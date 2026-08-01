@@ -1,0 +1,13 @@
+﻿DM1 search 2026-08-01 15:10:36
+=== Робота : top level ===
+    .syncing_db
+    @Recently-Snapshot
+    @Recycle
+    HR
+    Work
+    Архив
+    Маркетинг
+    Менеджмент
+    Проекти
+    Технічна частина
+    Фінанси та облік

@@ -1,0 +1,61 @@
+﻿Targeted scan started 14:26:33
+DONE  Browser Station - scanned 18, matches: 2 (0.3s)
+DONE  Download - scanned 1623, matches: 0 (1.6s)
+DONE  home - scanned 22, matches: 0 (0.2s)
+DONE  HomeAssistant - scanned 51, matches: 0 (0.2s)
+DONE  homes - scanned 193, matches: 0 (1s)
+DONE  Multimedia - scanned 21, matches: 0 (0.1s)
+DONE  NeoPOS - scanned 2974, matches: 14 (14.7s)
+DONE  Programs - scanned 14, matches: 0 (0.1s)
+DONE  Programs2 - scanned 8, matches: 0 (0.1s)
+DONE  Public - scanned 10, matches: 0 (0.1s)
+DONE  QmailAgent - scanned 7025, matches: 0 (47.4s)
+DONE  Video - scanned 4, matches: 0 (0s)
+SKIP  В
+SKIP  і
+SKIP  д
+SKIP  е
+SKIP  о
+SKIP  с
+SKIP  п
+SKIP  о
+SKIP  с
+SKIP  т
+SKIP  е
+SKIP  р
+SKIP  е
+SKIP  ж
+SKIP  е
+SKIP  н
+SKIP  н
+SKIP  я
+SKIP  Р
+SKIP  о
+SKIP  б
+SKIP  о
+SKIP  т
+SKIP  а
+SKIP  С
+SKIP  и
+SKIP  н
+SKIP  х
+SKIP  р
+SKIP  о
+SKIP  н
+SKIP  і
+SKIP  з
+SKIP  а
+SKIP  ц
+SKIP  і
+SKIP  я
+SKIP  Ф
+SKIP  о
+SKIP  т
+SKIP  о
+SKIP  а
+SKIP  л
+SKIP  ь
+SKIP  б
+SKIP  о
+SKIP  м
+TOTAL: 16

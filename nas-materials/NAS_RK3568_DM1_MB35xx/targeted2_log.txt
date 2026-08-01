@@ -1,0 +1,3 @@
+﻿Scan started 14:45:36
+Cyrillic shares found: В?дєоспостереження | Робота | С?нхрон?зац?я | Фотоальбом
+SKIP  В?дєоспостереження (unreachable)

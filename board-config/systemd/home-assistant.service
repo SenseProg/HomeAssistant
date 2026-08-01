@@ -1,0 +1,18 @@
+[Unit]
+Description=Home Assistant
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=forlinx
+Group=forlinx
+WorkingDirectory=/userdata/hass/config
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/userdata/hass/venv/bin/hass -c /userdata/hass/config
+Restart=on-failure
+RestartSec=15
+TimeoutStartSec=600
+
+[Install]
+WantedBy=multi-user.target

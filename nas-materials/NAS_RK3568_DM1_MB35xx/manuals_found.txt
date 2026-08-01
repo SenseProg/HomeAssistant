@@ -1,0 +1,14 @@
+﻿Manual hunt 17:13:22
+        0 MB  \\CloudMate\NeoPOS\Archiving\account\gapps\README.md
+     0.12 MB  \\CloudMate\NeoPOS\Archiving\adb\README.md
+     0.12 MB  \\CloudMate\NeoPOS\Archiving\adb\adb2\README.md
+        0 MB  \\CloudMate\NeoPOS\Archiving\Confluance\gps\instruction.txt
+     0.01 MB  \\CloudMate\NeoPOS\Archiving\Confluance\linux command\linux+command.doc
+     0.61 MB  \\CloudMate\NeoPOS\Archiving\Confluance\NFC NXP PN7150 Android Porting Guidelines\NFC+NXP+PN7150+Android+Porting+Guidelines.doc
+     0.09 MB  \\CloudMate\NeoPOS\Archiving\Confluance\NFC NXP PN7150 Android Porting Guidelines\PN7150 intergation guide.pdf
+      0.3 MB  \\CloudMate\NeoPOS\Archiving\Confluance\NFC NXP PN7150 Android Porting Guidelines\Rockchip_Developer_Guide_I2C_EN.pdf
+     0.67 MB  \\CloudMate\NeoPOS\Archiving\Confluance\security\RK356X_SecurityBoot_And_AVB_instructions_EN.pdf
+        0 MB  \\CloudMate\NeoPOS\Archiving\gps\ublox_gps_hal-master\u-blox.conf.README.txt
+        0 MB  \\CloudMate\NeoPOS\Devang\README.txt
+     0.74 MB  \\CloudMate\NeoPOS\IO-Domain\Rockchip_Developer_Guide_Linux_IO_DOMAIN_CN.pdf
+TOTAL: 12

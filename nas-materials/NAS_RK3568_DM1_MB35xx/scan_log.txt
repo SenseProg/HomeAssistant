@@ -1,0 +1,23 @@
+﻿NAS full scan started 2026-08-01 13:42:01
+Shares to scan (19): AquaMate, BackupPC, Browser Station, Container, Download, home, HomeAssistant, homes, Multimedia, NeoPOS, Programs, Programs2, Public, QmailAgent, Video, В?дєоспостереження, Робота, С?нхрон?зац?я, Фотоальбом
+EXCLUDED (video surveillance, 12): qvr-face-insightData, qvr-face-linkData, qvr-face-tigerData, QVRCenterAppData, QVREliteSys, QVRProAppData, QVRProAutoSnap, QVRProDB, QVRProRecording, QVRProSpace_Disk1, QVRProSpace_Disk2, QVRProSpace_Disk2_1
+
+DONE  AquaMate - scanned 4 items, matches: 0 (0.4s)
+DONE  BackupPC - scanned 604232 items, matches: 404 (1617.6s)
+DONE  Browser Station - scanned 18 items, matches: 2 (0.2s)
+DONE  \\CloudMate\Container - matches: 96
+TOTAL matches: 96
+Finished 2026-08-01 14:16:20
+DONE  Container - scanned 896151 items, matches: 96 (1934.6s)
+DONE  Download - scanned 1623 items, matches: 0 (1.4s)
+DONE  home - scanned 22 items, matches: 0 (0.1s)
+DONE  HomeAssistant - scanned 51 items, matches: 0 (0.2s)
+DONE  homes - scanned 193 items, matches: 0 (0.9s)
+DONE  Multimedia - scanned 21 items, matches: 0 (0.1s)
+DONE  NeoPOS - scanned 2974 items, matches: 2 (11.3s)
+DONE  Programs - scanned 14 items, matches: 0 (0.1s)
+DONE  Programs2 - scanned 8 items, matches: 0 (0s)
+DONE  Public - scanned 10 items, matches: 0 (0.1s)
+DONE  QmailAgent - scanned 7025 items, matches: 0 (27.1s)
+DONE  Video - scanned 4 items, matches: 0 (0s)
+SKIP  В?дєоспостереження (not reachable)

@@ -1,0 +1,30 @@
+﻿Sizes + DM-1 hunt 15:27:58
+
+=== Hardware projects: size per folder ===
+  MiniBoard 3588                         22 files      14139.49 MB
+  NeoPOS 3568 Soft+HArdware          284494 files    1001141.36 MB
+  NXP IMX8MP                            203 files         61951 MB
+  Picoboard                             261 files       10801.4 MB
+  XMate                                 418 files      97944.29 MB
+
+=== sync branches at top of Sinhronizaciya ===
+  @Recently-Snapshot
+  @Recycle
+  b.d.vending
+  Dropbox
+  Google PostiraykaHR
+  GoogleDrive(dmytro.v.kovtun)
+  GooglePostiraykaKiev
+  OneDrive
+  Qsync
+  tpostirayka
+  vendlanding
+
+=== DM-1 / DM1 anywhere in Sinhronizaciya (depth 1..7) ===
+  [d2] \\CloudMate\Сінхронізація\GoogleDrive(dmytro.v.kovtun)\DM-1-CM5
+  [d5] \\CloudMate\Сінхронізація\GoogleDrive(dmytro.v.kovtun)\Робота\Проекти\Hardware projects\DM3588 v.1.0
+  [d6] \\CloudMate\Сінхронізація\GoogleDrive(dmytro.v.kovtun)\Робота\Проекти\DroneMate\Маркетинг, просування\Dm-3  Docs1
+  [d7] \\CloudMate\Сінхронізація\GoogleDrive(dmytro.v.kovtun)\Робота\Проекти\DroneMate\Технічна частина DroneMate\D4U13F~T\DM-2 v.1.0
+  [d7] \\CloudMate\Сінхронізація\GoogleDrive(dmytro.v.kovtun)\Робота\Проекти\DroneMate\Технічна частина DroneMate\D4U13F~T\DM-2 v.1.1
+  [d7] \\CloudMate\Сінхронізація\GoogleDrive(dmytro.v.kovtun)\Робота\Проекти\DroneMate\Технічна частина DroneMate\Проекти\DM-3 Carrier-1
+  [d7] \\CloudMate\Сінхронізація\GoogleDrive(dmytro.v.kovtun)\Робота\Проекти\DroneMate AI\Технічна частина DroneMate\Проекти\DM-1-CM5

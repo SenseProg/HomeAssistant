@@ -1,0 +1,63 @@
+﻿DM* inspection 15:26:41
+
+=== DM-2, тех.характеристики ===
+    [DIR ] Схеми, архітектура фото ДМ2
+    [FILE] DroneMate-2_Tech_Overview_Public_Extended.docx (4.84 MB)
+    [FILE] DroneMate-2_Tech_Overview_Public_Extended.docx.pdf (4.95 MB)
+    [FILE] Технічні харакетристики DroneMate 2.docx (2.41 MB)
+    [FILE] Технічні харакетристики DroneMate 2.pdf (2.56 MB)
+
+=== DM-3, тех.характеристики ===
+    [DIR ] Відео 12 камер + протокол
+    [FILE] DM3_Public_Tech_Overview_EN.docx (5.32 MB)
+    [FILE] DM3_Public_Tech_Overview_EN.pdf (0.16 MB)
+    [FILE] DroneMate_DM2_DM3_vs_Jetson_OrinNano_RPi5_Hailo_Public_Comparison_EN (не підходить, допрацювати).docx (0.04 MB)
+
+=== DM-8 ===
+    [FILE] DM-8 характеристики.docx (0.01 MB)
+
+=== DM-1-CM5 ===
+    (EMPTY)
+
+=== DM-3 TDA проект ===
+    [DIR ] 1 Concept
+    [DIR ] 2 Task
+
+=== DM-3-32  SoM AM69A_TDA4VH ===
+    [DIR ] 1 Concept
+    [DIR ] 2 Tasks for Dm-3
+    [DIR ] 3 DevelopmentResults
+    [DIR ] 4 Testing
+    [DIR ] 5 Production
+    [DIR ] 6 Feedback
+    [DIR ] 7 software
+    [DIR ] Archive DM-3
+    [FILE] README_КТ_CONFIDENTIAL.txt (0 MB)
+
+=== DM-3-8 SoM TDA4VM (був AM68A) ===
+    [DIR ] 1 Concept
+    [DIR ] 2 Tasks for Dm-3-8
+    [DIR ] 3 DevelopmentResults
+    [DIR ] 4 Testing
+    [DIR ] 5 Production
+    [DIR ] 6 Feedback
+    [DIR ] 7 Software
+    [FILE] README_КТ_CONFIDENTIAL.txt (0 MB)
+
+=== DM2 проект ===
+    [DIR ] 1 Concept
+    [DIR ] 2 Tasks for DM-2
+    [DIR ] 3 DevelopmentResults
+    [DIR ] 5 Production
+
+=== DM4 ===
+    [FILE] appmap.log (0.09 MB)
+    [FILE] Таблиця розробки ДМ-4.xlsx (0.1 MB)
+
+=== Robota\Proekty\Hardware projects ===
+    [DIR ] MiniBoard 3588
+    [DIR ] NeoPOS 3568 Soft+HArdware
+    [DIR ] NXP IMX8MP
+    [DIR ] Picoboard
+    [DIR ] XMate
+    [FILE] Screen_Recording_20240327_212611_Zoom.mp4 (906.84 MB)

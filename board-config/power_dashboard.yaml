@@ -1,0 +1,80 @@
+views:
+  - title: Потужність
+    path: power
+    icon: mdi:flash
+    cards:
+      - type: gauge
+        entity: sensor.zagalne_navantazhennia
+        name: Навантаження зараз
+        unit: kW
+        min: 0
+        max: 15
+        needle: true
+        severity:
+          green: 0
+          yellow: 6
+          red: 11
+
+      - type: entities
+        title: Миттєві показники (локально, опитування 5 с)
+        entities:
+          - entity: sensor.zagalne_navantazhennia
+            name: Загальна потужність
+          - entity: sensor.zagalnii_strum
+            name: Загальний струм
+          - type: divider
+          - entity: sensor.energy_meter_phase_a_power_2
+            name: Фаза A - потужність
+          - entity: sensor.energy_meter_phase_b_power_2
+            name: Фаза B - потужність
+          - entity: sensor.energy_meter_phase_c_power_2
+            name: Фаза C - потужність
+          - type: divider
+          - entity: sensor.energy_meter_phase_a_voltage_2
+            name: Фаза A - напруга
+          - entity: sensor.energy_meter_phase_b_voltage_2
+            name: Фаза B - напруга
+          - entity: sensor.energy_meter_phase_c_voltage_2
+            name: Фаза C - напруга
+
+      - type: history-graph
+        title: Потужність за останню годину (сирі дані)
+        hours_to_show: 1
+        refresh_interval: 5
+        entities:
+          - entity: sensor.zagalne_navantazhennia
+            name: Разом
+
+      - type: history-graph
+        title: Фази за 3 години
+        hours_to_show: 3
+        refresh_interval: 10
+        entities:
+          - entity: sensor.energy_meter_phase_a_power_2
+            name: Фаза A
+          - entity: sensor.energy_meter_phase_b_power_2
+            name: Фаза B
+          - entity: sensor.energy_meter_phase_c_power_2
+            name: Фаза C
+
+      - type: statistics-graph
+        title: Потужність - 5-хвилинні зрізи за добу
+        days_to_show: 1
+        period: 5minute
+        stat_types:
+          - mean
+          - max
+        chart_type: line
+        entities:
+          - sensor.zagalne_navantazhennia
+
+      - type: history-graph
+        title: Напруга за 6 годин
+        hours_to_show: 6
+        entities:
+          - entity: sensor.energy_meter_phase_a_voltage_2
+            name: Фаза A
+          - entity: sensor.energy_meter_phase_b_voltage_2
+            name: Фаза B
+          - entity: sensor.energy_meter_phase_c_voltage_2
+            name: Фаза C

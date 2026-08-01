@@ -1,0 +1,23 @@
+# Home Assistant secrets and runtime state - never commit
+.storage/
+secrets.yaml
+*.db
+*.db-shm
+*.db-wal
+*.log
+*.log.*
+.HA_VERSION
+.ha_run.lock
+deps/
+tts/
+custom_components/
+
+# Firmware images - too large for GitHub (100 MB hard limit per file)
+# backupSW_MB35x8.zip is 2.7 GB, see README for its location on the NAS
+*.img
+backupSW_MB35x8.zip
+
+# OS noise
+Thumbs.db
+desktop.ini
+.DS_Store

@@ -1,0 +1,60 @@
+
+# Loads default set of integrations. Do not remove.
+default_config:
+
+# Load frontend themes from the themes folder
+frontend:
+  themes: !include_dir_merge_named themes
+
+automation: !include automations.yaml
+script: !include scripts.yaml
+scene: !include scenes.yaml
+
+# --- Total load across all three phases (added 2026-08-02) ---
+template:
+  - sensor:
+      - name: "Загальне навантаження"
+        unique_id: total_load_power
+        unit_of_measurement: "kW"
+        device_class: power
+        state_class: measurement
+        state: >
+          {{ (states('sensor.energy_meter_phase_a_power_2') | float(0)
+            + states('sensor.energy_meter_phase_b_power_2') | float(0)
+            + states('sensor.energy_meter_phase_c_power_2') | float(0)) | round(3) }}
+        availability: >
+          {{ states('sensor.energy_meter_phase_a_power_2') not in ['unknown','unavailable'] }}
+
+      - name: "Загальний струм"
+        unique_id: total_load_current
+        unit_of_measurement: "A"
+        device_class: current
+        state_class: measurement
+        state: >
+          {{ (states('sensor.energy_meter_phase_a_current_2') | float(0)
+            + states('sensor.energy_meter_phase_b_current_2') | float(0)
+            + states('sensor.energy_meter_phase_c_current_2') | float(0)) | round(2) }}
+        availability: >
+          {{ states('sensor.energy_meter_phase_a_current_2') not in ['unknown','unavailable'] }}
+# --- Recorder: keep detailed history longer for analysis (added 2026-08-02) ---
+recorder:
+  purge_keep_days: 30
+  commit_interval: 5
+  auto_purge: true
+  exclude:
+    domains:
+      - update
+      - automation
+      - script
+      - persistent_notification
+
+# --- Separate YAML dashboard with instantaneous power graphs ---
+lovelace:
+  mode: storage
+  dashboards:
+    power-dashboard:
+      mode: yaml
+      title: Потужність
+      icon: mdi:flash
+      show_in_sidebar: true
+      filename: power_dashboard.yaml

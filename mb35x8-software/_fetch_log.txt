@@ -1,0 +1,5 @@
+﻿Fetch started 2026-08-01 15:50:28
+Found 1 file(s) in backupSW_MB35x8
+  backupSW_MB35x8.zip  (2697.78 MB)  6/13/2026 4:36:26 PM
+COPIED backupSW_MB35x8.zip - 2697.78 MB in 239.1s
+Finished 15:54:58

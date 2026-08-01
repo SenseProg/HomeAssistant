@@ -1,0 +1,5 @@
+﻿Probe of \\CloudMate\homes\Volodymyr\hardware
+DIR   DM3588_v1.1  -  4 files, 45.69 MB
+DIR   MB35x8_v1.1  -  11 files, 114.35 MB
+
+TOTAL: 15 files, 160.04 MB

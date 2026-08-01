@@ -1,0 +1,391 @@
+Date: Mon, 19 Feb 2024 08:03:12 +0000 (UTC)
+Message-ID: <324507123.3.1708329792642@e9a6c0108b78>
+Subject: Exported From Confluence
+MIME-Version: 1.0
+Content-Type: multipart/related; 
+	boundary="----=_Part_2_1870640003.1708329792640"
+
+------=_Part_2_1870640003.1708329792640
+Content-Type: text/html; charset=UTF-8
+Content-Transfer-Encoding: quoted-printable
+Content-Location: file:///C:/exported.html
+
+<html xmlns:o=3D'urn:schemas-microsoft-com:office:office'
+      xmlns:w=3D'urn:schemas-microsoft-com:office:word'
+      xmlns:v=3D'urn:schemas-microsoft-com:vml'
+      xmlns=3D'urn:w3-org-ns:HTML'>
+<head>
+    <meta http-equiv=3D"Content-Type" content=3D"text/html; charset=3Dutf-8=
+">
+    <title>Android11 source code for Rockchip RK3568J Xstrive</title>
+    <!--[if gte mso 9]>
+    <xml>
+        <o:OfficeDocumentSettings>
+            <o:TargetScreenSize>1024x640</o:TargetScreenSize>
+            <o:PixelsPerInch>72</o:PixelsPerInch>
+            <o:AllowPNG/>
+        </o:OfficeDocumentSettings>
+        <w:WordDocument>
+            <w:View>Print</w:View>
+            <w:Zoom>90</w:Zoom>
+            <w:DoNotOptimizeForBrowser/>
+        </w:WordDocument>
+    </xml>
+    <![endif]-->
+    <style>
+                <!--
+        @page Section1 {
+            size: 8.5in 11.0in;
+            margin: 1.0in;
+            mso-header-margin: .5in;
+            mso-footer-margin: .5in;
+            mso-paper-source: 0;
+        }
+
+        table {
+            border: solid 1px;
+            border-collapse: collapse;
+        }
+
+        table td, table th {
+            border: solid 1px;
+            padding: 5px;
+        }
+
+        td {
+            page-break-inside: avoid;
+        }
+
+        tr {
+            page-break-after: avoid;
+        }
+
+        div.Section1 {
+            page: Section1;
+        }
+
+        /* Confluence print stylesheet. Common to all themes for print medi=
+a */
+/* Full of !important until we improve batching for print CSS */
+
+@media print {
+    #main {
+        padding-bottom: 1em !important; /* The default padding of 6em is to=
+o much for printouts */
+    }
+
+    body {
+        font-family: Arial, Helvetica, FreeSans, sans-serif;
+        font-size: 10pt;
+        line-height: 1.2;
+    }
+
+    body, #full-height-container, #main, #page, #content, .has-personal-sid=
+ebar #content {
+        background: var(--ds-surface, #fff) !important;
+        color: var(--ds-text, #000) !important;
+        border: 0 !important;
+        width: 100% !important;
+        height: auto !important;
+        min-height: auto !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        display: block !important;
+    }
+
+    a, a:link, a:visited, a:focus, a:hover, a:active {
+        color: var(--ds-text, #000);
+    }
+
+    #content h1,
+    #content h2,
+    #content h3,
+    #content h4,
+    #content h5,
+    #content h6 {
+        font-family: Arial, Helvetica, FreeSans, sans-serif;
+        page-break-after: avoid;
+    }
+
+    pre {
+        font-family: Monaco, "Courier New", monospace;
+    }
+
+    #header,
+    .aui-header-inner,
+    #navigation,
+    #sidebar,
+    .sidebar,
+    #personal-info-sidebar,
+    .ia-fixed-sidebar,
+    .page-actions,
+    .navmenu,
+    .ajs-menu-bar,
+    .noprint,
+    .inline-control-link,
+    .inline-control-link a,
+    a.show-labels-editor,
+    .global-comment-actions,
+    .comment-actions,
+    .quick-comment-container,
+    #addcomment {
+        display: none !important;
+    }
+
+    /* CONF-28544 cannot print multiple pages in IE */
+    #splitter-content {
+        position: relative !important;
+    }
+
+    .comment .date::before {
+        content: none !important; /* remove middot for print view */
+    }
+
+    h1.pagetitle img {
+        height: auto;
+        width: auto;
+    }
+
+    .print-only {
+        display: block;
+    }
+
+    #footer {
+        position: relative !important; /* CONF-17506 Place the footer at en=
+d of the content */
+        margin: 0;
+        padding: 0;
+        background: none;
+        clear: both;
+    }
+
+    #poweredby {
+        border-top: none;
+        background: none;
+    }
+
+    #poweredby li.print-only {
+        display: list-item;
+        font-style: italic;
+    }
+
+    #poweredby li.noprint {
+        display: none;
+    }
+
+    /* no width controls in print */
+    .wiki-content .table-wrap,
+    .wiki-content p,
+    .panel .codeContent,
+    .panel .codeContent pre,
+    .image-wrap {
+        overflow: visible !important;
+    }
+
+    /* TODO - should this work? */
+    #children-section,
+    #comments-section .comment,
+    #comments-section .comment .comment-body,
+    #comments-section .comment .comment-content,
+    #comments-section .comment p {
+        page-break-inside: avoid;
+    }
+
+    #page-children a {
+        text-decoration: none;
+    }
+
+    /**
+     hide twixies
+
+     the specificity here is a hack because print styles
+     are getting loaded before the base styles. */
+    #comments-section.pageSection .section-header,
+    #comments-section.pageSection .section-title,
+    #children-section.pageSection .section-header,
+    #children-section.pageSection .section-title,
+    .children-show-hide {
+        padding-left: 0;
+        margin-left: 0;
+    }
+
+    .children-show-hide.icon {
+        display: none;
+    }
+
+    /* personal sidebar */
+    .has-personal-sidebar #content {
+        margin-right: 0px;
+    }
+
+    .has-personal-sidebar #content .pageSection {
+        margin-right: 0px;
+    }
+
+    .no-print, .no-print * {
+        display: none !important;
+    }
+}
+-->
+    </style>
+</head>
+<body>
+    <h1>Android11 source code for Rockchip RK3568J Xstrive</h1>
+    <div class=3D"Section1">
+        <p>
+<style>[data-colorid=3Dq1yrka53yt]{color:#bf2600} html[data-color-mode=3Dda=
+rk] [data-colorid=3Dq1yrka53yt]{color:#ff6640}[data-colorid=3Dcrh6nl11b0]{c=
+olor:#bf2600} html[data-color-mode=3Ddark] [data-colorid=3Dcrh6nl11b0]{colo=
+r:#ff6640}[data-colorid=3Dqnexorpmnf]{color:#0747a6} html[data-color-mode=
+=3Ddark] [data-colorid=3Dqnexorpmnf]{color:#5999f8}[data-colorid=3Dwozdbcq5=
+o0]{color:#bf2600} html[data-color-mode=3Ddark] [data-colorid=3Dwozdbcq5o0]=
+{color:#ff6640}[data-colorid=3Dixz6ic0yuc]{color:#bf2600} html[data-color-m=
+ode=3Ddark] [data-colorid=3Dixz6ic0yuc]{color:#ff6640}[data-colorid=3Dqg3kb=
+ysivg]{color:#bf2600} html[data-color-mode=3Ddark] [data-colorid=3Dqg3kbysi=
+vg]{color:#ff6640}[data-colorid=3Ddf8mcqotly]{color:#0747a6} html[data-colo=
+r-mode=3Ddark] [data-colorid=3Ddf8mcqotly]{color:#5999f8}[data-colorid=3Dis=
+p2eram76]{color:#bf2600} html[data-color-mode=3Ddark] [data-colorid=3Disp2e=
+ram76]{color:#ff6640}[data-colorid=3Dlnykp6es69]{color:#bf2600} html[data-c=
+olor-mode=3Ddark] [data-colorid=3Dlnykp6es69]{color:#ff6640}[data-colorid=
+=3Dtu2hp1so8f]{color:#bf2600} html[data-color-mode=3Ddark] [data-colorid=3D=
+tu2hp1so8f]{color:#ff6640}[data-colorid=3Dg67exlef5q]{color:#bf2600} html[d=
+ata-color-mode=3Ddark] [data-colorid=3Dg67exlef5q]{color:#ff6640}[data-colo=
+rid=3Dnsyvpyylld]{color:#0747a6} html[data-color-mode=3Ddark] [data-colorid=
+=3Dnsyvpyylld]{color:#5999f8}[data-colorid=3Do4hyuj3egh]{color:#bf2600} htm=
+l[data-color-mode=3Ddark] [data-colorid=3Do4hyuj3egh]{color:#ff6640}[data-c=
+olorid=3Dzbi5w0ktwp]{color:#0747a6} html[data-color-mode=3Ddark] [data-colo=
+rid=3Dzbi5w0ktwp]{color:#5999f8}[data-colorid=3Dyql3tgsf6g]{color:#bf2600} =
+html[data-color-mode=3Ddark] [data-colorid=3Dyql3tgsf6g]{color:#ff6640}[dat=
+a-colorid=3Dx6ygiop9p7]{color:#bf2600} html[data-color-mode=3Ddark] [data-c=
+olorid=3Dx6ygiop9p7]{color:#ff6640}[data-colorid=3Dr3c4ekaq4m]{color:#bf260=
+0} html[data-color-mode=3Ddark] [data-colorid=3Dr3c4ekaq4m]{color:#ff6640}[=
+data-colorid=3Dkhmqgi6ue8]{color:#bf2600} html[data-color-mode=3Ddark] [dat=
+a-colorid=3Dkhmqgi6ue8]{color:#ff6640}</style><em>$ .repo/repo/repo sync -l=
+</em></p>
+<p><em>$ repo forall RKTools/ tools/apifinder/ -c "git add ."</em></p>
+<p><em>$ repo forall RKTools/ tools/apifinder/ -c 'git commit -m "commit f =
+and x remove"'</em></p>
+<p><em>$ repo forall -c "git branch xstrive"</em></p>
+<p>=D0=9F=D1=80=D0=B8 =D0=BF=D0=B5=D1=80=D1=88=D1=96=D0=B9 =D0=BA=D0=BE=D0=
+=BC=D0=BF=D1=96=D0=BB=D1=8F=D1=86=D1=96=D1=97 =D0=BA=D0=BE=D0=B4=D1=83 =D0=
+=B2=D0=B8=D1=81=D0=BA=D0=BE=D1=87=D0=B8=D1=82=D1=8C =D0=B2=D1=96=D0=BA=D0=
+=BD=D0=BE IO Domain Checklist =D0=B7 =D0=BD=D0=B0=D0=BB=D0=B0=D1=88=D1=82=
+=D1=83=D0=B2=D0=B0=D0=BD=D0=BD=D1=8F=D0=BC=D0=B8 pmuio-supply =D1=82=D0=B0 =
+vccio-supply.</p>
+<p>=D0=92=D0=B8=D1=81=D1=82=D0=B0=D0=B2=D0=BB=D1=8F=D1=94=D0=BC=D0=BE =D1=
+=82=D0=B0=D0=BA:</p>
+<p>=D0=A3=D0=BF=D1=80=D0=B0=D0=B2=D0=BB=D1=96=D0=BD=D0=BD=D1=8F: =D1=81=D1=
+=82=D1=80=D1=96=D0=BB=D0=BA=D0=B8 =D0=B2=D0=B3=D0=BE=D1=80=D1=83, =D0=B2=D0=
+=BD=D0=B8=D0=B7, tab =D0=B4=D0=BB=D1=8F =D0=BF=D0=B5=D1=80=D0=B5=D1=85=D0=
+=BE=D0=B4=D1=83 =D0=BD=D0=B0 =D0=BE=D0=BA, =D0=B0=D0=B1=D0=BE =D0=BF=D1=80=
+=D0=BE=D1=81=D1=82=D0=BE =D0=B5=D0=BD=D1=82=D0=B5=D1=80</p>
+<p>pmuio2-supply =3D &lt;&amp;vcc3v3_pmu&gt;</p>
+<p>&nbsp;vccio1-supply =3D &lt;&amp;vcc_3v3&gt;</p>
+<p>&nbsp;vccio3-supply =3D &lt;&amp;vcc_3v3&gt;</p>
+<p>&nbsp;vccio4-supply =3D &lt;&amp;vcc_3v3&gt;</p>
+<p>&nbsp;vccio5-supply =3D &lt;&amp;vcc_3v3&gt;</p>
+<p>&nbsp;vccio6-supply =3D &lt;&amp;vcc_3v3&gt;</p>
+<p>&nbsp;vccio7-supply =3D &lt;&amp;vcc_3v3&gt;</p>
+<p><em>$ source build/envsetup.sh</em></p>
+<p><em>$ lunch rk3566_rgo-userdebug</em></p>
+<p><em>$ ./build.sh -UKAup</em></p>
+<p><em>$ find /home/forlinx/3568/OK3568-android11-source -type d -name ".gi=
+t" -exec rm -rf {} +</em></p>
+<p class=3D"media-group"><img height=3D"250" style=3D"margin: 2px; border: =
+1px solid #ddd; box-sizing: border-box; vertical-align: text-bottom;" src=
+=3D"e991ff9635ef9873cbc10ae530d481424ed80b581facb82df0f9d0aeb78de226" width=
+=3D"250"></p>
+<p>NEW CODE android11_20230910.tar.xz</p>
+<p><em>$ source build/envsetup.sh</em></p>
+<p><em>$ lunch rk356x_box-userdebug</em></p>
+<p><em>$ ./build.sh -AUCKu</em></p>
+<p>=D0=A1=D0=BF=D0=BE=D1=87=D0=B0=D1=82=D0=BA=D1=83 =D0=BA=D0=BE=D0=BC=D0=
+=BF=D1=96=D0=BB=D1=8E=D1=94=D0=BC =D0=B2=D0=BF=D0=B5=D1=80=D1=88=D0=B5 =D0=
+=BF=D0=BE=D1=82=D1=96=D0=BC =D0=B2=D0=BD=D0=BE=D1=81=D0=B8=D0=BC=D0=BE =D0=
+=B7=D0=BC=D1=96=D0=BD=D0=B8 =D1=96 =D0=B7=D0=BD=D0=BE=D0=B2=D1=83 =D0=BA=D0=
+=BE=D0=BC=D0=BF=D1=96=D0=BB=D1=8E=D1=94=D0=BC!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!=
+!!!!!!!!!!!</p>
+<p><span data-colorid=3D"nsyvpyylld">Set the dts file=EF=BC=9A</span><br><s=
+pan data-colorid=3D"qnexorpmnf">device/rockchip/rk356x_box/rk356x_box/Board=
+Config.mk(File modification)</span><br><span data-colorid=3D"df8mcqotly">PR=
+ODUCT_UBOOT_CONFIG :=3D rk3568</span><br><span data-colorid=3D"zbi5w0ktwp">=
+PRODUCT_KERNEL_DTS :=3D rk3568-nvr-demo-v10</span></p>
+<p><span data-colorid=3D"x6ygiop9p7">Setting The io_domains:</span></p>
+<p><span data-colorid=3D"o4hyuj3egh">kernel/arch/arm64/boot/dts/rockchip/rk=
+3568-nvr.dtsi(File modification)</span><br><span data-colorid=3D"lnykp6es69=
+">&amp;pmu_io_domains {</span><br><span data-colorid=3D"khmqgi6ue8"> status=
+ =3D "okay";</span><br><span data-colorid=3D"g67exlef5q"> pmuio2-supply =3D=
+ &lt;&amp;vcc_3v3&gt;;</span><br><span data-colorid=3D"tu2hp1so8f"> vccio1-=
+supply =3D &lt;&amp;vcc_3v3&gt;;</span><br><span data-colorid=3D"ixz6ic0yuc=
+"> vccio2-supply =3D &lt;&amp;vcc_1v8&gt;;</span><br><span data-colorid=3D"=
+wozdbcq5o0"> vccio3-supply =3D &lt;&amp;vcc_3v3&gt;;</span><br><span data-c=
+olorid=3D"q1yrka53yt"> vccio4-supply =3D &lt;&amp;vcc_1v8&gt;;</span><br><s=
+pan data-colorid=3D"r3c4ekaq4m"> vccio5-supply =3D &lt;&amp;vcc_3v3&gt;;</s=
+pan><br><span data-colorid=3D"crh6nl11b0"> vccio6-supply =3D &lt;&amp;vcc_1=
+v8&gt;;</span><br><span data-colorid=3D"qg3kbysivg"> vccio7-supply =3D &lt;=
+&amp;vcc_3v3&gt;;</span><br><span data-colorid=3D"isp2eram76">};</span></p>
+<p>key attestation /home/forlinx/3568/arhive/android11_20230910/Android11_2=
+0230906/device/rockchip/rk356x_box/<a class=3D"external-link" href=3D"http:=
+//CommonBoardConfig.mk" rel=3D"nofollow">CommonBoardConfig.mk</a></p>
+<p>=D0=9D=D0=B0=D0=BB=D0=B0=D1=88=D1=82=D1=83=D0=B2=D0=B0=D0=BD=D0=BD=D1=8F=
+ =D1=96=D0=BD=D1=82=D0=B5=D1=80=D0=BD=D0=B5=D1=82 =D1=87=D0=B5=D1=80=D0=B5=
+=D0=B7 =D0=BA=D0=B0=D0=B1=D0=B5=D0=BB=D1=8C: =D0=BD=D0=B0=D0=BB=D0=B0=D1=88=
+=D1=82=D1=83=D0=B2=D0=B0=D0=BD=D0=BD=D1=8F IP-OK-OK-OK-OK</p>
+<p>=D0=92=D1=81=D1=82=D0=B0=D0=B2=D0=BB=D1=8F=D1=94=D0=BC =D0=BF=D0=BE =D0=
+=BD=D0=BE=D0=B2=D1=96=D0=B9 =D1=96 =D0=B1=D1=83=D0=B4=D0=B5 =D0=B7=D0=BD=D0=
+=B0=D1=87=D0=BE=D0=BA =D0=B4=D1=83=D0=B6=D0=BA=D0=B8 =D0=B2 =D0=BE=D0=B1=D0=
+=B8=D0=B4=D0=B2=D1=96 =D1=81=D1=82=D0=BE=D1=80=D0=BE=D0=BD=D0=B8, =D1=82=D0=
+=B0 =D1=96=D0=B7=D0=B5=D1=80=D0=BD=D0=B5=D1=82 =D1=80=D0=BE=D0=B7=D1=94=D0=
+=BC.</p>
+<p>=D0=9D=D0=B5 =D1=80=D0=BE=D0=B1=D0=B8=D1=82=D0=B8=D0=BC=D0=B5 =D1=8F=D0=
+=BA=D1=89=D0=BE =D0=BD=D0=B5=D0=BD=D0=B0=D0=BB=D0=B0=D1=88=D1=82=D0=BE=D0=
+=B2=D0=B0=D0=BD=D0=B8=D0=B9 <span data-colorid=3D"yql3tgsf6g">Setting The i=
+o_domains</span></p>
+    </div>
+</body>
+</html>
+------=_Part_2_1870640003.1708329792640
+Content-Type: application/octet-stream
+Content-Transfer-Encoding: base64
+Content-Location: file:///C:/e991ff9635ef9873cbc10ae530d481424ed80b581facb82df0f9d0aeb78de226
+
+iVBORw0KGgoAAAANSUhEUgAAAPoAAAD6CAMAAAC/MqoPAAADAFBMVEX19fXv7+98fHx1dXV9fX23
+t7eenp5wcHDn5+f09PTz8/Pd3d2SkpLY2Njt7e3Q0NCioqJycnKqqqq7u7uurq6CgoKGhobOzs7D
+w8PR0dGNjY3Hx8fj4+PGxsbS0tKoqKgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAABYhwFnAAAFQElEQVR4Xu3cC3eaSBQH8CuvISKowUS6xobv/6U223TP5rlu4iNF
+o+zcEQwZbbbaI9T1/2tjhrnTCfcMDKmMEAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAByAml6xH+5iYep13zE3jG963QFzLdvV677HtY0fbnsAHFuv+Yjt6DV7YegVe/HD
+R7tiLvSaAyb0io9t2XxH5Yz6L+mIU9/qJNyZNddrgshJjM5ZmugBtt58HypK3Z+YL9OU5iN/U+5r
+zQ+YPm91xadl4ZPw30cUvfkh03IJrM95sWkGxchSOalXMs21W1/y4lOzXYyUydIryjB5eSsnlexB
+ebQj2Cz8pyngiVaL/38P+BMrfdt4rmzUq0j9F4HUjxFSP0aVpV7OBewjlaVePaR+jJD6MULqxwip
+HyOkXp16va5XlaSS1DnZWXYn2bQndFJJ9lWk/vLkysFuLTf8BVH69L5BOapInepNmrQGEfE78o8T
+omYlo17JjafU+EbPddMzOgM/lanbL+/vqJdz46mS1BvD+oym5JtjYzgj8l7q7++8lZN6OfT3Jfqi
+sFzGNXpvG4re/JCt5RJaXl70RViMsLXmB2w9l77R6ronJ263Zeljvqn54dqQS2A3LNG2GvaGlXsb
+mh+sLXPZsvmOKrmu/xqQ+p7Nt1r66ZZzWS8ndWOrZOYl7ZResRdGus3y4JJS33Bp2YfjXRQOAAAA
+AAAAAAAAADuL9YoPxHrFf4n1iqJYr9jZT37ArncjO7CN52yPruRX0Hgkkl+u/yw3hsX31KPBJ27B
+rPZ94RuL81BZfjL1h3Yyqp/IHFXWrJYIa3L+D1FK1qROhc8xEg3OV8X58+nfRKfjh0I4d6VX7Mf2
+93jiU7HMpysuKXkYpuNhMWzT/Ti95WVBw3EW6gghOlxIrlfNUmvcpObYSsmXURHKwyaO42Xn8YXg
+m0I14VIoY418aZmMLfu5lIVLLnC4E4hTFdz/jaRYeOqMs0Vfbde9c5NrhTD58/iCl8Mx89yre2cG
+h/pBP6uOs6AUCU9VCseV4SyUda4y7AjqiV7gi+wxNZHqJ+afHAURr8AJRRh8bpMn96QrLvKO9yfm
+j93H1OKd5FIc83IouVsXHd4dwWPMAxUIDgWyBS8TspcrJeJVN3I+WOaU77MKZZ2r1sIm0ZXfL7JF
+Fmq5kR2rwLJDVSBekNVTLbez/QFP6qhtvIix2rq6W9CUj+Xnrw/tEdG3oTN1Zi1eFfL4x6NaG8IN
+N95sVKmH92edtxFbnhKvdCH/vBLdpGlq5TPlqh9+WRWk6+jr4jZrtE+xeukXlnzlwyIHOhtErlkV
+Yr6/7K6Nepgd8PTZMXn8VSh/OXPIOXs7IhS11s6N8wL/iPzOdSPd4dlNO4y6ct0arZ4rNcgLTeIB
+W8NnxtraAm/UHXcHHPoynVtyivq9uFDWqVGNd+3dwbLqZ1XIeg1nrdra4rs9iLMXnydZEblBT/zG
+hYsg5Km2K/yazzVnqiCHbjnNLXdN/WNWU+dpR07LInSDSx7CqF4YeuHwYRKJjuuGXIr5MFlNc1mH
+fZ7mTDnN9eSPXa1B/FG7jrq8dlk3DrUHafLgyWFvD+6TUUNeqm8bU2dq/yXP/lAWQr7K+XfJnSd/
+z5FTIv9VzOZMvj40TWqP0oQfXbAYjLMYSxO+gt6cD9N0lD3I49G7e7rjZ7nMIlmIZIfXi1Fy2w5e
+0z/p1n/d8KgTAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAOAr/Aq4XBUIq
+J9Y5AAAAAElFTkSuQmCC
+------=_Part_2_1870640003.1708329792640--

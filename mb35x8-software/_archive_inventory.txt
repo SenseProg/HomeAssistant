@@ -1,0 +1,27 @@
+﻿backupSW_MB35x8.zip inventory - 2026-08-01 15:55
+entries: 11
+uncompressed total: 7.39 GB
+
+=== top-level entries ===
+  backupSW_MB35x8                                    11 entries       7564.17 MB
+
+=== second level ===
+  backupSW_MB35x8/firmware                                          10 entries     7564.17 MB
+  backupSW_MB35x8/                                                   1 entries           0 MB
+
+=== 30 biggest files ===
+     5649.44 MB  backupSW_MB35x8/firmware/img/ubuntu20/fullimageuartpwm/update.img
+     1914.73 MB  backupSW_MB35x8/firmware/img/linux/pwm_uarts_updateimg/update.img
+        0.01 MB  backupSW_MB35x8/firmware/img/ubuntu20/fullimageuartpwm/config.cfg
+           0 MB  backupSW_MB35x8/firmware/downloadFW.txt
+           0 MB  backupSW_MB35x8/firmware/img/ubuntu20/fullimageuartpwm/
+           0 MB  backupSW_MB35x8/firmware/img/ubuntu20/
+           0 MB  backupSW_MB35x8/
+           0 MB  backupSW_MB35x8/firmware/img/
+           0 MB  backupSW_MB35x8/firmware/
+           0 MB  backupSW_MB35x8/firmware/img/linux/pwm_uarts_updateimg/
+           0 MB  backupSW_MB35x8/firmware/img/linux/
+
+=== OS / image signature files ===
+    1914.73 MB  backupSW_MB35x8/firmware/img/linux/pwm_uarts_updateimg/update.img
+    5649.44 MB  backupSW_MB35x8/firmware/img/ubuntu20/fullimageuartpwm/update.img

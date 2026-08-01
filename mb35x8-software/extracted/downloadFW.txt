@@ -1,0 +1,1 @@
+https://wiki.t-firefly.com/en/ROC-RK3568-PC-SE/03-upgrade_firmware_with_flash.html?highlight=miniloader#download-to-emmc

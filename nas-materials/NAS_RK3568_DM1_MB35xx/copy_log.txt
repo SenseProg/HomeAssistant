@@ -1,0 +1,15 @@
+﻿Copy started 2026-08-01 15:21:55
+OK    Android11+source+code+for+board+Rockchip+OK3568-C+FORLINX..doc  (1.21 MB)
+OK    Android11+source+code+for+Rockchip+RK3568J+Xstrive.doc  (0.02 MB)
+OK    device_rockchip.zip  (45.07 MB)
+OK    rk3568b1 Xstrive.docx  (0.02 MB)
+OK    Rockchip_Developer_Guide_I2C_EN.pdf  (0.3 MB)
+OK    Rockchip_Developer_Guide_Linux_IO_DOMAIN_CN.pdf  (0.74 MB)
+OK    Rockchip_PX30_Introduction_IO_Power_Domains_Configuration.pdf  (0.53 MB)
+OK    Rockchip_RK3288_Introduction_IO_Power_Domains_Configuration.pdf  (0.44 MB)
+OK    Rockchip_RK3326_Introduction_IO_Power_Domains_Configuration.pdf  (0.5 MB)
+OK    Rockchip_RK3399_Introduction_IO_Power_Domains_Configuration.pdf  (0.45 MB)
+OK    Rockchip_RK3399Pro_Introduction_IO_Power_Domains_Configuration.pdf  (0.47 MB)
+OK    Rockchip_RK356X_Introduction_IO_Power_Domains_Configuration.pdf  (0.97 MB)
+
+TOTAL copied: 12 files, 50.72 MB; failed: 0

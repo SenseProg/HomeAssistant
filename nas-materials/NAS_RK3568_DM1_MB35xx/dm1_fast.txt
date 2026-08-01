@@ -1,0 +1,28 @@
+﻿Targeted DM1 lookup 15:24:17
+
+=== Robota\Proekty ===
+    (\\CloudMate\Робота\Проекти)
+    AquaMate
+    CoffeeMate
+    Hardware projects
+    NeoPOS
+    Project TT
+    Vend.Board
+    Vend.land
+
+=== Robota\Proekty\DroneMate AI ===
+    (\\CloudMate\Робота\Проекти\DroneMate AI)
+    NOT FOUND
+
+=== DM* under DroneMate AI (Robota), depth 1..4 ===
+
+=== DM* in Sinhronizaciya GoogleDrive branch ===
+  \\CloudMate\Сінхронізація\GoogleDrive(dmytro.v.kovtun)\Робота\Проекти\DroneMate AI\Маркетинг, просування\Тех.характеристики\DM-2, тех.характеристики
+  \\CloudMate\Сінхронізація\GoogleDrive(dmytro.v.kovtun)\Робота\Проекти\DroneMate AI\Маркетинг, просування\Тех.характеристики\DM-3, тех.характеристики
+  \\CloudMate\Сінхронізація\GoogleDrive(dmytro.v.kovtun)\Робота\Проекти\DroneMate AI\Маркетинг, просування\Тех.характеристики\DM-8
+  \\CloudMate\Сінхронізація\GoogleDrive(dmytro.v.kovtun)\Робота\Проекти\DroneMate AI\Технічна частина DroneMate\Проекти\DM-1-CM5
+  \\CloudMate\Сінхронізація\GoogleDrive(dmytro.v.kovtun)\Робота\Проекти\DroneMate AI\Технічна частина DroneMate\Проекти\DM-3 TDA проект
+  \\CloudMate\Сінхронізація\GoogleDrive(dmytro.v.kovtun)\Робота\Проекти\DroneMate AI\Технічна частина DroneMate\Проекти\DM-3-32  SoM AM69A_TDA4VH
+  \\CloudMate\Сінхронізація\GoogleDrive(dmytro.v.kovtun)\Робота\Проекти\DroneMate AI\Технічна частина DroneMate\Проекти\DM-3-8 SoM TDA4VM (був AM68A)
+  \\CloudMate\Сінхронізація\GoogleDrive(dmytro.v.kovtun)\Робота\Проекти\DroneMate AI\Технічна частина DroneMate\Проекти\DM2 проект
+  \\CloudMate\Сінхронізація\GoogleDrive(dmytro.v.kovtun)\Робота\Проекти\DroneMate AI\Технічна частина DroneMate\Проекти\DM4
