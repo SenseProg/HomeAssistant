@@ -1,5 +1,5 @@
 views:
-  - title: Потужність
+  - title: Зараз
     path: power
     icon: mdi:flash
     cards:
@@ -40,22 +40,9 @@ views:
       - type: history-graph
         title: Потужність за останню годину (сирі дані)
         hours_to_show: 1
-        refresh_interval: 5
         entities:
           - entity: sensor.zagalne_navantazhennia
             name: Разом
-
-      - type: history-graph
-        title: Фази за 3 години
-        hours_to_show: 3
-        refresh_interval: 10
-        entities:
-          - entity: sensor.energy_meter_phase_a_power_2
-            name: Фаза A
-          - entity: sensor.energy_meter_phase_b_power_2
-            name: Фаза B
-          - entity: sensor.energy_meter_phase_c_power_2
-            name: Фаза C
 
       - type: statistics-graph
         title: Потужність - 5-хвилинні зрізи за добу
@@ -68,9 +55,202 @@ views:
         entities:
           - sensor.zagalne_navantazhennia
 
+  - title: 3 години
+    path: last-3h
+    icon: mdi:clock-time-three-outline
+    cards:
       - type: history-graph
-        title: Напруга за 6 годин
-        hours_to_show: 6
+        title: Загальна потужність за 3 години (сирі дані)
+        hours_to_show: 3
+        entities:
+          - entity: sensor.zagalne_navantazhennia
+            name: Разом
+
+      - type: history-graph
+        title: Потужність фаз за 3 години
+        hours_to_show: 3
+        entities:
+          - entity: sensor.energy_meter_phase_a_power_2
+            name: Фаза A
+          - entity: sensor.energy_meter_phase_b_power_2
+            name: Фаза B
+          - entity: sensor.energy_meter_phase_c_power_2
+            name: Фаза C
+
+      - type: history-graph
+        title: Струм за 3 години
+        hours_to_show: 3
+        entities:
+          - entity: sensor.zagalnii_strum
+            name: Разом
+          - entity: sensor.energy_meter_phase_a_current_2
+            name: Фаза A
+          - entity: sensor.energy_meter_phase_b_current_2
+            name: Фаза B
+          - entity: sensor.energy_meter_phase_c_current_2
+            name: Фаза C
+
+      - type: history-graph
+        title: Напруга за 3 години
+        hours_to_show: 3
+        entities:
+          - entity: sensor.energy_meter_phase_a_voltage_2
+            name: Фаза A
+          - entity: sensor.energy_meter_phase_b_voltage_2
+            name: Фаза B
+          - entity: sensor.energy_meter_phase_c_voltage_2
+            name: Фаза C
+
+  - title: Місяць
+    path: month
+    icon: mdi:calendar-month
+    cards:
+      - type: statistics-graph
+        title: Загальна потужність за місяць (погодинно)
+        days_to_show: 31
+        period: hour
+        stat_types:
+          - mean
+          - max
+        chart_type: line
+        entities:
+          - entity: sensor.zagalne_navantazhennia
+            name: Разом
+
+      - type: statistics-graph
+        title: Потужність фаз за місяць (погодинно)
+        days_to_show: 31
+        period: hour
+        stat_types:
+          - mean
+        chart_type: line
+        entities:
+          - entity: sensor.energy_meter_phase_a_power_2
+            name: Фаза A
+          - entity: sensor.energy_meter_phase_b_power_2
+            name: Фаза B
+          - entity: sensor.energy_meter_phase_c_power_2
+            name: Фаза C
+
+      - type: statistics-graph
+        title: Напруга за місяць (мін/сер/макс)
+        days_to_show: 31
+        period: hour
+        stat_types:
+          - min
+          - mean
+          - max
+        chart_type: line
+        entities:
+          - entity: sensor.energy_meter_phase_a_voltage_2
+            name: Фаза A
+          - entity: sensor.energy_meter_phase_b_voltage_2
+            name: Фаза B
+          - entity: sensor.energy_meter_phase_c_voltage_2
+            name: Фаза C
+
+      - type: statistics-graph
+        title: Струм за місяць (погодинно)
+        days_to_show: 31
+        period: hour
+        stat_types:
+          - mean
+          - max
+        chart_type: line
+        entities:
+          - entity: sensor.zagalnii_strum
+            name: Разом
+
+  - title: Пів року
+    path: half-year
+    icon: mdi:calendar-range
+    cards:
+      - type: statistics-graph
+        title: Загальна потужність за пів року (по днях)
+        days_to_show: 183
+        period: day
+        stat_types:
+          - mean
+          - max
+        chart_type: line
+        entities:
+          - entity: sensor.zagalne_navantazhennia
+            name: Разом
+
+      - type: statistics-graph
+        title: Потужність фаз за пів року (по днях)
+        days_to_show: 183
+        period: day
+        stat_types:
+          - mean
+        chart_type: line
+        entities:
+          - entity: sensor.energy_meter_phase_a_power_2
+            name: Фаза A
+          - entity: sensor.energy_meter_phase_b_power_2
+            name: Фаза B
+          - entity: sensor.energy_meter_phase_c_power_2
+            name: Фаза C
+
+      - type: statistics-graph
+        title: Напруга за пів року (мін/сер/макс, по днях)
+        days_to_show: 183
+        period: day
+        stat_types:
+          - min
+          - mean
+          - max
+        chart_type: line
+        entities:
+          - entity: sensor.energy_meter_phase_a_voltage_2
+            name: Фаза A
+          - entity: sensor.energy_meter_phase_b_voltage_2
+            name: Фаза B
+          - entity: sensor.energy_meter_phase_c_voltage_2
+            name: Фаза C
+
+  - title: Вибір періоду
+    path: period
+    icon: mdi:calendar-search
+    cards:
+      - type: energy-date-selection
+
+      - type: statistics-graph
+        title: Загальна потужність за вибраний період
+        period: auto
+        energy_date_selection: true
+        stat_types:
+          - mean
+          - max
+        chart_type: line
+        entities:
+          - entity: sensor.zagalne_navantazhennia
+            name: Разом
+
+      - type: statistics-graph
+        title: Потужність фаз за вибраний період
+        period: auto
+        energy_date_selection: true
+        stat_types:
+          - mean
+        chart_type: line
+        entities:
+          - entity: sensor.energy_meter_phase_a_power_2
+            name: Фаза A
+          - entity: sensor.energy_meter_phase_b_power_2
+            name: Фаза B
+          - entity: sensor.energy_meter_phase_c_power_2
+            name: Фаза C
+
+      - type: statistics-graph
+        title: Напруга за вибраний період (мін/сер/макс)
+        period: auto
+        energy_date_selection: true
+        stat_types:
+          - min
+          - mean
+          - max
+        chart_type: line
         entities:
           - entity: sensor.energy_meter_phase_a_voltage_2
             name: Фаза A
