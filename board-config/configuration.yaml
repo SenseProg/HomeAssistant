@@ -61,6 +61,24 @@ lovelace:
       icon: mdi:flash
       show_in_sidebar: true
       filename: power_dashboard.yaml
+    router-dashboard:
+      mode: yaml
+      title: Роутер
+      icon: mdi:router-wireless
+      show_in_sidebar: true
+      filename: router_dashboard.yaml
+    midea-dashboard:
+      mode: yaml
+      title: Бойлер
+      icon: mdi:water-boiler
+      show_in_sidebar: true
+      filename: midea_dashboard.yaml
+    hikvision-dashboard:
+      mode: yaml
+      title: Камера
+      icon: mdi:cctv
+      show_in_sidebar: true
+      filename: hikvision_dashboard.yaml
 
 sensor:
   - platform: integration

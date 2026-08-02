@@ -1,0 +1,34 @@
+views:
+- title: Камера
+  path: camera
+  icon: mdi:cctv
+  type: sections
+  max_columns: 2
+  sections:
+  - type: grid
+    cards:
+    - type: picture-entity
+      entity: camera.cam1
+      name: Двір (Cam1)
+      show_state: false
+      show_name: true
+      camera_view: live
+      grid_options:
+        columns: full
+    - type: entities
+      title: Сенсори
+      grid_options:
+        columns: full
+      entities:
+      - entity: binary_sensor.cam1_motion
+        name: Рух
+      - entity: binary_sensor.cam1_illegal_access
+        name: Illegal access
+      - entity: binary_sensor.cam1_video_mismatch
+        name: Video mismatch (діагностика)
+    - type: history-graph
+      title: Активність руху за 24 години
+      hours_to_show: 24
+      entities:
+      - entity: binary_sensor.cam1_motion
+        name: Рух

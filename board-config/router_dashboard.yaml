@@ -1,0 +1,88 @@
+views:
+- title: Роутер
+  path: router
+  icon: mdi:router-wireless
+  type: sections
+  max_columns: 2
+  sections:
+  - type: grid
+    cards:
+    - type: entities
+      title: Стан пристрою
+      grid_options:
+        columns: full
+      entities:
+      - entity: sensor.spalnia_batkiv_192_168_50_1_devices_connected
+        name: Пристроїв підключено
+      - entity: sensor.spalnia_batkiv_192_168_50_1_cpu_temperature
+        name: Температура CPU
+      - entity: sensor.spalnia_batkiv_192_168_50_1_5ghz_temperature
+        name: Температура 5GHz радіо
+      - type: divider
+      - entity: sensor.spalnia_batkiv_192_168_50_1_average_load_1_min
+        name: Навантаження (1 хв)
+      - entity: sensor.spalnia_batkiv_192_168_50_1_average_load_5_min
+        name: Навантаження (5 хв)
+      - entity: sensor.spalnia_batkiv_192_168_50_1_average_load_15_min
+        name: Навантаження (15 хв)
+    - type: entities
+      title: Швидкість LAN-опитування
+      grid_options:
+        columns: full
+      entities:
+      - entity: sensor.spalnia_batkiv_192_168_50_1_download_speed
+        name: Швидкість завантаження
+      - entity: sensor.spalnia_batkiv_192_168_50_1_upload_speed
+        name: Швидкість вивантаження
+      - entity: sensor.spalnia_batkiv_192_168_50_1_download
+        name: Завантажено (лічильник)
+      - entity: sensor.spalnia_batkiv_192_168_50_1_upload
+        name: Вивантажено (лічильник)
+    - type: history-graph
+      title: Швидкість за 3 години
+      hours_to_show: 3
+      grid_options:
+        columns: full
+      entities:
+      - entity: sensor.spalnia_batkiv_192_168_50_1_download_speed
+        name: Завантаження
+      - entity: sensor.spalnia_batkiv_192_168_50_1_upload_speed
+        name: Вивантаження
+    - type: markdown
+      title: Про WAN-сенсори
+      grid_options:
+        columns: full
+      content: >
+        Вбудовані сенсори WAN-статусу і зовнішньої IP (через UPnP/IGD)
+        на цьому роутері нестабільні і завжди повертають
+        unavailable/0.0.0.0 - це обмеження прошивки ASUS, не Home
+        Assistant. Прибрано з дашборда свідомо.
+  - type: grid
+    cards:
+    - type: entities
+      title: Хто вдома (presence detection)
+      grid_options:
+        columns: full
+      entities:
+      - entity: device_tracker.homemate
+        name: HomeMate (ПК)
+      - entity: device_tracker.ok3568
+        name: Плата ok3568
+      - entity: device_tracker.samsung
+        name: Samsung
+      - entity: device_tracker.s20_fe_koristuvaca_kateryna
+        name: S20 FE (Катерина)
+      - entity: device_tracker.s21_pol_zovatela_kateryna
+        name: S21 (Катерина)
+      - entity: device_tracker.s23_ultra_dvk
+        name: S23 Ultra
+      - entity: device_tracker.laptop_u1i8pnmk
+        name: Ноутбук
+      - entity: device_tracker.noteasus
+        name: NoteAsus
+      - entity: device_tracker.esp_eea5c5
+        name: ESP пристрій (EEA5C5)
+      - entity: device_tracker.esp_eea84e
+        name: ESP пристрій (EEA84E)
+      - entity: device_tracker.sm_s918b
+        name: Телефон (mobile app)
