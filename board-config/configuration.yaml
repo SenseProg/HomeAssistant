@@ -50,6 +50,9 @@ recorder:
 
 # --- Separate YAML dashboard with instantaneous power graphs ---
 lovelace:
+  resources:
+    - url: /hacsfiles/sunsynk-power-flow-card/sunsynk-power-flow-card.js
+      type: module
   mode: storage
   dashboards:
     power-dashboard:

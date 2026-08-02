@@ -265,3 +265,107 @@ views:
         name: Разом
       grid_options:
         columns: full
+- title: Інвертор
+  path: inverter
+  icon: mdi:solar-power-variant
+  type: sections
+  max_columns: 2
+  sections:
+  - type: grid
+    cards:
+    - type: custom:sunsynk-power-flow-card
+      cardstyle: lite
+      panel_mode: false
+      large_font: true
+      show_solar: false
+      inverter:
+        modern: true
+        three_phase: true
+        model: deye
+        autarky: power
+      battery:
+        energy: 10000
+        shutdown_soc: 15
+        show_daily: true
+        invert_power: false
+        animation_speed: 6
+        max_power: 5000
+      load:
+        show_daily: true
+        animation_speed: 8
+        max_power: 15000
+        show_absolute: false
+      grid:
+        show_daily_buy: true
+        show_daily_sell: true
+        animation_speed: 8
+        max_power: 15000
+        invert_grid: false
+      entities:
+        inverter_status_59: sensor.inverter_device_state
+        inverter_power_175: sensor.inverter_power
+        inverter_voltage_154: sensor.inverter_output_l2_voltage
+        load_frequency_192: sensor.inverter_load_frequency
+        dc_transformer_temp_90: sensor.inverter_dc_temperature
+        battery_soc_184: sensor.inverter_battery
+        battery_power_190: sensor.inverter_battery_power
+        battery_voltage_183: sensor.inverter_battery_voltage
+        battery_current_191: sensor.inverter_battery_current
+        battery_temp_182: sensor.inverter_battery_temperature
+        day_battery_charge_70: sensor.inverter_today_battery_charge
+        day_battery_discharge_71: sensor.inverter_today_battery_discharge
+        grid_ct_power_172: sensor.inverter_grid_power
+        grid_power_169: sensor.inverter_grid_power
+        grid_ct_power_l2: sensor.inverter_grid_l2_power
+        grid_ct_power_l3: sensor.inverter_grid_l3_power
+        grid_voltage: sensor.inverter_grid_l1_voltage
+        grid_connected_status_194: sensor.inverter_device_relay
+        day_grid_import_76: sensor.inverter_today_energy_import
+        day_grid_export_77: sensor.inverter_today_energy_export
+        essential_power: sensor.inverter_load_power
+        load_power_l1: sensor.inverter_load_l1_power
+        load_power_l2: sensor.inverter_load_l2_power
+        load_power_l3: sensor.inverter_load_l3_power
+        day_load_energy_84: sensor.inverter_today_load_consumption
+      grid_options:
+        columns: full
+  - type: grid
+    cards:
+    - type: entities
+      title: Батарея
+      grid_options:
+        columns: full
+      entities:
+      - entity: sensor.inverter_battery
+        name: Заряд (SOC)
+      - entity: sensor.inverter_battery_power
+        name: Потужність
+      - entity: sensor.inverter_battery_voltage
+        name: Напруга
+      - entity: sensor.inverter_battery_state
+        name: Стан
+      - entity: sensor.inverter_battery_soh
+        name: Здоров'я (SOH)
+      - entity: sensor.inverter_battery_temperature
+        name: Температура
+      - entity: sensor.inverter_total_battery_life_cycles
+        name: Циклів за весь час
+    - type: entities
+      title: Інвертор і мережа
+      grid_options:
+        columns: full
+      entities:
+      - entity: sensor.inverter_device_state
+        name: Стан пристрою
+      - entity: sensor.inverter_device_relay
+        name: Реле
+      - entity: sensor.inverter_device_alarm
+        name: Аварія
+      - entity: sensor.inverter_grid_frequency
+        name: Частота мережі
+      - entity: sensor.inverter_dc_temperature
+        name: Температура DC
+      - entity: sensor.inverter_today_energy_import
+        name: Спожито з мережі сьогодні
+      - entity: sensor.inverter_today_load_consumption
+        name: Навантаження сьогодні
