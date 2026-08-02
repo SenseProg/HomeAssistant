@@ -1,0 +1,489 @@
+views:
+- title: Роутер
+  path: router
+  icon: mdi:router-wireless
+  type: sections
+  max_columns: 2
+  sections:
+  - type: grid
+    cards:
+    - type: entities
+      title: Стан пристрою
+      grid_options:
+        columns: full
+      entities:
+      - entity: sensor.spalnia_batkiv_192_168_50_1_devices_connected
+        name: Пристроїв підключено
+      - entity: sensor.spalnia_batkiv_192_168_50_1_cpu_temperature
+        name: Температура CPU
+      - entity: sensor.spalnia_batkiv_192_168_50_1_5ghz_temperature
+        name: Температура 5GHz радіо
+      - type: divider
+      - entity: sensor.spalnia_batkiv_192_168_50_1_average_load_1_min
+        name: Навантаження (1 хв)
+      - entity: sensor.spalnia_batkiv_192_168_50_1_average_load_5_min
+        name: Навантаження (5 хв)
+      - entity: sensor.spalnia_batkiv_192_168_50_1_average_load_15_min
+        name: Навантаження (15 хв)
+    - type: entities
+      title: Швидкість LAN-опитування
+      grid_options:
+        columns: full
+      entities:
+      - entity: sensor.spalnia_batkiv_192_168_50_1_download_speed
+        name: Швидкість завантаження
+      - entity: sensor.spalnia_batkiv_192_168_50_1_upload_speed
+        name: Швидкість вивантаження
+      - entity: sensor.spalnia_batkiv_192_168_50_1_download
+        name: Завантажено (лічильник)
+      - entity: sensor.spalnia_batkiv_192_168_50_1_upload
+        name: Вивантажено (лічильник)
+    - type: history-graph
+      title: Швидкість за 3 години
+      hours_to_show: 3
+      grid_options:
+        columns: full
+      entities:
+      - entity: sensor.spalnia_batkiv_192_168_50_1_download_speed
+        name: Завантаження
+      - entity: sensor.spalnia_batkiv_192_168_50_1_upload_speed
+        name: Вивантаження
+    - type: markdown
+      title: Про WAN-сенсори
+      grid_options:
+        columns: full
+      content: >
+        Вбудовані сенсори WAN-статусу і зовнішньої IP (через UPnP/IGD)
+        на цьому роутері нестабільні і завжди повертають
+        unavailable/0.0.0.0 - це обмеження прошивки ASUS, не Home
+        Assistant. Прибрано з дашборда свідомо.
+  - type: grid
+    cards:
+    - type: entities
+      title: Хто вдома (presence detection)
+      grid_options:
+        columns: full
+      entities:
+      - entity: device_tracker.homemate
+        name: HomeMate (ПК)
+      - entity: device_tracker.ok3568
+        name: Плата ok3568
+      - entity: device_tracker.samsung
+        name: Samsung
+      - entity: device_tracker.s20_fe_koristuvaca_kateryna
+        name: S20 FE (Катерина)
+      - entity: device_tracker.s21_pol_zovatela_kateryna
+        name: S21 (Катерина)
+      - entity: device_tracker.s23_ultra_dvk
+        name: S23 Ultra
+      - entity: device_tracker.laptop_u1i8pnmk
+        name: Ноутбук
+      - entity: device_tracker.noteasus
+        name: NoteAsus
+      - entity: device_tracker.esp_eea5c5
+        name: ESP пристрій (EEA5C5)
+      - entity: device_tracker.esp_eea84e
+        name: ESP пристрій (EEA84E)
+      - entity: device_tracker.sm_s918b
+        name: Телефон (mobile app)
+- title: Бойлер
+  path: midea
+  icon: mdi:water-boiler
+  type: sections
+  max_columns: 2
+  sections:
+  - type: grid
+    cards:
+    - type: thermostat
+      entity: water_heater.144036023323246_water_heater
+      name: Електричний водонагрівач
+      grid_options:
+        columns: full
+    - type: entities
+      title: Деталі
+      grid_options:
+        columns: full
+      entities:
+      - entity: water_heater.144036023323246_water_heater
+        name: Стан
+    - type: history-graph
+      title: Температура за 24 години
+      hours_to_show: 24
+      entities:
+      - entity: water_heater.144036023323246_water_heater
+        name: Водонагрівач
+- title: Камера
+  path: camera
+  icon: mdi:cctv
+  type: sections
+  max_columns: 2
+  sections:
+  - type: grid
+    cards:
+    - type: picture-entity
+      entity: camera.cam1
+      name: Двір (Cam1)
+      show_state: false
+      show_name: true
+      camera_view: live
+      grid_options:
+        columns: full
+    - type: entities
+      title: Сенсори
+      grid_options:
+        columns: full
+      entities:
+      - entity: binary_sensor.cam1_motion
+        name: Рух
+      - entity: binary_sensor.cam1_illegal_access
+        name: Illegal access
+      - entity: binary_sensor.cam1_video_mismatch
+        name: Video mismatch (діагностика)
+    - type: history-graph
+      title: Активність руху за 24 години
+      hours_to_show: 24
+      entities:
+      - entity: binary_sensor.cam1_motion
+        name: Рух
+- title: Автополив
+  path: poliv
+  icon: mdi:sprinkler-variant
+  type: sections
+  max_columns: 2
+  sections:
+  - type: grid
+    cards:
+    - type: heading
+      heading: Зона 1
+      grid_options:
+        columns: full
+    - type: tile
+      entity: input_number.poliv_zona_1_hvylyn
+      name: Тривалість (хв)
+      grid_options:
+        columns: full
+      features:
+      - type: numeric-input
+        style: buttons
+    - type: entities
+      grid_options:
+        columns: full
+      entities:
+      - entity: switch.avtopoliv_kontroler_switch_1
+        name: Клапан
+      - entity: script.poliv_zona_1
+        name: Йде полив
+    - type: button
+      name: Старт
+      icon: mdi:play
+      grid_options:
+        columns: 6
+      tap_action:
+        action: call-service
+        service: script.poliv_zona_1
+    - type: button
+      name: Стоп
+      icon: mdi:stop
+      grid_options:
+        columns: 6
+      tap_action:
+        action: call-service
+        service: homeassistant.turn_off
+        target:
+          entity_id:
+          - switch.avtopoliv_kontroler_switch_1
+          - script.poliv_zona_1
+  - type: grid
+    cards:
+    - type: heading
+      heading: Зона 2
+      grid_options:
+        columns: full
+    - type: tile
+      entity: input_number.poliv_zona_2_hvylyn
+      name: Тривалість (хв)
+      grid_options:
+        columns: full
+      features:
+      - type: numeric-input
+        style: buttons
+    - type: entities
+      grid_options:
+        columns: full
+      entities:
+      - entity: switch.avtopoliv_kontroler_switch_2
+        name: Клапан
+      - entity: script.poliv_zona_2
+        name: Йде полив
+    - type: button
+      name: Старт
+      icon: mdi:play
+      grid_options:
+        columns: 6
+      tap_action:
+        action: call-service
+        service: script.poliv_zona_2
+    - type: button
+      name: Стоп
+      icon: mdi:stop
+      grid_options:
+        columns: 6
+      tap_action:
+        action: call-service
+        service: homeassistant.turn_off
+        target:
+          entity_id:
+          - switch.avtopoliv_kontroler_switch_2
+          - script.poliv_zona_2
+  - type: grid
+    cards:
+    - type: heading
+      heading: Зона 3
+      grid_options:
+        columns: full
+    - type: tile
+      entity: input_number.poliv_zona_3_hvylyn
+      name: Тривалість (хв)
+      grid_options:
+        columns: full
+      features:
+      - type: numeric-input
+        style: buttons
+    - type: entities
+      grid_options:
+        columns: full
+      entities:
+      - entity: switch.avtopoliv_kontroler_switch_3
+        name: Клапан
+      - entity: script.poliv_zona_3
+        name: Йде полив
+    - type: button
+      name: Старт
+      icon: mdi:play
+      grid_options:
+        columns: 6
+      tap_action:
+        action: call-service
+        service: script.poliv_zona_3
+    - type: button
+      name: Стоп
+      icon: mdi:stop
+      grid_options:
+        columns: 6
+      tap_action:
+        action: call-service
+        service: homeassistant.turn_off
+        target:
+          entity_id:
+          - switch.avtopoliv_kontroler_switch_3
+          - script.poliv_zona_3
+  - type: grid
+    cards:
+    - type: heading
+      heading: Зона 4
+      grid_options:
+        columns: full
+    - type: tile
+      entity: input_number.poliv_zona_4_hvylyn
+      name: Тривалість (хв)
+      grid_options:
+        columns: full
+      features:
+      - type: numeric-input
+        style: buttons
+    - type: entities
+      grid_options:
+        columns: full
+      entities:
+      - entity: switch.avtopoliv_kontroler_switch_4
+        name: Клапан
+      - entity: script.poliv_zona_4
+        name: Йде полив
+    - type: button
+      name: Старт
+      icon: mdi:play
+      grid_options:
+        columns: 6
+      tap_action:
+        action: call-service
+        service: script.poliv_zona_4
+    - type: button
+      name: Стоп
+      icon: mdi:stop
+      grid_options:
+        columns: 6
+      tap_action:
+        action: call-service
+        service: homeassistant.turn_off
+        target:
+          entity_id:
+          - switch.avtopoliv_kontroler_switch_4
+          - script.poliv_zona_4
+  - type: grid
+    cards:
+    - type: heading
+      heading: Зона 5
+      grid_options:
+        columns: full
+    - type: tile
+      entity: input_number.poliv_zona_5_hvylyn
+      name: Тривалість (хв)
+      grid_options:
+        columns: full
+      features:
+      - type: numeric-input
+        style: buttons
+    - type: entities
+      grid_options:
+        columns: full
+      entities:
+      - entity: switch.avtopoliv_kontroler_switch_5
+        name: Клапан
+      - entity: script.poliv_zona_5
+        name: Йде полив
+    - type: button
+      name: Старт
+      icon: mdi:play
+      grid_options:
+        columns: 6
+      tap_action:
+        action: call-service
+        service: script.poliv_zona_5
+    - type: button
+      name: Стоп
+      icon: mdi:stop
+      grid_options:
+        columns: 6
+      tap_action:
+        action: call-service
+        service: homeassistant.turn_off
+        target:
+          entity_id:
+          - switch.avtopoliv_kontroler_switch_5
+          - script.poliv_zona_5
+  - type: grid
+    cards:
+    - type: heading
+      heading: Зона 6
+      grid_options:
+        columns: full
+    - type: tile
+      entity: input_number.poliv_zona_6_hvylyn
+      name: Тривалість (хв)
+      grid_options:
+        columns: full
+      features:
+      - type: numeric-input
+        style: buttons
+    - type: entities
+      grid_options:
+        columns: full
+      entities:
+      - entity: switch.avtopoliv_kontroler_switch_6
+        name: Клапан
+      - entity: script.poliv_zona_6
+        name: Йде полив
+    - type: button
+      name: Старт
+      icon: mdi:play
+      grid_options:
+        columns: 6
+      tap_action:
+        action: call-service
+        service: script.poliv_zona_6
+    - type: button
+      name: Стоп
+      icon: mdi:stop
+      grid_options:
+        columns: 6
+      tap_action:
+        action: call-service
+        service: homeassistant.turn_off
+        target:
+          entity_id:
+          - switch.avtopoliv_kontroler_switch_6
+          - script.poliv_zona_6
+  - type: grid
+    cards:
+    - type: heading
+      heading: Зона 7
+      grid_options:
+        columns: full
+    - type: tile
+      entity: input_number.poliv_zona_7_hvylyn
+      name: Тривалість (хв)
+      grid_options:
+        columns: full
+      features:
+      - type: numeric-input
+        style: buttons
+    - type: entities
+      grid_options:
+        columns: full
+      entities:
+      - entity: switch.avtopoliv_kontroler_switch_7
+        name: Клапан
+      - entity: script.poliv_zona_7
+        name: Йде полив
+    - type: button
+      name: Старт
+      icon: mdi:play
+      grid_options:
+        columns: 6
+      tap_action:
+        action: call-service
+        service: script.poliv_zona_7
+    - type: button
+      name: Стоп
+      icon: mdi:stop
+      grid_options:
+        columns: 6
+      tap_action:
+        action: call-service
+        service: homeassistant.turn_off
+        target:
+          entity_id:
+          - switch.avtopoliv_kontroler_switch_7
+          - script.poliv_zona_7
+  - type: grid
+    cards:
+    - type: heading
+      heading: Зона 8
+      grid_options:
+        columns: full
+    - type: tile
+      entity: input_number.poliv_zona_8_hvylyn
+      name: Тривалість (хв)
+      grid_options:
+        columns: full
+      features:
+      - type: numeric-input
+        style: buttons
+    - type: entities
+      grid_options:
+        columns: full
+      entities:
+      - entity: switch.avtopoliv_kontroler_switch_8
+        name: Клапан
+      - entity: script.poliv_zona_8
+        name: Йде полив
+    - type: button
+      name: Старт
+      icon: mdi:play
+      grid_options:
+        columns: 6
+      tap_action:
+        action: call-service
+        service: script.poliv_zona_8
+    - type: button
+      name: Стоп
+      icon: mdi:stop
+      grid_options:
+        columns: 6
+      tap_action:
+        action: call-service
+        service: homeassistant.turn_off
+        target:
+          entity_id:
+          - switch.avtopoliv_kontroler_switch_8
+          - script.poliv_zona_8

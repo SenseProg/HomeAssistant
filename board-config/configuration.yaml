@@ -6,6 +6,63 @@ default_config:
 frontend:
   themes: !include_dir_merge_named themes
 
+input_number:
+  poliv_zona_1_hvylyn:
+    name: Зона 1 - хвилин поливу
+    min: 1
+    max: 60
+    step: 1
+    initial: 10
+    icon: mdi:timer-outline
+  poliv_zona_2_hvylyn:
+    name: Зона 2 - хвилин поливу
+    min: 1
+    max: 60
+    step: 1
+    initial: 10
+    icon: mdi:timer-outline
+  poliv_zona_3_hvylyn:
+    name: Зона 3 - хвилин поливу
+    min: 1
+    max: 60
+    step: 1
+    initial: 10
+    icon: mdi:timer-outline
+  poliv_zona_4_hvylyn:
+    name: Зона 4 - хвилин поливу
+    min: 1
+    max: 60
+    step: 1
+    initial: 10
+    icon: mdi:timer-outline
+  poliv_zona_5_hvylyn:
+    name: Зона 5 - хвилин поливу
+    min: 1
+    max: 60
+    step: 1
+    initial: 10
+    icon: mdi:timer-outline
+  poliv_zona_6_hvylyn:
+    name: Зона 6 - хвилин поливу
+    min: 1
+    max: 60
+    step: 1
+    initial: 10
+    icon: mdi:timer-outline
+  poliv_zona_7_hvylyn:
+    name: Зона 7 - хвилин поливу
+    min: 1
+    max: 60
+    step: 1
+    initial: 10
+    icon: mdi:timer-outline
+  poliv_zona_8_hvylyn:
+    name: Зона 8 - хвилин поливу
+    min: 1
+    max: 60
+    step: 1
+    initial: 10
+    icon: mdi:timer-outline
 automation: !include automations.yaml
 script: !include scripts.yaml
 scene: !include scenes.yaml
@@ -61,24 +118,12 @@ lovelace:
       icon: mdi:flash
       show_in_sidebar: true
       filename: power_dashboard.yaml
-    router-dashboard:
+    pristroi-dashboard:
       mode: yaml
-      title: Роутер
-      icon: mdi:router-wireless
+      title: Пристрої
+      icon: mdi:devices
       show_in_sidebar: true
-      filename: router_dashboard.yaml
-    midea-dashboard:
-      mode: yaml
-      title: Бойлер
-      icon: mdi:water-boiler
-      show_in_sidebar: true
-      filename: midea_dashboard.yaml
-    hikvision-dashboard:
-      mode: yaml
-      title: Камера
-      icon: mdi:cctv
-      show_in_sidebar: true
-      filename: hikvision_dashboard.yaml
+      filename: devices_dashboard.yaml
 
 sensor:
   - platform: integration
