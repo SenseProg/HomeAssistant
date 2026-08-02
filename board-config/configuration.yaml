@@ -61,3 +61,13 @@ lovelace:
       icon: mdi:flash
       show_in_sidebar: true
       filename: power_dashboard.yaml
+
+sensor:
+  - platform: integration
+    source: sensor.zariadka_7_5kvt_device_kw
+    name: Зарядка авто - спожито
+    unique_id: ev_charger_energy_total
+    unit_time: h
+    method: left
+    round: 3
+    max_sub_interval: "00:01:00"
