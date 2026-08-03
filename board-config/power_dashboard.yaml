@@ -435,3 +435,110 @@ views:
         Важливо: перерахунок стосується лише споживання ПІСЛЯ підключення
         тарифу (2026-08-03). Історія до цього моменту порахована за старою
         плоскою ціною 2.5 грн і заднім числом не переписується.
+- title: Наживо
+  path: live
+  icon: mdi:pulse
+  type: sections
+  max_columns: 4
+  dense_section_placement: true
+  sections:
+  - type: grid
+    cards:
+    - type: heading
+      heading: Потужність зараз
+      grid_options:
+        columns: full
+    - type: tile
+      entity: sensor.zagalne_navantazhennia
+      name: Весь будинок
+      grid_options:
+        columns: full
+    - type: tile
+      entity: sensor.zariadka_7_5kvt_device_kw
+      name: Зарядка авто
+      grid_options:
+        columns: 6
+    - type: tile
+      entity: sensor.boiler_potuzhnist
+      name: Бойлер
+      grid_options:
+        columns: 6
+    - type: tile
+      entity: sensor.nasos_polivu_potuzhnist_zaraz
+      name: Насос поливу
+      grid_options:
+        columns: 6
+    - type: tile
+      entity: sensor.tarif_elektroenergii_zaraz
+      name: Тариф
+      grid_options:
+        columns: 6
+  - type: grid
+    cards:
+    - type: heading
+      heading: Спожито сьогодні (оновлюється миттєво)
+      grid_options:
+        columns: full
+    - type: entities
+      grid_options:
+        columns: full
+      entities:
+      - entity: sensor.energy_meter_budinok_spozhito_sogodni
+        name: Весь будинок
+      - type: divider
+      - entity: sensor.zariadka_avto_sogodni
+        name: Зарядка авто
+      - entity: sensor.boiler_sogodni
+        name: Бойлер
+      - entity: sensor.nasos_polivu_energiia_sogodni
+        name: Насос поливу
+      - entity: sensor.terneo_1_tepla_pidloga_1_sogodni
+        name: Тепла підлога 1
+  - type: grid
+    cards:
+    - type: heading
+      heading: Деталізація по 5 хвилин
+      grid_options:
+        columns: full
+    - type: statistics-graph
+      title: Зарядка авто
+      chart_type: bar
+      period: 5minute
+      days_to_show: 1
+      stat_types:
+      - change
+      grid_options:
+        columns: full
+      entities:
+      - entity: sensor.zariadka_avto_spozhito
+        name: Зарядка
+    - type: statistics-graph
+      title: Весь будинок
+      chart_type: bar
+      period: 5minute
+      days_to_show: 1
+      stat_types:
+      - change
+      grid_options:
+        columns: full
+      entities:
+      - entity: sensor.energy_meter_total_energy
+        name: Будинок
+  - type: grid
+    cards:
+    - type: markdown
+      title: Чому Енергія показує менше
+      grid_options:
+        columns: full
+      content: >
+        Розділ "Енергія" малює ГОДИННУ статистику. Поточна година туди
+        потрапляє лише після того, як вона закінчиться, тому о 23:40 там ще
+        видно дані за 22:00 - і це не застарілість, а те, як влаштований
+        дашборд. Оновлення сторінки не допоможе: годинного запису за поточну
+        годину просто ще не існує.
+
+        Перевірено 2026-08-03: годинна статистика зарядки давала 0.236 кВт-год
+        за 22:00, тоді як 5-хвилинна вже показувала 3.992, а сам сенсор -
+        4.125. Тому ця вкладка побудована на 5-хвилинній статистиці та на
+        добових лічильниках, які є звичайними сутностями й оновлюються з
+        кожною зміною - без очікування кінця години.

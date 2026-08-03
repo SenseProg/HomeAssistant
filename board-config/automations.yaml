@@ -264,3 +264,59 @@
       continue_on_timeout: false
     - delay: 00:00:10
   mode: single
+
+- id: tcl_idle_slideshow_start
+  alias: TCL - запустити фотозаставку після 5 хвилин простою
+  description: >-
+    Не вмикає телевізор. Стартує лише якщо вже ввімкнений TCL безперервно
+    перебуває у стані idle п'ять хвилин.
+  triggers:
+  - trigger: state
+    entity_id: media_player.televizor_tcl
+    to: idle
+    for: 00:05:00
+  conditions:
+  - condition: state
+    entity_id: media_player.televizor_tcl
+    state: idle
+  actions:
+  - action: script.turn_on
+    target:
+      entity_id: script.tv_idle_slideshow
+  mode: restart
+
+- id: tcl_idle_slideshow_stop_on_activity
+  alias: TCL - зупинити фотозаставку при активності
+  description: >-
+    Не дає заставці перебивати відео чи застосунок, який запустив користувач.
+    Дві секунди потрібні, щоб не прийняти власний запуск JPEG через стандартний
+    Cast receiver за сторонню активність.
+  triggers:
+  - trigger: state
+    entity_id: media_player.televizor_tcl
+  - trigger: state
+    entity_id: media_player.televizor_tcl
+    attribute: app_id
+  - trigger: state
+    entity_id: media_player.televizor_tcl
+    attribute: media_content_type
+  conditions:
+  - condition: state
+    entity_id: script.tv_idle_slideshow
+    state: 'on'
+  actions:
+  - delay: 00:00:02
+  - condition: template
+    value_template: >-
+      {% set tv = 'media_player.televizor_tcl' %}
+      {% set st = states(tv) %}
+      {% set app = state_attr(tv, 'app_name') | default('', true) %}
+      {% set kind = state_attr(tv, 'media_content_type') | default('', true) %}
+      {{ st in ['off', 'unavailable']
+         or (st not in ['idle']
+             and kind != 'image/jpeg'
+             and app not in ['Default Media Receiver', 'Home Assistant Cast']) }}
+  - action: script.turn_off
+    target:
+      entity_id: script.tv_idle_slideshow
+  mode: restart

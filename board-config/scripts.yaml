@@ -93,3 +93,58 @@ poliv_stop_all:
       - switch.avtopoliv_kontroler_switch_1
       - switch.avtopoliv_kontroler_switch_2
       - switch.avtopoliv_kontroler_switch_3
+
+tv_idle_slideshow:
+  alias: TCL - фотозаставка у режимі простою
+  description: >-
+    Показує випадкові JPEG з двох перевірених альбомів NAS кожні 20 секунд.
+    Запускається автоматизацією лише після 5 хвилин idle. Вимкнений телевізор
+    не будить. Цикл завершується, коли телевізор стає недоступним, вимикається
+    або користувач запускає інший застосунок/медіа.
+  icon: mdi:image-multiple
+  mode: restart
+  sequence:
+  - variables:
+      tv: media_player.televizor_tcl
+      photos:
+      - media-source://media_source/local/foto/2018/01-18/Карпаты/20180126_170841_001.jpg
+      - media-source://media_source/local/foto/2018/01-18/Карпаты/20180126_170859_001.jpg
+      - media-source://media_source/local/foto/2018/01-18/Карпаты/20180127_132828_001.jpg
+      - media-source://media_source/local/foto/2018/01-18/Карпаты/20180127_132828_002.jpg
+      - media-source://media_source/local/foto/2018/01-18/Карпаты/20180127_132828_003.jpg
+      - media-source://media_source/local/foto/2018/01-18/Карпаты/20180127_132828_004.jpg
+      - media-source://media_source/local/foto/2018/01-18/Карпаты/20180127_132828_005.jpg
+      - media-source://media_source/local/foto/2018/01-18/Карпаты/20180127_132828_006.jpg
+      - media-source://media_source/local/foto/2018/01-18/Карпаты/20180127_132828_007.jpg
+      - media-source://media_source/local/foto/2018/01-18/Карпаты/20180127_132828_008.jpg
+      - media-source://media_source/local/foto/2018/01-18/Карпаты/20180127_132828_009.jpg
+      - media-source://media_source/local/foto/2018/01-18/Карпаты/20180127_132828_010.jpg
+      - media-source://media_source/local/foto/2018/01-18/Карпаты/20180127_132828_011.jpg
+      - media-source://media_source/local/foto/2018/01-18/Карпаты/20180127_132828_012.jpg
+      - media-source://media_source/local/foto/2018/01-18/Карпаты/20180127_132828_013.jpg
+      - media-source://media_source/local/foto/2015/11-2015/Бахмут/20151105_104444.jpg
+      - media-source://media_source/local/foto/2015/11-2015/Бахмут/20151105_104500.jpg
+      - media-source://media_source/local/foto/2015/11-2015/Бахмут/20151105_104524.jpg
+      - media-source://media_source/local/foto/2015/11-2015/Бахмут/20151105_104541.jpg
+      - media-source://media_source/local/foto/2015/11-2015/Бахмут/image-5ded100ffad0124b665e242c5d0c0cfb02ea6a163da864284dcec8cc7138a858-V.jpg
+  - repeat:
+      while:
+      - condition: template
+        value_template: >-
+          {% set st = states(tv) %}
+          {% set app = state_attr(tv, 'app_name') | default('', true) %}
+          {% set kind = state_attr(tv, 'media_content_type') | default('', true) %}
+          {{ st == 'idle'
+             or (st in ['playing', 'paused']
+                 and (kind == 'image/jpeg'
+                      or app in ['Default Media Receiver', 'Home Assistant Cast'])) }}
+      sequence:
+      - variables:
+          photo: '{{ photos | random }}'
+      - action: media_player.play_media
+        target:
+          entity_id: '{{ tv }}'
+        data:
+          media_content_id: '{{ photo }}'
+          media_content_type: image/jpeg
+      - delay: 00:00:20
