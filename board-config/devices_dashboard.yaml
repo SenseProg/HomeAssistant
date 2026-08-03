@@ -641,3 +641,201 @@ views:
         рішення приймається лише за нею. Хмарна працює резервом і враховується
         тільки тоді, коли локальна недоступна. Якщо мовчать обидві - потужність
         вважається нульовою, щоб не нараховувати вигадане споживання.
+- title: Заряджання авто
+  path: ev-charging
+  icon: mdi:ev-station
+  type: sections
+  max_columns: 3
+  sections:
+  - type: grid
+    cards:
+    - type: heading
+      heading: Зарядна станція 1 · 7,5 кВт
+      icon: mdi:ev-station
+      grid_options:
+        columns: full
+    - type: markdown
+      grid_options:
+        columns: full
+      content: >-
+        {% set power = states('sensor.zariadka_7_5kvt_device_kw') | float(0) %}
+        {% set voltage = states('sensor.zariadka_7_5kvt_voltage_a') | float(0) %}
+        {% set device_state = states('sensor.zariadka_7_5kvt_device_state') | lower %}
+        {% if is_state('binary_sensor.zariadka_7_5kvt_fault', 'on') %}
+        # 🔴 НЕСПРАВНІСТЬ ЗАРЯДНОЇ СТАНЦІЇ
+        {% elif power > 0.1 or device_state in ['charing', 'charging'] %}
+        # 🟢 ЗАРЯДЖАННЯ ТРИВАЄ
+        {% elif is_state('switch.zariadka_7_5kvt', 'off') %}
+        # ⚪ ЗАРЯДНУ СТАНЦІЮ ВИМКНЕНО
+        {% else %}
+        # 🟡 ПІДКЛЮЧЕНО, ОЧІКУЄ АВТОМОБІЛЬ
+        {% endif %}
+
+        **Зараз:** {{ power | round(2) }} кВт · {{ voltage | round(1) }} В
+        {% if power > 0 and voltage > 0 %} · приблизно {{ (power * 1000 / voltage) | round(1) }} А{% endif %}
+
+        **Температура станції:** {{ states('sensor.zariadka_7_5kvt_device_temperature') }} °C
+    - type: tile
+      entity: sensor.zariadka_7_5kvt_device_kw
+      name: Потужність зараз
+      icon: mdi:flash
+      color: amber
+      grid_options:
+        columns: 6
+    - type: tile
+      entity: sensor.zariadka_avto_spozhito
+      name: Спожито від початку обліку
+      icon: mdi:counter
+      color: blue
+      grid_options:
+        columns: 6
+    - type: tile
+      entity: sensor.zariadka_7_5kvt_voltage_a
+      name: Напруга
+      icon: mdi:sine-wave
+      grid_options:
+        columns: 6
+    - type: tile
+      entity: sensor.zariadka_7_5kvt_device_temperature
+      name: Температура станції
+      icon: mdi:thermometer
+      grid_options:
+        columns: 6
+    - type: tile
+      entity: binary_sensor.zariadka_7_5kvt_fault
+      name: Несправність
+      icon: mdi:alert-circle
+      color: red
+      grid_options:
+        columns: 6
+    - type: tile
+      entity: switch.zariadka_7_5kvt
+      name: Живлення зарядної станції
+      icon: mdi:ev-plug-type2
+      color: green
+      tap_action:
+        action: more-info
+      hold_action:
+        action: toggle
+        confirmation:
+          text: Змінити живлення зарядної станції? Під час заряджання це зупинить сесію.
+      grid_options:
+        columns: 6
+    - type: markdown
+      title: Безпечне керування
+      grid_options:
+        columns: full
+      content: >-
+        Коротке натискання лише відкриває деталі. Щоб увімкнути або вимкнути
+        станцію, **утримуйте** плитку «Живлення зарядної станції» і підтвердьте
+        дію. Так заряджання не зупиниться від випадкового дотику.
+  - type: grid
+    cards:
+    - type: heading
+      heading: Споживання та історія
+      icon: mdi:chart-areaspline
+      grid_options:
+        columns: full
+    - type: history-graph
+      title: Потужність за 24 години
+      hours_to_show: 24
+      grid_options:
+        columns: full
+      entities:
+      - entity: sensor.zariadka_7_5kvt_device_kw
+        name: Зарядна станція 1
+    - type: statistics-graph
+      title: Спожито за добу
+      chart_type: bar
+      period: day
+      days_to_show: 30
+      stat_types:
+      - change
+      grid_options:
+        columns: full
+      entities:
+      - entity: sensor.zariadka_avto_spozhito
+        name: Зарядна станція 1
+    - type: history-graph
+      title: Коли зарядна станція вмикалася · 7 днів
+      hours_to_show: 168
+      grid_options:
+        columns: full
+      entities:
+      - entity: switch.zariadka_7_5kvt
+        name: Живлення станції
+      - entity: sensor.zariadka_7_5kvt_device_kw
+        name: Потужність
+    - type: markdown
+      title: Як рахується електроенергія
+      grid_options:
+        columns: full
+      content: >-
+        `sensor.zariadka_avto_spozhito` інтегрує фактичну потужність
+        `sensor.zariadka_7_5kvt_device_kw` у часі. Стовпчики показують приріст
+        цього накопичувального лічильника за кожну добу; графік живлення та
+        потужності показує частоту і тривалість сесій.
+
+        Датчик струму самої інтеграції зараз має неправильний масштаб та навіть
+        помилкову одиницю «V», тому на головній картці струм обчислюється як
+        `потужність × 1000 / напруга` і явно позначений як приблизний.
+  - type: grid
+    cards:
+    - type: heading
+      heading: Налаштування станції 1
+      icon: mdi:tune-variant
+      grid_options:
+        columns: full
+    - type: tile
+      entity: number.zariadka_7_5kvt_set_32a
+      name: Максимальний струм заряджання
+      icon: mdi:current-ac
+      tap_action:
+        action: more-info
+      grid_options:
+        columns: full
+    - type: tile
+      entity: number.zariadka_7_5kvt_set_delay_time
+      name: Відкладений старт · години
+      icon: mdi:clock-start
+      tap_action:
+        action: more-info
+      grid_options:
+        columns: 6
+    - type: tile
+      entity: number.zariadka_7_5kvt_set_define_time
+      name: Обмеження тривалості · години
+      icon: mdi:timer-sand
+      tap_action:
+        action: more-info
+      grid_options:
+        columns: 6
+    - type: entities
+      title: Службовий стан
+      grid_options:
+        columns: full
+      entities:
+      - entity: sensor.zariadka_7_5kvt_device_state
+        name: Стан заряджання
+      - entity: sensor.zariadka_7_5kvt_max_set_ampere
+        name: Апаратна межа струму
+    - type: markdown
+      title: Що означають налаштування
+      grid_options:
+        columns: full
+      content: >-
+        **Максимальний струм** задає межу навантаження; для цієї однофазної
+        станції пристрій повідомляє апаратну межу 32 А. **Відкладений старт** —
+        через скільки годин почати заряджання. **Обмеження тривалості** — скільки
+        годин дозволено заряджати після старту; нуль означає, що таймер не задано.
+
+        Зміни застосовуються безпосередньо до зарядної станції. Не змінюйте їх
+        посеред активної сесії без потреби.
+    - type: markdown
+      title: Майбутні зарядні станції
+      grid_options:
+        columns: full
+      content: >-
+        Ця колонка свідомо названа «Станція 1». Кожну наступну зарядну станцію
+        буде додано окремою колонкою з власними станом, лічильником, графіками та
+        налаштуваннями — без змішування статистики між автомобілями або станціями.
