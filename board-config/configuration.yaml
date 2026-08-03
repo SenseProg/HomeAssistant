@@ -41,6 +41,48 @@ input_boolean:
     name: Автоматичний полив дозволено
     icon: mdi:sprinkler-variant
 
+  # --- Розклад поливу: дні тижня (додано 2026-08-03) ---
+  poliv_pn:
+    name: Полив - понеділок
+    icon: mdi:calendar
+  poliv_vt:
+    name: Полив - вівторок
+    icon: mdi:calendar
+  poliv_sr:
+    name: Полив - середа
+    icon: mdi:calendar
+  poliv_cht:
+    name: Полив - четвер
+    icon: mdi:calendar
+  poliv_pt:
+    name: Полив - п'ятниця
+    icon: mdi:calendar
+  poliv_sb:
+    name: Полив - субота
+    icon: mdi:calendar
+  poliv_nd:
+    name: Полив - неділя
+    icon: mdi:calendar
+  # Які зони бере розклад. Тривалість кожної - з input_number вище.
+  poliv_zona_1_vkl:
+    name: Зона 1 у розкладі
+    icon: mdi:sprinkler
+  poliv_zona_2_vkl:
+    name: Зона 2 у розкладі
+    icon: mdi:sprinkler
+  poliv_zona_3_vkl:
+    name: Зона 3 у розкладі
+    icon: mdi:sprinkler
+
+# Час старту розкладу. initial навмисно НЕ задано, щоб значення переживало
+# перезапуск HA - з initial воно скидалось би на дефолт при кожному старті.
+input_datetime:
+  poliv_chas:
+    name: Полив - час старту
+    has_date: false
+    has_time: true
+    icon: mdi:clock-outline
+
 automation: !include automations.yaml
 script: !include scripts.yaml
 scene: !include scenes.yaml
@@ -238,3 +280,28 @@ logger:
 #     method: left
 #     round: 3
 #     max_sub_interval: "00:01:00"
+
+# --- Насос поливу: облік енергії (додано 2026-08-03) ---
+#
+# Так само як бойлер, ці сутності створені як UI-помічники в .storage, а не тут:
+#   input_number.nasos_polivu_potuzhnist        - калібрувальна потужність, Вт
+#   sensor.nasos_polivu_potuzhnist_zaraz        - template, миттєва потужність
+#   sensor.nasos_polivu_spozhito                - Riemann left -> кВт-год
+#
+# Реле Tuya Mini switch K601 лічильника енергії НЕ має (перевірено: у пристрою
+# лише switch, timer і power_on_behavior). Тому енергія = час роботи реле,
+# помножений на потужність.
+#
+# Потужність 1100 Вт ВИМІРЯНА 2026-08-03 по стрибку sensor.zagalne_navantazhennia,
+# а не взята зі стелі:
+#   * контрольований пуск (клапан -> насос, по 90 с) : 8.453 - 7.46  = 994 Вт
+#   * реальний пуск 19:11:39 (41 вимір)              : 3.521 - 2.095 = 1426 Вт
+#   * реальний пуск 19:13:19                         : 3.214 - 2.095 = 1119 Вт
+# Взято медіану. Значення міняється з дашборда, YAML для цього правити не треба.
+#
+# Насос видно у HA двічі. ГОЛОВНА - локальна сутність; хмарна лише резерв:
+#   {% set l = states('switch.mini_switch_k601_2_switch_1_2') %}
+#   {% set c = states('switch.mini_switch_k601_2_switch_1') %}
+#   {% set on = (l == 'on') if l in ['on','off'] else (c == 'on') %}
+# Спершу була проста OR-логіка, але вона хибна: якщо локальна вже сказала off,
+# а хмарна ще тримає застаріле on, облік нараховував би неіснуюче споживання.
