@@ -28,41 +28,6 @@ input_number:
     step: 1
     initial: 10
     icon: mdi:timer-outline
-  poliv_zona_4_hvylyn:
-    name: Зона 4 - хвилин поливу
-    min: 1
-    max: 60
-    step: 1
-    initial: 10
-    icon: mdi:timer-outline
-  poliv_zona_5_hvylyn:
-    name: Зона 5 - хвилин поливу
-    min: 1
-    max: 60
-    step: 1
-    initial: 10
-    icon: mdi:timer-outline
-  poliv_zona_6_hvylyn:
-    name: Зона 6 - хвилин поливу
-    min: 1
-    max: 60
-    step: 1
-    initial: 10
-    icon: mdi:timer-outline
-  poliv_zona_7_hvylyn:
-    name: Зона 7 - хвилин поливу
-    min: 1
-    max: 60
-    step: 1
-    initial: 10
-    icon: mdi:timer-outline
-  poliv_zona_8_hvylyn:
-    name: Зона 8 - хвилин поливу
-    min: 1
-    max: 60
-    step: 1
-    initial: 10
-    icon: mdi:timer-outline
 automation: !include automations.yaml
 script: !include scripts.yaml
 scene: !include scenes.yaml

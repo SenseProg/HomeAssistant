@@ -4,93 +4,57 @@ poliv_zona_1:
   sequence:
   - action: switch.turn_on
     target:
+      entity_id: switch.mini_switch_k601_2_switch_1
+  - delay:
+      seconds: 1
+  - action: switch.turn_on
+    target:
       entity_id: switch.avtopoliv_kontroler_switch_1
   - delay:
-      minutes: "{{ states('input_number.poliv_zona_1_hvylyn') | int(10) }}"
+      minutes: '{{ states(''input_number.poliv_zona_1_hvylyn'') | int(10) }}'
   - action: switch.turn_off
     target:
       entity_id: switch.avtopoliv_kontroler_switch_1
+  - action: switch.turn_off
+    target:
+      entity_id: switch.mini_switch_k601_2_switch_1
 poliv_zona_2:
   alias: Полити зону 2
   icon: mdi:sprinkler-variant
   sequence:
   - action: switch.turn_on
     target:
+      entity_id: switch.mini_switch_k601_2_switch_1
+  - delay:
+      seconds: 1
+  - action: switch.turn_on
+    target:
       entity_id: switch.avtopoliv_kontroler_switch_2
   - delay:
-      minutes: "{{ states('input_number.poliv_zona_2_hvylyn') | int(10) }}"
+      minutes: '{{ states(''input_number.poliv_zona_2_hvylyn'') | int(10) }}'
   - action: switch.turn_off
     target:
       entity_id: switch.avtopoliv_kontroler_switch_2
+  - action: switch.turn_off
+    target:
+      entity_id: switch.mini_switch_k601_2_switch_1
 poliv_zona_3:
   alias: Полити зону 3
   icon: mdi:sprinkler-variant
   sequence:
   - action: switch.turn_on
     target:
+      entity_id: switch.mini_switch_k601_2_switch_1
+  - delay:
+      seconds: 1
+  - action: switch.turn_on
+    target:
       entity_id: switch.avtopoliv_kontroler_switch_3
   - delay:
-      minutes: "{{ states('input_number.poliv_zona_3_hvylyn') | int(10) }}"
+      minutes: '{{ states(''input_number.poliv_zona_3_hvylyn'') | int(10) }}'
   - action: switch.turn_off
     target:
       entity_id: switch.avtopoliv_kontroler_switch_3
-poliv_zona_4:
-  alias: Полити зону 4
-  icon: mdi:sprinkler-variant
-  sequence:
-  - action: switch.turn_on
-    target:
-      entity_id: switch.avtopoliv_kontroler_switch_4
-  - delay:
-      minutes: "{{ states('input_number.poliv_zona_4_hvylyn') | int(10) }}"
   - action: switch.turn_off
     target:
-      entity_id: switch.avtopoliv_kontroler_switch_4
-poliv_zona_5:
-  alias: Полити зону 5
-  icon: mdi:sprinkler-variant
-  sequence:
-  - action: switch.turn_on
-    target:
-      entity_id: switch.avtopoliv_kontroler_switch_5
-  - delay:
-      minutes: "{{ states('input_number.poliv_zona_5_hvylyn') | int(10) }}"
-  - action: switch.turn_off
-    target:
-      entity_id: switch.avtopoliv_kontroler_switch_5
-poliv_zona_6:
-  alias: Полити зону 6
-  icon: mdi:sprinkler-variant
-  sequence:
-  - action: switch.turn_on
-    target:
-      entity_id: switch.avtopoliv_kontroler_switch_6
-  - delay:
-      minutes: "{{ states('input_number.poliv_zona_6_hvylyn') | int(10) }}"
-  - action: switch.turn_off
-    target:
-      entity_id: switch.avtopoliv_kontroler_switch_6
-poliv_zona_7:
-  alias: Полити зону 7
-  icon: mdi:sprinkler-variant
-  sequence:
-  - action: switch.turn_on
-    target:
-      entity_id: switch.avtopoliv_kontroler_switch_7
-  - delay:
-      minutes: "{{ states('input_number.poliv_zona_7_hvylyn') | int(10) }}"
-  - action: switch.turn_off
-    target:
-      entity_id: switch.avtopoliv_kontroler_switch_7
-poliv_zona_8:
-  alias: Полити зону 8
-  icon: mdi:sprinkler-variant
-  sequence:
-  - action: switch.turn_on
-    target:
-      entity_id: switch.avtopoliv_kontroler_switch_8
-  - delay:
-      minutes: "{{ states('input_number.poliv_zona_8_hvylyn') | int(10) }}"
-  - action: switch.turn_off
-    target:
-      entity_id: switch.avtopoliv_kontroler_switch_8
+      entity_id: switch.mini_switch_k601_2_switch_1
