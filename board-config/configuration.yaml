@@ -110,6 +110,9 @@ input_boolean:
   poliv_zona_2_vkl:
     name: Зона 2 у розкладі
     icon: mdi:sprinkler
+  poliv_zona_5_vkl:
+    name: Зона 5 у розкладі
+    icon: mdi:sprinkler
 
 automation: !include automations.yaml
 script: !include scripts.yaml
@@ -151,6 +154,12 @@ irrigation_unlimited:
           zone_id: zona_3
           entity_id: switch.avtopoliv_kontroler_switch_3
           duration: "00:10:00"
+        # Зона 5 у IU потрібна лише заради ЧЕРГИ і майстер-насоса.
+        # У Smart Irrigation вона НЕ заведена навмисно - тривалість фіксована.
+        - name: Зона 5
+          zone_id: zona_5
+          entity_id: switch.avtopoliv_kontroler_switch_5
+          duration: "00:25:00"
       sequences:
         - name: Розумний полив
           sequence_id: rozumnyi_poliv

@@ -33,11 +33,26 @@ _IMPORTANT_ENTITY_MARKERS = (
     "cam1",
     "energy_meter",
     "inverter",
+    "irrigation_unlimited",
+    "mini_switch_k601",
     "nasos_polivu",
     "poliv",
     "smart_irrigation",
     "terneo",
     "zariadka",
+)
+_CRITICAL_ENTITY_IDS = {
+    "input_number.nasos_polivu_potuzhnist",
+    "sensor.nasos_polivu_napruga",
+    "sensor.nasos_polivu_potuzhnist_zaraz",
+    "sensor.nasos_polivu_spozhito",
+    "sensor.nasos_polivu_spozhito_za_sesiiu",
+    "sensor.poliv_stan_sistemi",
+    "switch.mini_switch_k601_2_switch_1_2",
+}
+_CRITICAL_ENTITY_PREFIXES = (
+    "binary_sensor.irrigation_unlimited_",
+    "switch.avtopoliv_kontroler_switch_",
 )
 _MAX_STATE_LINES = 160
 _MAX_STATE_CHARS = 14000
@@ -75,7 +90,17 @@ def _state_snapshot(hass: HomeAssistant) -> str:
     """Return a bounded, read-only snapshot of relevant HA states."""
     lines: list[str] = []
     total = 0
-    for state in sorted(hass.states.async_all(), key=lambda item: item.entity_id):
+    def priority(state: State) -> tuple[int, str]:
+        entity_id = state.entity_id
+        if entity_id in _CRITICAL_ENTITY_IDS or entity_id.startswith(
+            _CRITICAL_ENTITY_PREFIXES
+        ):
+            return (0, entity_id)
+        if any(marker in entity_id for marker in _IMPORTANT_ENTITY_MARKERS):
+            return (1, entity_id)
+        return (2, entity_id)
+
+    for state in sorted(hass.states.async_all(), key=priority):
         if not _is_relevant(hass, state):
             continue
         name = _clean(state.attributes.get("friendly_name", state.entity_id))
