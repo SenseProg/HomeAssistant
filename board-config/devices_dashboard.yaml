@@ -112,6 +112,177 @@ views:
       entities:
       - entity: water_heater.144036023323246_water_heater
         name: Водонагрівач
+  - type: grid
+    cards:
+    - type: heading
+      heading: Спожита електроенергія
+      grid_options:
+        columns: full
+    - type: tile
+      entity: sensor.boiler_potuzhnist
+      name: Потужність зараз
+      grid_options:
+        columns: 6
+    - type: tile
+      entity: sensor.boiler_spozhito
+      name: Спожито всього
+      grid_options:
+        columns: 6
+    - type: statistics-graph
+      title: Спожито за добу
+      chart_type: bar
+      period: day
+      days_to_show: 30
+      stat_types:
+      - change
+      grid_options:
+        columns: full
+      entities:
+      - entity: sensor.boiler_spozhito
+        name: Бойлер
+    - type: history-graph
+      title: Потужність за 24 години
+      hours_to_show: 24
+      grid_options:
+        columns: full
+      entities:
+      - entity: sensor.boiler_potuzhnist
+        name: Потужність тена
+    - type: markdown
+      title: Як рахується
+      grid_options:
+        columns: full
+      content: >
+        Бойлер не має вбудованого лічильника енергії, тому споживання
+        оцінюється. Апарат повідомляє прапорець `heating` (тен працює) і поле
+        `heating_power`, яке дорівнює 2200 Вт лише коли увімкнений верхній
+        тен; коли гріє лише нижній, воно дорівнює нулю. Тому формула бере
+        `heating_power`, а якщо той нульовий при активному нагріві -
+        підставляє 800 Вт. Обидві цифри звірені зі стрибком загального
+        лічильника будинку: вимкнення верхнього тена давало -2.18 і -1.92 кВт,
+        нижнього - близько -0.75 кВт. Похибка очікується в межах 10-15 %.
+- title: Тепла підлога
+  path: floor
+  icon: mdi:heating-coil
+  type: sections
+  max_columns: 2
+  sections:
+  - type: grid
+    cards:
+    - type: heading
+      heading: Контур 1
+      grid_options:
+        columns: full
+    - type: thermostat
+      entity: climate.terneo_1
+      name: Тепла підлога 1
+      grid_options:
+        columns: full
+    - type: entities
+      title: Стан
+      grid_options:
+        columns: full
+      entities:
+      - entity: switch.terneo_1_power
+        name: Живлення
+      - entity: sensor.terneo_1_floor_temperature
+        name: Температура підлоги
+      - entity: sensor.terneo_1_target_temperature
+        name: Уставка
+      - type: divider
+      - entity: sensor.terneo_1_heating_active
+        name: Нагрів активний
+      - entity: sensor.terneo_1_current_power
+        name: Потужність зараз
+      - entity: sensor.terneo_1_heating_time
+        name: Час нагріву
+      - entity: sensor.terneo_1_heating_energy
+        name: Спожито всього
+    - type: statistics-graph
+      title: Спожито за добу - контур 1
+      chart_type: bar
+      period: day
+      days_to_show: 30
+      stat_types:
+      - change
+      grid_options:
+        columns: full
+      entities:
+      - entity: sensor.terneo_1_heating_energy
+        name: Контур 1
+  - type: grid
+    cards:
+    - type: heading
+      heading: Контур 2
+      grid_options:
+        columns: full
+    - type: thermostat
+      entity: climate.terneo_2
+      name: Тепла підлога 2
+      grid_options:
+        columns: full
+    - type: entities
+      title: Стан
+      grid_options:
+        columns: full
+      entities:
+      - entity: switch.terneo_2_power
+        name: Живлення
+      - entity: sensor.terneo_2_floor_temperature
+        name: Температура підлоги
+      - entity: sensor.terneo_2_air_temperature
+        name: Температура повітря
+      - entity: sensor.terneo_2_target_temperature
+        name: Уставка
+      - type: divider
+      - entity: sensor.terneo_2_heating_active
+        name: Нагрів активний
+      - entity: sensor.terneo_2_current_power
+        name: Потужність зараз
+      - entity: sensor.terneo_2_heating_time
+        name: Час нагріву
+      - entity: sensor.terneo_2_heating_energy
+        name: Спожито всього
+    - type: statistics-graph
+      title: Спожито за добу - контур 2
+      chart_type: bar
+      period: day
+      days_to_show: 30
+      stat_types:
+      - change
+      grid_options:
+        columns: full
+      entities:
+      - entity: sensor.terneo_2_heating_energy
+        name: Контур 2
+  - type: grid
+    cards:
+    - type: history-graph
+      title: Потужність обох контурів за 24 години
+      hours_to_show: 24
+      grid_options:
+        columns: full
+      entities:
+      - entity: sensor.terneo_1_current_power
+        name: Контур 1
+      - entity: sensor.terneo_2_current_power
+        name: Контур 2
+    - type: markdown
+      title: Як рахується
+      grid_options:
+        columns: full
+      content: >
+        На відміну від бойлера, тут нічого оцінювати не треба - термостат
+        Terneo сам віддає `heating_energy` у кВт-год. Але це теж не вимір:
+        всередині немає лічильника, і термостат рахує енергію з часу
+        замикання реле, помноженого на задану потужність контуру. Якщо
+        реальна потужність кабелю відрізняється від тієї, що прошита в
+        термостаті, цифра поїде пропорційно.
+
+        Контур 2 фізично не ввімкнений, тому всі його сутності показують
+        `unavailable`. Ніяких дій для нього робити не треба - він уже
+        доданий і в цей дашборд, і в Energy-дашборд, і почне рахувати сам,
+        щойно на нього подадуть живлення.
 - title: Камера
   path: camera
   icon: mdi:cctv

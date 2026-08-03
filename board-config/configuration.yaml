@@ -134,3 +134,45 @@ sensor:
     method: left
     round: 3
     max_sub_interval: "00:01:00"
+
+# --- Per-device energy accounting (added 2026-08-03) ---
+#
+# УВАГА: два сенсори бойлера створені як UI-помічники (config entries у
+# .storage/core.config_entries), а НЕ цим файлом - на момент створення до плати
+# не було SSH, лише REST API. Тому тут вони лише задокументовані. Якщо колись
+# доведеться піднімати конфіг з нуля, розкоментуй блок нижче І видали
+# відповідні помічники в UI, інакше сутності задублюються.
+#
+# Тепла підлога власних сенсорів не потребує: термостати Terneo самі віддають
+# sensor.terneo_N_heating_energy у кВт-год (час замикання реле помножений на
+# power_watts=2000, прошиту в самому термостаті - це оцінка, не вимір).
+#
+# Бойлер Midea лічильника енергії не має. Модель потужності:
+#   * heating = False                    -> 0 Вт
+#   * heating = True, heating_power > 0  -> heating_power (2200 Вт, верхній тен)
+#   * heating = True, heating_power = 0  -> 800 Вт (працює лише нижній тен)
+# Обидві цифри звірені зі стрибком загального лічильника будинку 2026-08-03:
+# вимкнення верхнього тена давало -2.18 і -1.92 кВт, нижнього - близько -0.75 кВт.
+#
+# template:
+#   - sensor:
+#       - name: "Бойлер - потужність"
+#         unique_id: boiler_power_estimated
+#         unit_of_measurement: "W"
+#         device_class: power
+#         state_class: measurement
+#         state: >
+#           {% set e = 'water_heater.144036023323246_water_heater' %}
+#           {% set hp = state_attr(e, 'heating_power') | float(0) %}
+#           {{ 0 if not state_attr(e, 'heating') else (hp if hp > 0 else 800) }}
+#
+# sensor:
+#   - platform: integration
+#     source: sensor.boiler_potuzhnist
+#     name: Бойлер - спожито
+#     unique_id: boiler_energy_total
+#     unit_prefix: k
+#     unit_time: h
+#     method: left
+#     round: 3
+#     max_sub_interval: "00:01:00"
