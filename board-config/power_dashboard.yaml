@@ -369,3 +369,66 @@ views:
         name: Спожито з мережі сьогодні
       - entity: sensor.inverter_today_load_consumption
         name: Навантаження сьогодні
+- title: Тариф
+  path: tariff
+  icon: mdi:cash-clock
+  type: sections
+  max_columns: 2
+  sections:
+  - type: grid
+    cards:
+    - type: heading
+      heading: Двозонний тариф
+      grid_options:
+        columns: full
+    - type: tile
+      entity: sensor.tarif_elektroenergii_zaraz
+      name: Діє зараз
+      grid_options:
+        columns: full
+    - type: tile
+      entity: input_number.tarif_den_07_00_22_59
+      name: День (07:00-22:59)
+      grid_options:
+        columns: full
+      features:
+      - type: numeric-input
+        style: box
+    - type: tile
+      entity: input_number.tarif_nich_23_00_06_59
+      name: Ніч (23:00-06:59)
+      grid_options:
+        columns: full
+      features:
+      - type: numeric-input
+        style: box
+    - type: entities
+      title: Витрати
+      grid_options:
+        columns: full
+      entities:
+      - entity: sensor.energy_meter_total_energy_cost
+        name: Вартість спожитого (наростаюча)
+      - entity: sensor.energy_meter_total_energy
+        name: Лічильник будинку
+    - type: history-graph
+      title: Перемикання тарифу за добу
+      hours_to_show: 24
+      grid_options:
+        columns: full
+      entities:
+      - entity: sensor.tarif_elektroenergii_zaraz
+        name: Ставка
+    - type: markdown
+      title: Як це працює
+      grid_options:
+        columns: full
+      content: >
+        Energy-дашборд рахує вартість не за фіксованою ціною, а за сутністю
+        `sensor.tarif_elektroenergii_zaraz`, яка сама перемикається між денною
+        і нічною ставкою о 07:00 і о 23:00. Ставки редагуються прямо тут -
+        YAML правити не треба.
+
+        Важливо: перерахунок стосується лише споживання ПІСЛЯ підключення
+        тарифу (2026-08-03). Історія до цього моменту порахована за старою
+        плоскою ціною 2.5 грн і заднім числом не переписується.
