@@ -325,6 +325,49 @@ views:
   - type: grid
     cards:
     - type: heading
+      heading: Розклад поливу
+      grid_options:
+        columns: full
+    - type: entities
+      grid_options:
+        columns: full
+      entities:
+      - entity: input_datetime.poliv_chas
+        name: Час старту
+      - type: section
+        label: Дні тижня
+      - entity: input_boolean.poliv_pn
+        name: Понеділок
+      - entity: input_boolean.poliv_vt
+        name: Вівторок
+      - entity: input_boolean.poliv_sr
+        name: Середа
+      - entity: input_boolean.poliv_cht
+        name: Четвер
+      - entity: input_boolean.poliv_pt
+        name: П'ятниця
+      - entity: input_boolean.poliv_sb
+        name: Субота
+      - entity: input_boolean.poliv_nd
+        name: Неділя
+      - type: section
+        label: Зони у розкладі
+      - entity: input_boolean.poliv_zona_1_vkl
+        name: Зона 1
+      - entity: input_boolean.poliv_zona_2_vkl
+        name: Зона 2
+      - entity: input_boolean.poliv_zona_3_vkl
+        name: Зона 3
+    - type: entities
+      title: Автоматизація розкладу
+      grid_options:
+        columns: full
+      entities:
+      - entity: automation.poliv_rozklad_za_chasom_i_dniami_tizhnia
+        name: Розклад за часом і днями тижня
+  - type: grid
+    cards:
+    - type: heading
       heading: Керування системою поливу
       grid_options:
         columns: full
@@ -498,3 +541,71 @@ views:
       tap_action:
         action: call-service
         service: script.poliv_stop_all
+  - type: grid
+    cards:
+    - type: heading
+      heading: Насос - споживання електроенергії
+      grid_options:
+        columns: full
+    - type: tile
+      entity: sensor.nasos_polivu_potuzhnist_zaraz
+      name: Потужність зараз
+      grid_options:
+        columns: 6
+    - type: tile
+      entity: sensor.nasos_polivu_spozhito
+      name: Спожито всього
+      grid_options:
+        columns: 6
+    - type: entities
+      grid_options:
+        columns: full
+      entities:
+      - entity: sensor.nasos_polivu_robota_sogodni
+        name: Напрацювання сьогодні
+    - type: tile
+      entity: input_number.nasos_polivu_potuzhnist
+      name: Потужність насоса (калібрування)
+      grid_options:
+        columns: full
+      features:
+      - type: numeric-input
+        style: buttons
+    - type: statistics-graph
+      title: Спожито за добу
+      chart_type: bar
+      period: day
+      days_to_show: 30
+      stat_types:
+      - change
+      grid_options:
+        columns: full
+      entities:
+      - entity: sensor.nasos_polivu_spozhito
+        name: Насос
+    - type: history-graph
+      title: Потужність за 24 години
+      hours_to_show: 24
+      grid_options:
+        columns: full
+      entities:
+      - entity: sensor.nasos_polivu_potuzhnist_zaraz
+        name: Насос
+    - type: markdown
+      title: Як рахується
+      grid_options:
+        columns: full
+      content: >
+        Реле Tuya Mini switch K601, яким керується насос, лічильника енергії не
+        має - воно вміє лише вмикати і вимикати. Тому споживання рахується як
+        час роботи реле, помножений на потужність із поля вище.
+
+        Потужність 1100 Вт виміряна 2026-08-03 по стрибку загального лічильника
+        будинку: контрольований запуск дав 994 Вт, два реальні пуски о 19:11 і
+        19:13 - 1119 і 1426 Вт. Взято медіану. Якщо захочеш уточнити - зміни
+        значення у полі вище, графіки перерахуються від моменту зміни.
+
+        Насос присутній у системі двічі - через хмару Tuya і локально
+        (LocalTuya). Формула вважає його увімкненим, якщо це підтверджує
+        будь-яка з двох сутностей, бо кожна з них періодично стає недоступною
+        поодинці.
