@@ -256,6 +256,14 @@ lovelace:
   resources:
     - url: /hacsfiles/sunsynk-power-flow-card/sunsynk-power-flow-card.js
       type: module
+    # Встановлені вручну в www/community (повз HACS), тому шлях /local/,
+    # а не /hacsfiles/ - той алias обслуговує лише репозиторії, які знає HACS.
+    - url: /local/community/mushroom/mushroom.js
+      type: module
+    - url: /local/community/card-mod/card-mod.js
+      type: module
+    - url: /local/community/mini-graph-card/mini-graph-card-bundle.js
+      type: module
   mode: storage
   dashboards:
     power-dashboard:

@@ -198,7 +198,8 @@ views:
   path: period
   icon: mdi:calendar-search
   type: sections
-  max_columns: 1
+  max_columns: 4
+  dense_section_placement: true
   sections:
   - type: grid
     cards:
@@ -269,7 +270,8 @@ views:
   path: inverter
   icon: mdi:solar-power-variant
   type: sections
-  max_columns: 2
+  max_columns: 4
+  dense_section_placement: true
   sections:
   - type: grid
     cards:
@@ -373,7 +375,8 @@ views:
   path: tariff
   icon: mdi:cash-clock
   type: sections
-  max_columns: 2
+  max_columns: 4
+  dense_section_placement: true
   sections:
   - type: grid
     cards:
