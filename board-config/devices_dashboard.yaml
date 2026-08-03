@@ -351,13 +351,23 @@ views:
       - entity: input_boolean.poliv_nd
         name: Неділя
       - type: section
-        label: Зони у розкладі
+        label: Зони у розкладі та тривалість
       - entity: input_boolean.poliv_zona_1_vkl
         name: Зона 1
+      - entity: input_number.poliv_zona_1_hvylyn
+        name: "    хвилин"
       - entity: input_boolean.poliv_zona_2_vkl
         name: Зона 2
+      - entity: input_number.poliv_zona_2_hvylyn
+        name: "    хвилин"
       - entity: input_boolean.poliv_zona_3_vkl
         name: Зона 3
+      - entity: input_number.poliv_zona_3_hvylyn
+        name: "    хвилин"
+      - type: section
+        label: Ручний пуск
+      - entity: input_select.poliv_ruchna_zona
+        name: Кнопка на модулі відкриває
     - type: entities
       title: Автоматизація розкладу
       grid_options:
@@ -563,6 +573,12 @@ views:
       entities:
       - entity: sensor.nasos_polivu_robota_sogodni
         name: Напрацювання сьогодні
+      - entity: sensor.nasos_polivu_energiia_sogodni
+        name: Спожито сьогодні
+      - entity: sensor.nasos_polivu_spozhito_za_sesiiu
+        name: Спожито за сесію
+      - entity: sensor.nasos_polivu_napruga
+        name: Напруга на насосі (фаза B)
     - type: tile
       entity: input_number.nasos_polivu_potuzhnist
       name: Потужність насоса (калібрування)

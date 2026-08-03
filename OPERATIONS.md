@@ -104,7 +104,7 @@ all automatic starts are additionally gated by
 `input_boolean.poliv_avtomatika_dozvolena`.
 
 Smart Irrigation `v2026.7.1` is the calculation layer. It uses keyless
-Open-Meteo data, hourly collection, a daily calculation at 23:00, a 2 mm
+Open-Meteo data, hourly collection, a daily calculation at 19:55, a 2 mm
 forecast-precipitation skip threshold, and observed-watering feedback. Direct
 valve control in Smart Irrigation must remain disabled so that only Irrigation
 Unlimited owns the actuators.
@@ -113,10 +113,15 @@ Create Smart Irrigation zones only for physical irrigation zones 1 and 2.
 Measure or confirm both the irrigated area in square metres and the real flow
 in litres per minute for each zone. Keep Smart Irrigation direct valve control
 disabled and map observed watering to `switch.avtopoliv_kontroler_switch_1` and
-`switch.avtopoliv_kontroler_switch_2`. The event automation reads
+`switch.avtopoliv_kontroler_switch_2`. The existing weekday automation remains
+the only start source (currently all weekdays at 20:00). It reads
 `sensor.smart_irrigation_zona_1` and `sensor.smart_irrigation_zona_2`, then
-queues the calculated durations on the corresponding Irrigation Unlimited
-zone entities. Zone 3 remains manual and is not part of weather-driven starts.
+queues the calculated durations on the corresponding Irrigation Unlimited zone
+entities. Until a Smart zone exists, that zone safely falls back to its current
+`input_number.poliv_zona_*_hvylyn` duration; a calculated value of zero skips
+the zone. Smart Irrigation's sunrise event is intentionally not connected to an
+automation, which prevents a second daily start. Zone 3 remains manual and is
+not part of weather-driven calculation.
 
 Automatic irrigation must remain disabled until the physical values and a dry
 commissioning test have been completed. The pinned custom components can be

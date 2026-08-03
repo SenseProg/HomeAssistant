@@ -1,38 +1,73 @@
-- id: irrigation_smart_start
-  alias: Полив - запуск за розрахунком Smart Irrigation
+- id: irrigation_pump_session_energy
+  alias: Полив - фіксація лічильника на старті сесії
   description: >-
-    Передає окремі розраховані тривалості зонам 1 і 2 Irrigation Unlimited
-    лише після погодного рішення Smart Irrigation і лише коли користувач
-    дозволив автоматичний полив. Зона 3 до погодної автоматики не входить.
+    На кожному вмиканні насоса запам'ятовує поточний показ наростаючого
+    лічильника енергії, щоб сенсор "спожито за сесію" рахував від нуля.
   triggers:
-  - trigger: event
-    event_type: smart_irrigation_start_irrigation_all_zones
-  conditions:
-  - condition: state
-    entity_id: input_boolean.poliv_avtomatika_dozvolena
-    state: 'on'
+  - trigger: state
+    entity_id: switch.mini_switch_k601_2_switch_1_2
+    from: 'off'
+    to: 'on'
+  conditions: []
   actions:
-  - variables:
-      zona_1_seconds: "{{ states('sensor.smart_irrigation_zona_1') | int(0) }}"
-      zona_2_seconds: "{{ states('sensor.smart_irrigation_zona_2') | int(0) }}"
-  - if:
-    - condition: template
-      value_template: "{{ zona_1_seconds > 0 }}"
-    then:
-    - action: irrigation_unlimited.manual_run
-      data:
-        entity_id: binary_sensor.irrigation_unlimited_c1_z1
-        time: "{{ timedelta(seconds=zona_1_seconds) }}"
-        queue: true
-  - if:
-    - condition: template
-      value_template: "{{ zona_2_seconds > 0 }}"
-    then:
-    - action: irrigation_unlimited.manual_run
-      data:
-        entity_id: binary_sensor.irrigation_unlimited_c1_z2
-        time: "{{ timedelta(seconds=zona_2_seconds) }}"
-        queue: true
+  - action: input_number.set_value
+    target:
+      entity_id: input_number.nasos_energiia_start
+    data:
+      value: "{{ states('sensor.nasos_polivu_spozhito') | float(0) }}"
+  mode: single
+
+- id: irrigation_manual_pump_opens_valve
+  alias: Полив - ручний пуск насоса відкриває клапан
+  description: >-
+    Якщо насос увімкнули вручну - фізичною кнопкою на модулі або тумблером в
+    інтерфейсі - і жоден клапан не відкритий, одразу відкриває зону, обрану в
+    "Ручний пуск - яку зону відкривати". Спрацьовує за секунду, тому захист
+    "насос без відкритого клапана" (10 с) не встигає вимкнути насос. Сам захист
+    лишається недоторканим як останній рубіж, якщо клапан не відкриється.
+  triggers:
+  - trigger: state
+    entity_id: switch.mini_switch_k601_2_switch_1_2
+    from: 'off'
+    to: 'on'
+  conditions:
+  - condition: template
+    value_template: >
+      {{ not is_state('switch.avtopoliv_kontroler_switch_1', 'on')
+         and not is_state('switch.avtopoliv_kontroler_switch_2', 'on')
+         and not is_state('switch.avtopoliv_kontroler_switch_3', 'on') }}
+  actions:
+  - action: switch.turn_on
+    target:
+      entity_id: >
+        {% set z = states('input_select.poliv_ruchna_zona') %}
+        {{ 'switch.avtopoliv_kontroler_switch_2' if z == 'Зона 2'
+           else 'switch.avtopoliv_kontroler_switch_3' if z == 'Зона 3'
+           else 'switch.avtopoliv_kontroler_switch_1' }}
+  mode: single
+
+- id: irrigation_close_valves_when_pump_idle
+  alias: Полив - закрити клапани, якщо насос давно вимкнений
+  description: >-
+    Прибирає забутий відкритий клапан після ручного пуску. Irrigation Unlimited
+    закриває свої клапани за 3 секунди після зупинки насоса, тому 5-хвилинна
+    витримка у його роботу не втручається.
+  triggers:
+  - trigger: template
+    value_template: >
+      {{ is_state('switch.mini_switch_k601_2_switch_1_2', 'off')
+         and (is_state('switch.avtopoliv_kontroler_switch_1', 'on')
+              or is_state('switch.avtopoliv_kontroler_switch_2', 'on')
+              or is_state('switch.avtopoliv_kontroler_switch_3', 'on')) }}
+    for: '00:05:00'
+  conditions: []
+  actions:
+  - action: switch.turn_off
+    target:
+      entity_id:
+      - switch.avtopoliv_kontroler_switch_1
+      - switch.avtopoliv_kontroler_switch_2
+      - switch.avtopoliv_kontroler_switch_3
   mode: single
 
 - id: irrigation_fail_safe_on_ha_start
@@ -86,9 +121,12 @@
 - id: irrigation_scheduled_weekday
   alias: Полив - розклад за часом і днями тижня
   description: >-
-    О заданій годині у вибрані дні тижня послідовно запускає зони, увімкнені в
-    розкладі. Якщо зараз дощ або дощ прогнозується на найближчі 6 годин -
-    надсилає запит у застосунок; без відповіді полив пропускається.
+    О 20:00 у вибрані дні тижня послідовно запускає зони. Для зон 1 і 2 бере
+    розраховану Smart Irrigation тривалість у секундах; доки Smart-зона ще не
+    створена, безпечно використовує наявне ручне значення хвилин. Нульова
+    Smart-тривалість пропускає зону. Зона 3 залишається на ручній тривалості.
+    Якщо зараз дощ або дощ прогнозується на найближчі 6 годин - надсилає запит
+    у застосунок; без відповіді полив пропускається.
   triggers:
   - trigger: time
     at: input_datetime.poliv_chas
@@ -103,6 +141,21 @@
                    'input_boolean.poliv_pt', 'input_boolean.poliv_sb',
                    'input_boolean.poliv_nd'][now().weekday()], 'on') }}
   actions:
+  - variables:
+      zona_1_seconds: >-
+        {% set smart = states('sensor.smart_irrigation_zona_1') %}
+        {% if is_number(smart) %}
+          {{ smart | int(0) }}
+        {% else %}
+          {{ (states('input_number.poliv_zona_1_hvylyn') | int(25)) * 60 }}
+        {% endif %}
+      zona_2_seconds: >-
+        {% set smart = states('sensor.smart_irrigation_zona_2') %}
+        {% if is_number(smart) %}
+          {{ smart | int(0) }}
+        {% else %}
+          {{ (states('input_number.poliv_zona_2_hvylyn') | int(25)) * 60 }}
+        {% endif %}
   - action: weather.get_forecasts
     target:
       entity_id: weather.forecast_golovna
@@ -167,24 +220,26 @@
     - condition: state
       entity_id: input_boolean.poliv_zona_1_vkl
       state: 'on'
+    - condition: template
+      value_template: "{{ zona_1_seconds | int(0) > 0 }}"
     then:
     - action: irrigation_unlimited.manual_run
       data:
         entity_id: binary_sensor.irrigation_unlimited_c1_z1
-        time: >-
-          {% set m = states('input_number.poliv_zona_1_hvylyn') | int(10) %}
-          {{ '%02d:%02d:00' % (m // 60, m % 60) }}
+        time: "{{ timedelta(seconds=zona_1_seconds | int(0)) }}"
+        queue: true
   - if:
     - condition: state
       entity_id: input_boolean.poliv_zona_2_vkl
       state: 'on'
+    - condition: template
+      value_template: "{{ zona_2_seconds | int(0) > 0 }}"
     then:
     - action: irrigation_unlimited.manual_run
       data:
         entity_id: binary_sensor.irrigation_unlimited_c1_z2
-        time: >-
-          {% set m = states('input_number.poliv_zona_2_hvylyn') | int(10) %}
-          {{ '%02d:%02d:00' % (m // 60, m % 60) }}
+        time: "{{ timedelta(seconds=zona_2_seconds | int(0)) }}"
+        queue: true
   - if:
     - condition: state
       entity_id: input_boolean.poliv_zona_3_vkl
@@ -196,4 +251,5 @@
         time: >-
           {% set m = states('input_number.poliv_zona_3_hvylyn') | int(10) %}
           {{ '%02d:%02d:00' % (m // 60, m % 60) }}
+        queue: true
   mode: single

@@ -33,6 +33,27 @@ input_number:
     initial: 10
     icon: mdi:timer-outline
 
+  # Показ лічильника енергії насоса на момент старту сесії поливу.
+  # Заповнюється автоматизацією "Полив - фіксація лічильника на старті сесії".
+  nasos_energiia_start:
+    name: Насос - лічильник на старті сесії
+    min: 0
+    max: 1000000
+    step: 0.001
+    mode: box
+    icon: mdi:counter
+
+# Яку зону відкривати, коли насос вмикають вручну - фізичною кнопкою на модулі
+# або тумблером в інтерфейсі. Насос не має працювати в закриту магістраль.
+input_select:
+  poliv_ruchna_zona:
+    name: Ручний пуск - яку зону відкривати
+    options:
+      - Зона 1
+      - Зона 2
+      - Зона 3
+    icon: mdi:water-pump
+
 # Master commissioning gate. It starts off on first creation and is checked by
 # every scheduled/weather-driven irrigation automation. Manual controls and
 # emergency stop remain available independently.
@@ -162,6 +183,43 @@ template:
           {{ states('sensor.energy_meter_phase_a_current_2') not in ['unknown', 'unavailable']
              and states('sensor.energy_meter_phase_b_current_2') not in ['unknown', 'unavailable']
              and states('sensor.energy_meter_phase_c_current_2') not in ['unknown', 'unavailable'] }}
+
+      # --- Насос поливу (додано 2026-08-03) ---------------------------------
+      # Потужність і наростаючий лічильник живуть як UI-помічники в .storage
+      # (див. коментар нижче). Тут - лише те, чого там немає.
+      # Насос на фазі B: встановлено по стрибку +1.1 кВт саме на цій фазі на
+      # 6 незалежних вмиканнях/вимиканнях 2026-08-03; фази A і C не реагували.
+      # Напруга, яку реально бачить насос: він на фазі B (встановлено тим самим
+      # вимірюванням). Це показ домового лічильника, а не самого насоса.
+      - name: "Насос поливу - напруга"
+        unique_id: pump_voltage_phase_b
+        unit_of_measurement: "V"
+        device_class: voltage
+        state_class: measurement
+        state: >
+          {{ states('sensor.energy_meter_phase_b_voltage_2') | float(0) | round(1) }}
+        availability: >
+          {{ states('sensor.energy_meter_phase_b_voltage_2')
+             not in ['unknown', 'unavailable'] }}
+
+      - name: "Насос поливу - спожито за сесію"
+        unique_id: pump_energy_session
+        unit_of_measurement: "kWh"
+        icon: mdi:lightning-bolt
+        state: >
+          {% set tot = states('sensor.nasos_polivu_spozhito') | float(0) %}
+          {% set base = states('input_number.nasos_energiia_start') | float(0) %}
+          {{ [tot - base, 0] | max | round(3) }}
+
+      - name: "Насос поливу - енергія сьогодні"
+        unique_id: pump_energy_today
+        unit_of_measurement: "kWh"
+        icon: mdi:lightning-bolt
+        state: >
+          {% set p = states('input_number.nasos_polivu_potuzhnist') | float(1100) %}
+          {{ ((states('sensor.nasos_polivu_robota_sogodni') | float(0))
+              * p / 1000) | round(3) }}
+
 # --- Recorder: keep detailed history longer for analysis (added 2026-08-02) ---
 recorder:
   purge_keep_days: 30
