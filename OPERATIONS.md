@@ -71,3 +71,24 @@ Preferred paths, in order:
 
 Never in-place `do-release-upgrade` this vendor image and never flash production
 without a tested full-device recovery image and serial-console access.
+
+## Smart irrigation
+
+Irrigation Unlimited `2025.12.0` is the hardware execution layer. Its YAML
+controller opens a zone valve three seconds before the pump and stops the pump
+three seconds before closing the final valve. It has no schedule of its own;
+all automatic starts are additionally gated by
+`input_boolean.poliv_avtomatika_dozvolena`.
+
+Smart Irrigation `v2026.7.1` is the calculation layer. It uses keyless
+Open-Meteo data, hourly collection, a daily calculation at 23:00, a 2 mm
+forecast-precipitation skip threshold, and observed-watering feedback. Direct
+valve control in Smart Irrigation must remain disabled so that only Irrigation
+Unlimited owns the actuators.
+
+Before adding the three Smart Irrigation zones, measure or confirm both the
+irrigated area in square metres and the real flow in litres per minute for each
+zone. Automatic irrigation must remain disabled until these values and a dry
+commissioning test have been completed. The pinned custom components can be
+reinstalled or upgraded reproducibly with
+`board-config/scripts/homemate-install-irrigation-components.sh`.

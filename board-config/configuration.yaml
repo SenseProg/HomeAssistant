@@ -32,9 +32,63 @@ input_number:
     step: 1
     initial: 10
     icon: mdi:timer-outline
+
+# Master commissioning gate. It starts off on first creation and is checked by
+# every scheduled/weather-driven irrigation automation. Manual controls and
+# emergency stop remain available independently.
+input_boolean:
+  poliv_avtomatika_dozvolena:
+    name: Автоматичний полив дозволено
+    icon: mdi:sprinkler-variant
+
 automation: !include automations.yaml
 script: !include scripts.yaml
 scene: !include scenes.yaml
+
+# Irrigation Unlimited is the execution layer. It owns the three zone valves
+# and the master pump, but has no active schedule until commissioning. Negative
+# pre/postamble values guarantee valve-first start and pump-first stop.
+irrigation_unlimited:
+  granularity: 5
+  refresh_interval: 30
+  history:
+    enabled: true
+    span: 30
+    refresh_interval: 60
+  controllers:
+    - name: Система поливу
+      controller_id: poliv
+      entity_id: switch.mini_switch_k601_2_switch_1_2
+      preamble: "-00:00:03"
+      postamble: "-00:00:03"
+      queue_manual: true
+      show_sequence_status: true
+      all_zones_config:
+        minimum: "00:01:00"
+        maximum: "01:00:00"
+        show:
+          timeline: true
+      zones:
+        - name: Зона 1
+          zone_id: zona_1
+          entity_id: switch.avtopoliv_kontroler_switch_1
+          duration: "00:25:00"
+        - name: Зона 2
+          zone_id: zona_2
+          entity_id: switch.avtopoliv_kontroler_switch_2
+          duration: "00:25:00"
+        - name: Зона 3
+          zone_id: zona_3
+          entity_id: switch.avtopoliv_kontroler_switch_3
+          duration: "00:10:00"
+      sequences:
+        - name: Розумний полив
+          sequence_id: rozumnyi_poliv
+          enabled: true
+          zones:
+            - zone_id: zona_1
+            - zone_id: zona_2
+            - zone_id: zona_3
 
 # --- Total load across all three phases (added 2026-08-02) ---
 template:

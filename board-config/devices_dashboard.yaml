@@ -329,11 +329,30 @@ views:
       grid_options:
         columns: full
     - type: tile
+      entity: input_boolean.poliv_avtomatika_dozvolena
+      name: Дозволити автоматичний полив
+      icon: mdi:sprinkler-variant
+      grid_options:
+        columns: full
+    - type: tile
       entity: switch.mini_switch_k601_2_switch_1_2
       name: Насос поливу
       icon: mdi:pump
       grid_options:
         columns: full
+    - type: entities
+      title: Планувальник Irrigation Unlimited
+      entities:
+      - entity: binary_sensor.irrigation_unlimited_c1_m
+        name: Система поливу
+      - entity: binary_sensor.irrigation_unlimited_c1_s1
+        name: Розумна послідовність
+      - entity: binary_sensor.irrigation_unlimited_c1_z1
+        name: Зона 1
+      - entity: binary_sensor.irrigation_unlimited_c1_z2
+        name: Зона 2
+      - entity: binary_sensor.irrigation_unlimited_c1_z3
+        name: Зона 3
     - type: button
       name: Аварійно зупинити все
       icon: mdi:stop-circle
