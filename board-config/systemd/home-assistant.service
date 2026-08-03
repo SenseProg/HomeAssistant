@@ -13,6 +13,7 @@ ExecStart=/home/forlinx/hass-venv-314/bin/hass -c /userdata/hass/config
 Restart=on-failure
 RestartSec=15
 TimeoutStartSec=600
+TimeoutStopSec=120
 
 [Install]
 WantedBy=multi-user.target

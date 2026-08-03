@@ -14,6 +14,10 @@ custom_components/
 
 # Firmware images - too large for GitHub (100 MB hard limit per file)
 # backupSW_MB35x8.zip is 2.7 GB, see README for its location on the NAS
+
+# Never commit live NAS credentials or backup encryption material.
+board-config/nas/ha-nas.credentials
+*emergency*kit*
 *.img
 backupSW_MB35x8.zip
 

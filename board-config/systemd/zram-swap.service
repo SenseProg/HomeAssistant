@@ -1,0 +1,17 @@
+[Unit]
+Description=1 GiB compressed RAM swap
+After=systemd-modules-load.service
+Before=home-assistant.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/bin/sh -c 'test "$(cat /sys/block/zram0/disksize)" = "0"'
+ExecStart=/bin/sh -c 'echo 1073741824 > /sys/block/zram0/disksize'
+ExecStart=/sbin/mkswap /dev/zram0
+ExecStart=/sbin/swapon --priority 100 /dev/zram0
+ExecStop=/sbin/swapoff /dev/zram0
+ExecStop=/bin/sh -c 'echo 1 > /sys/block/zram0/reset'
+
+[Install]
+WantedBy=multi-user.target

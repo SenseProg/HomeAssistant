@@ -2,6 +2,10 @@
 # Loads default set of integrations. Do not remove.
 default_config:
 
+# Keep schedules and log timestamps aligned with the physical installation.
+homeassistant:
+  time_zone: Europe/Kyiv
+
 # Load frontend themes from the themes folder
 frontend:
   themes: !include_dir_merge_named themes
@@ -12,14 +16,14 @@ input_number:
     min: 1
     max: 60
     step: 1
-    initial: 10
+    initial: 25
     icon: mdi:timer-outline
   poliv_zona_2_hvylyn:
     name: Зона 2 - хвилин поливу
     min: 1
     max: 60
     step: 1
-    initial: 10
+    initial: 25
     icon: mdi:timer-outline
   poliv_zona_3_hvylyn:
     name: Зона 3 - хвилин поливу
@@ -45,7 +49,9 @@ template:
             + states('sensor.energy_meter_phase_b_power_2') | float(0)
             + states('sensor.energy_meter_phase_c_power_2') | float(0)) | round(3) }}
         availability: >
-          {{ states('sensor.energy_meter_phase_a_power_2') not in ['unknown','unavailable'] }}
+          {{ states('sensor.energy_meter_phase_a_power_2') not in ['unknown', 'unavailable']
+             and states('sensor.energy_meter_phase_b_power_2') not in ['unknown', 'unavailable']
+             and states('sensor.energy_meter_phase_c_power_2') not in ['unknown', 'unavailable'] }}
 
       - name: "Загальний струм"
         unique_id: total_load_current
@@ -57,11 +63,14 @@ template:
             + states('sensor.energy_meter_phase_b_current_2') | float(0)
             + states('sensor.energy_meter_phase_c_current_2') | float(0)) | round(2) }}
         availability: >
-          {{ states('sensor.energy_meter_phase_a_current_2') not in ['unknown','unavailable'] }}
+          {{ states('sensor.energy_meter_phase_a_current_2') not in ['unknown', 'unavailable']
+             and states('sensor.energy_meter_phase_b_current_2') not in ['unknown', 'unavailable']
+             and states('sensor.energy_meter_phase_c_current_2') not in ['unknown', 'unavailable'] }}
 # --- Recorder: keep detailed history longer for analysis (added 2026-08-02) ---
 recorder:
   purge_keep_days: 30
-  commit_interval: 5
+  # Reduce SQLite/eMMC write frequency while keeping adequate history resolution.
+  commit_interval: 30
   auto_purge: true
   exclude:
     domains:
@@ -99,6 +108,40 @@ sensor:
     method: left
     round: 3
     max_sub_interval: "00:01:00"
+  - platform: history_stats
+    name: "Насос поливу - робота сьогодні"
+    entity_id: switch.mini_switch_k601_2_switch_1_2
+    state: "on"
+    type: time
+    start: "{{ today_at('00:00') }}"
+    end: "{{ now() }}"
+  - platform: history_stats
+    name: "Зона 1 - полив сьогодні"
+    entity_id: switch.avtopoliv_kontroler_switch_1
+    state: "on"
+    type: time
+    start: "{{ today_at('00:00') }}"
+    end: "{{ now() }}"
+  - platform: history_stats
+    name: "Зона 2 - полив сьогодні"
+    entity_id: switch.avtopoliv_kontroler_switch_2
+    state: "on"
+    type: time
+    start: "{{ today_at('00:00') }}"
+    end: "{{ now() }}"
+  - platform: history_stats
+    name: "Зона 3 - полив сьогодні"
+    entity_id: switch.avtopoliv_kontroler_switch_3
+    state: "on"
+    type: time
+    start: "{{ today_at('00:00') }}"
+    end: "{{ now() }}"
+
+# The AsusWRT library emits the same deprecation warning every 30 seconds.
+# Keep real errors visible without filling the local journal with duplicates.
+logger:
+  logs:
+    aioasuswrt.asuswrt: error
 
 # --- Per-device energy accounting (added 2026-08-03) ---
 #

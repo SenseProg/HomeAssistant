@@ -1,0 +1,12 @@
+[Unit]
+Description=Hourly Home Assistant backup and journal synchronization to NAS
+
+[Timer]
+OnCalendar=hourly
+Persistent=true
+RandomizedDelaySec=5min
+AccuracySec=1min
+Unit=homemate-nas-sync.service
+
+[Install]
+WantedBy=timers.target

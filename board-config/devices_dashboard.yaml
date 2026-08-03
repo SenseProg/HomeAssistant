@@ -325,6 +325,49 @@ views:
   - type: grid
     cards:
     - type: heading
+      heading: Керування системою поливу
+      grid_options:
+        columns: full
+    - type: tile
+      entity: switch.mini_switch_k601_2_switch_1_2
+      name: Насос поливу
+      icon: mdi:pump
+      grid_options:
+        columns: full
+    - type: button
+      name: Аварійно зупинити все
+      icon: mdi:stop-circle
+      show_state: false
+      grid_options:
+        columns: full
+      tap_action:
+        action: call-service
+        service: script.poliv_stop_all
+        confirmation:
+          text: Вимкнути насос і всі клапани?
+  - type: grid
+    cards:
+    - type: heading
+      heading: Тривалість роботи сьогодні
+      grid_options:
+        columns: full
+    - type: history-graph
+      title: Насос і клапани - години роботи сьогодні
+      hours_to_show: 24
+      grid_options:
+        columns: full
+      entities:
+      - entity: sensor.nasos_polivu_robota_sogodni
+        name: Насос
+      - entity: sensor.zona_1_poliv_sogodni
+        name: Зона 1
+      - entity: sensor.zona_2_poliv_sogodni
+        name: Зона 2
+      - entity: sensor.zona_3_poliv_sogodni
+        name: Зона 3
+  - type: grid
+    cards:
+    - type: heading
       heading: Зона 1
       grid_options:
         columns: full
@@ -359,11 +402,7 @@ views:
         columns: 6
       tap_action:
         action: call-service
-        service: homeassistant.turn_off
-        target:
-          entity_id:
-          - switch.avtopoliv_kontroler_switch_1
-          - script.poliv_zona_1
+        service: script.poliv_stop_all
   - type: grid
     cards:
     - type: heading
@@ -401,11 +440,7 @@ views:
         columns: 6
       tap_action:
         action: call-service
-        service: homeassistant.turn_off
-        target:
-          entity_id:
-          - switch.avtopoliv_kontroler_switch_2
-          - script.poliv_zona_2
+        service: script.poliv_stop_all
   - type: grid
     cards:
     - type: heading
@@ -443,8 +478,4 @@ views:
         columns: 6
       tap_action:
         action: call-service
-        service: homeassistant.turn_off
-        target:
-          entity_id:
-          - switch.avtopoliv_kontroler_switch_3
-          - script.poliv_zona_3
+        service: script.poliv_stop_all

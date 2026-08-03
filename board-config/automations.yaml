@@ -1,1 +1,59 @@
-[]
+- id: '1785767136336'
+  alias: Полив за розкладом 21:00
+  description: Зона 1 (25 хв), потім зона 2 (25 хв)
+  triggers:
+  - at: '21:00:00'
+    trigger: time
+  conditions: []
+  actions:
+  - action: script.poliv_zona_1
+  - action: script.poliv_zona_2
+  mode: single
+
+- id: irrigation_fail_safe_on_ha_start
+  alias: Полив - безпечний стан після запуску HA
+  description: Після запуску Home Assistant вимикає насос і всі клапани.
+  triggers:
+  - trigger: homeassistant
+    event: start
+  conditions: []
+  actions:
+  - action: script.poliv_stop_all
+  mode: single
+
+- id: irrigation_pump_without_open_valve
+  alias: Полив - насос без відкритого клапана
+  description: Вимикає насос, якщо протягом 10 секунд жоден клапан не відкритий.
+  triggers:
+  - trigger: template
+    value_template: >
+      {{ is_state('switch.mini_switch_k601_2_switch_1_2', 'on')
+         and not is_state('switch.avtopoliv_kontroler_switch_1', 'on')
+         and not is_state('switch.avtopoliv_kontroler_switch_2', 'on')
+         and not is_state('switch.avtopoliv_kontroler_switch_3', 'on') }}
+    for: '00:00:10'
+  conditions: []
+  actions:
+  - action: script.poliv_stop_all
+  - action: persistent_notification.create
+    data:
+      title: Аварійна зупинка поливу
+      message: Насос був увімкнений без відкритого клапана понад 10 секунд.
+  mode: single
+
+- id: irrigation_pump_max_runtime_3h
+  alias: Полив - максимальна робота насоса 3 години
+  description: Примусово зупиняє полив після трьох годин безперервної роботи насоса.
+  triggers:
+  - trigger: state
+    entity_id: switch.mini_switch_k601_2_switch_1_2
+    to: 'on'
+    for: '03:00:00'
+  conditions: []
+  actions:
+  - action: script.poliv_stop_all
+  - action: persistent_notification.create
+    data:
+      title: Полив зупинено
+      message: Насос досяг максимального безперервного часу роботи — 3 години.
+  mode: single

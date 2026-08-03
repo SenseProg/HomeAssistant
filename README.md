@@ -10,9 +10,9 @@ Home Assistant для дому, що працює на власній платі
 | Плата | MB35x8 v1.0 (власна розробка, Altium) + Forlinx RK3568J SoM |
 | Hostname / IP | `ok3568` / `192.168.50.141` |
 | ОС | **Ubuntu 20.04.6 LTS**, ядро 4.19.206, aarch64, 4 ядра, 3.8 ГБ RAM |
-| Home Assistant | Core **2026.2.3**, Python 3.13.14 у venv |
+| Home Assistant | Core **2026.7.4**, Python 3.14.6 у venv |
 | Веб-інтерфейс | http://192.168.50.141:8123 |
-| Встановлено | `/userdata/hass/venv`, конфіг у `/userdata/hass/config` |
+| Встановлено | `/home/forlinx/hass-venv-314`, конфіг у `/userdata/hass/config` |
 | Служба | `home-assistant.service`, автозапуск увімкнено |
 
 ## Чому Core у venv, а не Docker
@@ -32,6 +32,41 @@ Home Assistant для дому, що працює на власній платі
 
 Змінити це можна лише перезбіркою ядра з SDK Forlinx і перепрошивкою, а прошивка
 цієї плати має відомий проблемний статус.
+
+> Home Assistant Core у venv є технічно працездатним, але з релізу 2025.12 цей
+> спосіб встановлення офіційно не підтримується. Стратегічний напрямок —
+> перевірений вендорний образ із новішим ядром і Home Assistant Container або
+> перенесення HA на окремий підтримуваний хост.
+
+## Безпечний порядок роботи з конфігурацією
+
+Плата і Git-репозиторій можуть розійтися, якщо Home Assistant UI або інша сесія
+змінить YAML між копіюванням і перевіркою. Перед кожною сесією:
+
+1. Звірити SHA-256 файлів у `board-config/` з `/userdata/hass/config/` і live
+   unit-файлом `/etc/systemd/system/home-assistant.service`.
+2. Перевірити `git status`, поточний commit і час модифікації live-файлів.
+3. Перед перезаписом створити датований backup кожного цільового файла.
+4. Після копіювання виконати:
+
+   ```bash
+   /home/forlinx/hass-venv-314/bin/hass --script check_config -c /userdata/hass/config
+   ```
+
+5. Лише після успішної перевірки перезапускати `home-assistant.service`, а потім
+   повторно звірити SHA-256.
+
+Критичні параметри плати: timezone `Europe/Kyiv`; `TimeoutStopSec=120`; секрети,
+`.storage`, база даних і журнали ніколи не копіюються в Git.
+
+Swap реалізовано як 1 ГіБ стисненого zram через
+`board-config/systemd/zram-swap.service`. Він використовується лише при дефіциті
+RAM і не створює постійних записів на eMMC. Старий неактивний `/swapfile` на
+4 ГіБ видалено.
+
+Операційний план віддаленого доступу, NAS-копій, журналів і міграції платформи
+описаний у `OPERATIONS.md`. Погодинний NAS-sync реалізований unit/timer-файлами
+`homemate-nas-sync.*`; секрети NAS у репозиторій не потрапляють.
 
 ## Структура репозиторію
 
