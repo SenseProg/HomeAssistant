@@ -131,6 +131,27 @@ where precipitation rate is `throughput × 60 / area`. At the commissioned
 with delta `-4 mm`; the production zones remain on PyETO so weather and rain
 affect the result.
 
+Practical Smart Irrigation field settings for this installation:
+
+- `Size` is the actual irrigated area (250 m² per commissioned zone), while
+  `Throughput` is the combined flow of that zone's sprinklers (currently
+  40 L/min), not the pump's nameplate capacity.
+- `Bucket` is the accumulated soil-water balance: negative means a deficit and
+  positive means stored water. `Maximum bucket` caps only the positive stored
+  amount; water above it is treated as runoff. It does not cap a deficit.
+- `Drainage rate` applies only when the bucket is positive. The current
+  50.8 mm/h is a provisional default pending a soil-type or field test.
+- `Lead time` is unconditional extra runtime added after the calculated limit,
+  intended only for filling pipes or building pressure; keep it at 0 seconds.
+- The optional cumulative volume meter must be a physical `total_increasing`
+  water-meter total in L or m³. Until one is installed, leave it empty: observed
+  watering already credits 40 L/min multiplied by the real valve runtime.
+- PyETO `Coastal` remains off for this inland site. `Forecast days` is explicitly
+  0 so the calculation uses the day's measured data instead of averaging future
+  forecast days. Sensor group 0 supplies all nine inputs from Open-Meteo to both
+  zones; add another group only for a separate local weather station or
+  microclimate.
+
 Automatic irrigation must remain disabled until the physical values and a dry
 commissioning test have been completed. The pinned custom components can be
 reinstalled or upgraded reproducibly with

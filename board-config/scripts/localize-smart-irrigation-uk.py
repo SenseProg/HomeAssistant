@@ -33,8 +33,8 @@ def add_frontend_help(data):
             "size": "Площа ділянки, що поливається",
             "throughput": "Загальна витрата води через усю зону",
             "drainage_rate": "Дренаж насиченого ґрунту",
-            "state": "Режим роботи зони",
-            "mapping": "Джерело погодних даних",
+            "state": "Режим роботи зони (Автоматичний = PyETO)",
+            "mapping": "Група погодних датчиків (0 = Open-Meteo)",
             "bucket": "Водний баланс ґрунту (− дефіцит, + запас)",
             "maximum-bucket": "Максимальний запас води у ґрунті",
             "et-deficiency": "Добовий дефіцит евапотранспірації (довідково)",
@@ -51,9 +51,55 @@ def add_frontend_help(data):
                 "Irrigation Unlimited."
             ),
             "flow-sensor-hint": (
-                "Необов’язковий накопичувальний лічильник фактичного об’єму. "
-                "Якщо його немає, вода рахується як витрата зони × час роботи "
-                "підключеного клапана."
+                "Необов’язковий фізичний водомір із постійно зростаючим "
+                "підсумком (л або м³), а не датчик миттєвої витрати. Зараз його "
+                "немає, тому поле слід залишити порожнім: вода вже рахується як "
+                "40 л/хв × фактичний час роботи клапана. Віртуальний лічильник "
+                "лише дублював би цей самий розрахунок."
+            ),
+            "size-hint": (
+                "Фактична площа, яку поливає саме ця зона. Для зони 1 і зони 2 "
+                "встановлено по 250 м²."
+            ),
+            "throughput-hint": (
+                "Сумарна витрата всіх форсунок цієї зони, не паспортна подача "
+                "насоса. Зараз прийнято 40 л/хв; уточнити можна заміром відра "
+                "або фізичним водоміром."
+            ),
+            "drainage-rate-hint": (
+                "Швидкість природного відтоку лише за надлишку води, коли "
+                "баланс додатний. Не скорочує полив при дефіциті. 50,8 мм/год — "
+                "типове початкове значення; змінювати після визначення типу ґрунту."
+            ),
+            "bucket-hint": (
+                "Поточний накопичений водний баланс: мінус — нестача води й "
+                "потреба в поливі, нуль — баланс, плюс — запас після дощу або поливу."
+            ),
+            "maximum-bucket-hint": (
+                "Верхня межа додатного запасу води, який може втримати ґрунт. "
+                "Надлишок вище цієї межі вважається стоком; від’ємний дефіцит "
+                "цим значенням не обмежується."
+            ),
+            "et-deficiency-hint": (
+                "Розрахована PyETO добова втрата води через випаровування та "
+                "рослини, без накопиченого балансу. Поле лише для читання."
+            ),
+            "lead-time-hint": (
+                "Секунди, які безумовно додаються до ненульового розрахунку "
+                "після всіх обмежень. Потрібні лише для заповнення труб або "
+                "виходу системи на тиск; для HomeMate залишити 0."
+            ),
+            "maximum-duration-hint": (
+                "Запобіжна верхня межа одного запуску зони. 3600 с = 60 хв. "
+                "Окремий захист насоса на 3 години залишається додатковим бар’єром."
+            ),
+            "multiplier-hint": (
+                "Калібрувальний множник розрахованого часу: 1,0 — без змін; "
+                "0,8 скорочує на 20 %, 1,2 збільшує на 20 %."
+            ),
+            "duration-hint": (
+                "Фінальний час поливу в секундах після водного балансу, "
+                "множника, максимальної тривалості та додаткового часу."
             ),
         }
     )
@@ -85,7 +131,20 @@ def add_frontend_help(data):
         "PyETO автоматично обчислює зміну водного балансу з погоди. Static "
         "використовує одну сталу норму: поле Delta задається в мм за цикл "
         "розрахунку; мінус означає нестачу води. Для цієї системи Delta = −4 "
-        "мм відповідає приблизно 25 хвилинам поливу."
+        "мм відповідає приблизно 25 хвилинам поливу. У PyETO залиште "
+        "«Прибережна місцевість» вимкнено і «Днів прогнозу» = 0."
+    )
+
+    mappings = data.setdefault("panels", {}).setdefault("mappings", {})
+    mappings["description"] = (
+        "Група 0 вже використовується обома зонами й отримує з Open-Meteo всі "
+        "дев’ять потрібних показників: точку роси, евапотранспірацію, вологість, "
+        "опади, поточні опади, тиск, сонячну радіацію, температуру та вітер. "
+        "Додаткова група потрібна лише для окремої локальної метеостанції або "
+        "іншого мікроклімату."
+    )
+    mappings.setdefault("labels", {})["mapping-name"] = (
+        "Назва групи погодних датчиків"
     )
 
     observed = data.setdefault("observed_watering", {})
@@ -201,6 +260,152 @@ def iter_string_pairs(old_value, new_value):
             yield from iter_string_pairs(old_value[key], new_value[key])
 
 
+def replace_exact(bundle, old, new, expected_count, label):
+    """Apply one pinned-frontend patch once and validate its cardinality."""
+    old_count = bundle.count(old)
+    new_count = bundle.count(new)
+    if old_count:
+        if old_count != expected_count:
+            raise SystemExit(
+                f"Unexpected {label} occurrence count: {old_count} "
+                f"(expected {expected_count})"
+            )
+        return bundle.replace(old, new)
+    if new_count != expected_count:
+        raise SystemExit(
+            f"Could not find pristine or patched {label} "
+            f"(patched count {new_count}, expected {expected_count})"
+        )
+    return bundle
+
+
+def add_inline_frontend_help(bundle):
+    """Render practical zone and module help in the existing small hint style."""
+    bundle = replace_exact(
+        bundle,
+        '"mapping-name":"Назва — довільне ім’я зони"',
+        '"mapping-name":"Назва групи погодних датчиків"',
+        1,
+        "sensor-group name label",
+    )
+    old_num_signature = '_numRow(e,a,t,i,n=1,r=!1){'
+    new_num_signature = '_numRow(e,a,t,i,n=1,r=!1,h=""){'  # Pinned bundle form.
+    bundle = replace_exact(
+        bundle,
+        old_num_signature,
+        new_num_signature,
+        4,
+        "numeric-row hint parameter",
+    )
+    bundle = replace_exact(
+        bundle,
+        '${e}${a?q` <span class="unit">(${a})</span>`:""}\n        </div>\n        <div class="num-field">',
+        '${e}${a?q` <span class="unit">(${a})</span>`:""}${h?q`<div class="setting-hint">${h}</div>`:""}\n        </div>\n        <div class="num-field">',
+        4,
+        "numeric-row hint markup",
+    )
+    bundle = replace_exact(
+        bundle,
+        '_textRow(e,a,t,i){',
+        '_textRow(e,a,t,i,h=""){',
+        4,
+        "text-row hint parameter",
+    )
+    bundle = replace_exact(
+        bundle,
+        '${e}${a?q` <span class="unit">(${a})</span>`:""}\n        </div>\n        <input\n          class="field"',
+        '${e}${a?q` <span class="unit">(${a})</span>`:""}${h?q`<div class="setting-hint">${h}</div>`:""}\n        </div>\n        <input\n          class="field"',
+        4,
+        "text-row hint markup",
+    )
+
+    zone_hints = {
+        "size": "Фактична площа саме цієї зони; зараз 250 м².",
+        "throughput": (
+            "Сумарна витрата всіх форсунок зони; зараз 40 л/хв, а не "
+            "паспортна подача насоса."
+        ),
+        "drainage_rate": (
+            "Відтік лише за додатного запасу води. 50,8 мм/год — початкове "
+            "значення до уточнення типу ґрунту."
+        ),
+        "bucket": (
+            "Накопичений баланс: мінус — дефіцит, плюс — запас після дощу "
+            "або поливу."
+        ),
+        "maximum-bucket": (
+            "Максимальний додатний запас, який утримує ґрунт; усе вище "
+            "вважається стоком."
+        ),
+        "et-deficiency": (
+            "Добова втрата води за PyETO без накопиченого балансу; поле лише "
+            "для читання."
+        ),
+        "lead-time": (
+            "Секунди, що додаються до ненульового часу для заповнення труб; "
+            "для HomeMate залишити 0."
+        ),
+        "maximum-duration": (
+            "Межа одного запуску зони; 3600 с = 60 хв."
+        ),
+        "multiplier": (
+            "Калібрування часу: 1,0 без змін; 0,8 = −20 %, 1,2 = +20 %."
+        ),
+        "duration": (
+            "Фінальний час після розрахунку, множника, обмеження й додаткових секунд."
+        ),
+    }
+    zone_calls = {
+        "size": 'this._numRow(Bo("panels.zones.labels.size",r),$a(this.config,la),e.size,(t=>this.handleEditZone(a,Object.assign(Object.assign({},e),{[la]:parseFloat(t)}))),.1)',
+        "throughput": 'this._numRow(Bo("panels.zones.labels.throughput",r),$a(this.config,da),e.throughput,(t=>this.handleEditZone(a,Object.assign(Object.assign({},e),{[da]:parseFloat(t)}))),.1)',
+        "drainage_rate": 'this._numRow(Bo("panels.zones.labels.drainage_rate",r),$a(this.config,ka),e.drainage_rate,(t=>this.handleEditZone(a,Object.assign(Object.assign({},e),{[ka]:parseFloat(t)}))),.1)',
+        "bucket": 'this._numRow(Bo("panels.zones.labels.bucket",r),$a(this.config,ma),Number(e.bucket).toFixed(1),(t=>this.handleEditZone(a,Object.assign(Object.assign({},e),{[ma]:parseFloat(t)}))),.1)',
+        "maximum-bucket": 'this._numRow(Bo("panels.zones.labels.maximum-bucket",r),$a(this.config,ma),Number(e.maximum_bucket).toFixed(1),(t=>this.handleEditZone(a,Object.assign(Object.assign({},e),{[ba]:parseFloat(t)}))),.1)',
+        "et-deficiency": 'this._numRow(Bo("panels.zones.labels.et-deficiency",r),$a(this.config,ma),null!=e.et_deficiency?Number(e.et_deficiency).toFixed(2):"",(()=>{}),.01,!0)',
+        "lead-time": 'this._numRow(Bo("panels.zones.labels.lead-time",r),"s",e.lead_time,(t=>this.handleEditZone(a,Object.assign(Object.assign({},e),{[va]:parseInt(t,10)}))),1)',
+        "maximum-duration": 'this._numRow(Bo("panels.zones.labels.maximum-duration",r),"s",e.maximum_duration,(t=>this.handleEditZone(a,Object.assign(Object.assign({},e),{[fa]:parseInt(t,10)}))),1)',
+        "multiplier": 'this._numRow(Bo("panels.zones.labels.multiplier",r),"",e.multiplier,(t=>this.handleEditZone(a,Object.assign(Object.assign({},e),{[ga]:parseFloat(t)}))),.1)',
+        "duration": 'this._numRow(Bo("panels.zones.labels.duration",r),"s",e.duration,(t=>this.handleEditZone(a,Object.assign(Object.assign({},e),{[ca]:parseInt(t,10)}))),1,o)',
+    }
+    for key, old_call in zone_calls.items():
+        hint = json.dumps(zone_hints[key], ensure_ascii=False)
+        if key == "et-deficiency":
+            new_call = old_call[:-1] + f",{hint})"
+        elif key == "duration":
+            new_call = old_call[:-1] + f",{hint})"
+        else:
+            new_call = old_call[:-1] + f",!1,{hint})"
+        bundle = replace_exact(bundle, old_call, new_call, 1, f"{key} hint")
+
+    old_module_header = (
+        'const i=t.schema[a],n=i.name,r=function(e){if(e)return(e=e.replace("_"," ")).charAt(0).toUpperCase()+e.slice(1)}(n);let s="";'
+    )
+    new_module_header = (
+        'const i=t.schema[a],n=i.name,l={coastal:["Прибережна місцевість","Увімкнути лише для ділянки біля великої водойми й лише коли немає даних сонячної радіації. Для Київщини залишити вимкненим."],forecast_days:["Днів прогнозу","Кількість майбутніх днів, що усереднюються з поточним розрахунком. Для HomeMate залишити 0: використовувати фактичні дані дня."],delta:["Зміна водного балансу за цикл (Delta)","Від’ємне значення створює дефіцит. У довідковому Static −4 мм відповідає приблизно 25 хв при 250 м² і 40 л/хв."]}[n],r=l?l[0]:function(e){if(e)return(e=e.replace("_"," ")).charAt(0).toUpperCase()+e.slice(1)}(n),d=l?l[1]:"";let s="";'
+    )
+    bundle = replace_exact(
+        bundle, old_module_header, new_module_header, 1, "module field labels"
+    )
+    bundle = replace_exact(
+        bundle,
+        '<div class="setting-label">${o}</div>\n          <input\n            type="checkbox"',
+        '<div class="setting-label">${o}${d?q`<div style="font-size:.8rem;font-weight:normal;color:var(--secondary-text-color);margin-top:2px;max-width:460px">${d}</div>`:""}</div>\n          <input\n            type="checkbox"',
+        1,
+        "module checkbox hint",
+    )
+    old_module_number = 'this._numRow(o,"",t.config[n],(a=>this.handleEditConfig(e,Object.assign(Object.assign({},t),{config:Object.assign(Object.assign({},t.config),{[n]:a})}))),1)'
+    new_module_number = old_module_number[:-1] + ',!1,d)'
+    bundle = replace_exact(
+        bundle, old_module_number, new_module_number, 1, "module numeric hint"
+    )
+    old_module_text = 'this._textRow(o,"",s,(a=>this.handleEditConfig(e,Object.assign(Object.assign({},t),{config:Object.assign(Object.assign({},t.config),{[n]:a})}))))'
+    new_module_text = old_module_text[:-1] + ',d)'
+    bundle = replace_exact(
+        bundle, old_module_text, new_module_text, 1, "module text hint"
+    )
+    return bundle
+
+
 def update_frontend_bundle(
     component_root: Path, old_catalog: dict, new_catalog: dict
 ) -> None:
@@ -213,6 +418,14 @@ def update_frontend_bundle(
     # catalogue, and leave every other language untouched.
     for upstream_value, ukrainian_value in iter_string_pairs(old_catalog, new_catalog):
         if upstream_value == ukrainian_value:
+            continue
+        # This short value is shared by several catalogue entries. A previous
+        # global replacement made the sensor-group name look like a zone name;
+        # patch its anchored object property in add_inline_frontend_help instead.
+        if (
+            upstream_value == "Назва"
+            and ukrainian_value == "Назва групи погодних датчиків"
+        ):
             continue
         old_literal = json.dumps(upstream_value, ensure_ascii=False)
         new_literal = json.dumps(ukrainian_value, ensure_ascii=False)
@@ -230,6 +443,8 @@ def update_frontend_bundle(
         '"Daily ET deficiency"',
         '"Добовий дефіцит евапотранспірації"',
     )
+
+    bundle = add_inline_frontend_help(bundle)
 
     # The standalone title is identical in every language, so anchor the
     # replacement between two Ukrainian-only strings instead of replacing all
@@ -291,8 +506,10 @@ def main() -> None:
         'PANEL_URL = f"/api/panel_custom/{DOMAIN}-homemate-uk-v1"',
         'PANEL_URL = f"/api/panel_custom/{DOMAIN}-homemate-uk-v2"',
         'PANEL_URL = f"/api/panel_custom/{DOMAIN}-homemate-uk-v3"',
+        'PANEL_URL = f"/api/panel_custom/{DOMAIN}-homemate-uk-v4"',
+        'PANEL_URL = f"/api/panel_custom/{DOMAIN}-homemate-uk-v5"',
     )
-    new_url = 'PANEL_URL = f"/api/panel_custom/{DOMAIN}-homemate-uk-v4"'
+    new_url = 'PANEL_URL = f"/api/panel_custom/{DOMAIN}-homemate-uk-v6"'
     for old_url in old_urls:
         if old_url in source:
             source = source.replace(old_url, new_url, 1)
