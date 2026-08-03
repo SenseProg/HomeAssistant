@@ -109,9 +109,34 @@ forecast-precipitation skip threshold, and observed-watering feedback. Direct
 valve control in Smart Irrigation must remain disabled so that only Irrigation
 Unlimited owns the actuators.
 
-Before adding the three Smart Irrigation zones, measure or confirm both the
-irrigated area in square metres and the real flow in litres per minute for each
-zone. Automatic irrigation must remain disabled until these values and a dry
+Create Smart Irrigation zones only for physical irrigation zones 1 and 2.
+Measure or confirm both the irrigated area in square metres and the real flow
+in litres per minute for each zone. Keep Smart Irrigation direct valve control
+disabled and map observed watering to `switch.avtopoliv_kontroler_switch_1` and
+`switch.avtopoliv_kontroler_switch_2`. The event automation reads
+`sensor.smart_irrigation_zona_1` and `sensor.smart_irrigation_zona_2`, then
+queues the calculated durations on the corresponding Irrigation Unlimited
+zone entities. Zone 3 remains manual and is not part of weather-driven starts.
+
+Automatic irrigation must remain disabled until the physical values and a dry
 commissioning test have been completed. The pinned custom components can be
 reinstalled or upgraded reproducibly with
 `board-config/scripts/homemate-install-irrigation-components.sh`.
+
+### Ukrainian localization
+
+The Home Assistant user profile language is Ukrainian. Smart Irrigation's
+upstream Ukrainian catalogue translates the panel content, while the upstream
+sidebar and panel title are fixed to the English product name. HomeMate applies
+a small display-only overlay that changes those visible strings to
+`Розумний полив`; the integration domain, service names, entity IDs and device
+identity stay unchanged. Reapply it after a manual HACS update with:
+
+```bash
+/userdata/hass/config/scripts/homemate-localize-smart-irrigation-uk.sh
+```
+
+The pinned component installer applies the same overlay automatically.
+Component backups are kept under `/userdata/hass/backups/custom_components`,
+outside the live `custom_components` directory, so Home Assistant cannot mistake
+a backup for an importable integration.

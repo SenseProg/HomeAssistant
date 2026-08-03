@@ -3,8 +3,11 @@ set -euo pipefail
 
 readonly CONFIG_ROOT="/userdata/hass/config"
 readonly COMPONENT_ROOT="${CONFIG_ROOT}/custom_components"
+readonly BACKUP_ROOT="/userdata/hass/backups/custom_components"
 readonly IU_VERSION="2025.12.0"
 readonly SMART_VERSION="v2026.7.1"
+readonly SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+readonly SMART_UK_OVERLAY="${SCRIPT_DIR}/localize-smart-irrigation-uk.py"
 
 workdir="$(mktemp -d /tmp/homemate-irrigation-components.XXXXXX)"
 trap 'rm -rf -- "${workdir}"' EXIT
@@ -39,10 +42,16 @@ for manifest_path in sys.argv[1:]:
     print(f"Validated {domain} {version}")
 PY
 
+# Keep HomeMate's Ukrainian display name and remaining branded UI strings after
+# every upstream reinstall or upgrade. The domain and internal device identity
+# remain unchanged, so existing entities and registry entries are preserved.
+python3 "${SMART_UK_OVERLAY}" "${smart_source}"
+
 /home/forlinx/hass-venv-314/bin/python -m compileall -q \
   "${iu_source}" "${smart_source}"
 
 install -d -m 0755 "${COMPONENT_ROOT}"
+install -d -o forlinx -g forlinx -m 0755 "${BACKUP_ROOT}"
 stamp="$(date +%Y%m%d-%H%M%S)"
 
 for component in irrigation_unlimited smart_irrigation; do
@@ -62,7 +71,7 @@ for component in irrigation_unlimited smart_irrigation; do
   find "${staged}" -type d -exec chmod 0755 {} +
   find "${staged}" -type f -exec chmod 0644 {} +
   if [ -e "${target}" ]; then
-    mv "${target}" "${target}.bak-${stamp}"
+    mv "${target}" "${BACKUP_ROOT}/${component}-${stamp}"
   fi
   mv "${staged}" "${target}"
 done
