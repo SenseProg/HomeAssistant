@@ -40,6 +40,29 @@ The first NAS transfer was verified byte-for-byte with SHA-256 on 2026-08-03.
 CloudMate is a separate device but remains in the same building; an HBS cloud or
 second-site replication target is still required for a literal off-site copy.
 
+## NAS photo library
+
+CloudMate exports `/Фотоальбом` over NFSv4 only to the board address
+`192.168.50.141`. The export is read-only and uses `Squash no users`; the
+read-only export permission remains the write-protection boundary while keeping
+the existing NAS file ownership readable by the Home Assistant process.
+
+The board mounts the export at `/userdata/hass/config/media/foto` with
+`userdata-hass-config-media-foto.mount`. The unit uses `ro,soft,timeo=100`, so a
+NAS outage cannot leave Home Assistant indefinitely blocked on a hard NFS
+mount. Do not add a duplicate entry to `/etc/fstab`.
+
+Verify the path and mount with:
+
+```sh
+showmount -e 192.168.50.25
+findmnt -T /userdata/hass/config/media/foto
+systemctl is-active userdata-hass-config-media-foto.mount
+```
+
+Home Assistant exposes the mounted tree automatically as
+`Media > My media > foto`; no `configuration.yaml` entry is required.
+
 ## Known platform limitations
 
 - The vendor package database lacks list/md5 metadata for many base packages.
