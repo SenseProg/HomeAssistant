@@ -320,6 +320,23 @@ views:
       entities:
       - entity: binary_sensor.cam1_motion
         name: Рух
+    - type: button
+      name: Відкрити записи руху
+      icon: mdi:folder-play
+      show_state: false
+      tap_action:
+        action: navigate
+        navigation_path: /media-browser
+      grid_options:
+        columns: 6
+    - type: markdown
+      content: >-
+        **Уривки руху:** приблизно 5 секунд до спрацювання датчика і 5 секунд
+        після. Файли пишуться безпосередньо на NAS у `media/video/cam1` та
+        доступні через **Медіа**. Якщо NAS не змонтовано, локальна точка
+        монтування навмисно не дозволяє запис на eMMC.
+      grid_options:
+        columns: full
 - title: Автополив
   path: poliv
   icon: mdi:sprinkler-variant

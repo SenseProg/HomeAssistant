@@ -542,3 +542,52 @@ views:
         4.125. Тому ця вкладка побудована на 5-хвилинній статистиці та на
         добових лічильниках, які є звичайними сутностями й оновлюються з
         кожною зміною - без очікування кінця години.
+  - type: grid
+    cards:
+    - type: heading
+      heading: Хто споживає зараз
+      grid_options:
+        columns: full
+    - type: tile
+      entity: sensor.naibilshii_spozhivach_zaraz
+      name: Найбільший споживач
+      grid_options:
+        columns: full
+    - type: markdown
+      grid_options:
+        columns: full
+      content: >
+        {% set loads = [
+          ('Зарядка авто','sensor.zariadka_7_5kvt_device_kw',1),
+          ('Бойлер','sensor.boiler_potuzhnist',0.001),
+          ('Насос поливу','sensor.nasos_polivu_potuzhnist_zaraz',0.001),
+          ('Тепла підлога 1','sensor.terneo_1_current_power',0.001),
+          ('Тепла підлога 2','sensor.terneo_2_current_power',0.001)] %}
+        {% set total = states('sensor.zagalne_navantazhennia') | float(0) %}
+        {% set ns = namespace(rows=[], known=0.0) %}
+        {% for name, ent, k in loads %}
+          {% set v = (states(ent) | float(0)) * k %}
+          {% if v > 0.05 %}{% set ns.rows = ns.rows + [(v, name)] %}
+          {% set ns.known = ns.known + v %}{% endif %}
+        {% endfor %}
+        {% set other = total - ns.known %}
+        {% if other > 0.05 %}{% set ns.rows = ns.rows + [(other,'Інше (не враховане)')] %}{% endif %}
+        {% if ns.rows | length == 0 %}
+        Зараз нічого суттєвого не працює. Загальне навантаження **{{ total | round(2) }} кВт**.
+        {% else %}
+        {% for v, name in ns.rows | sort(reverse=true) %}
+        **{{ name }}** — {{ v | round(2) }} кВт&nbsp;&nbsp;({{ (100 * v / total) | round(0) | int if total > 0 else 0 }}%)
+        {% endfor %}
+        ---
+        Разом: **{{ total | round(2) }} кВт** · тариф {{ states('sensor.tarif_elektroenergii_zaraz') }} грн/кВт·год
+        {% endif %}
+    - type: markdown
+      title: Про "Інше"
+      grid_options:
+        columns: full
+      content: >
+        Це різниця між показом загального лічильника і сумою тих приладів, у
+        яких є власне вимірювання. Туди потрапляє все неметроване -
+        холодильник, освітлення, техніка. Велике стабільне "Інше" вночі варте
+        уваги: це або забутий прилад, або той самий нез'ясований циклічний
+        навантажувач на фазі A, який досі не ідентифіковано.
