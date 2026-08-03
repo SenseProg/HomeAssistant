@@ -69,7 +69,9 @@ def add_frontend_help(data):
             "drainage-rate-hint": (
                 "Швидкість природного відтоку лише за надлишку води, коли "
                 "баланс додатний. Не скорочує полив при дефіциті. 50,8 мм/год — "
-                "типове початкове значення; змінювати після визначення типу ґрунту."
+                "прийняте значення для обох газонних зон: верхні 10 см чорнозему, "
+                "нижче — добре дренований пісок. Інтеграція автоматично зменшує "
+                "відтік, коли ґрунт не повністю насичений."
             ),
             "bucket-hint": (
                 "Поточний накопичений водний баланс: мінус — нестача води й "
@@ -281,6 +283,22 @@ def replace_exact(bundle, old, new, expected_count, label):
 
 def add_inline_frontend_help(bundle):
     """Render practical zone and module help in the existing small hint style."""
+    # Upgrade the HomeMate v6 inline soil hint before the idempotent pinned
+    # call checks below. The long catalogue hint is not embedded in the bundle;
+    # this shorter text is the copy actually rendered next to the number field.
+    bundle = bundle.replace(
+        json.dumps(
+            "Відтік лише за додатного запасу води. 50,8 мм/год — початкове "
+            "значення до уточнення типу ґрунту.",
+            ensure_ascii=False,
+        ),
+        json.dumps(
+            "Відтік лише за додатного запасу. Для обох зон прийнято 50,8 мм/год: "
+            "газон має 10 см чорнозему над піском; нижче насичення відтік "
+            "автоматично зменшується.",
+            ensure_ascii=False,
+        ),
+    )
     bundle = replace_exact(
         bundle,
         '"mapping-name":"Назва — довільне ім’я зони"',
@@ -326,8 +344,9 @@ def add_inline_frontend_help(bundle):
             "паспортна подача насоса."
         ),
         "drainage_rate": (
-            "Відтік лише за додатного запасу води. 50,8 мм/год — початкове "
-            "значення до уточнення типу ґрунту."
+            "Відтік лише за додатного запасу. Для обох зон прийнято 50,8 мм/год: "
+            "газон має 10 см чорнозему над піском; нижче насичення відтік "
+            "автоматично зменшується."
         ),
         "bucket": (
             "Накопичений баланс: мінус — дефіцит, плюс — запас після дощу "
@@ -419,6 +438,13 @@ def update_frontend_bundle(
     for upstream_value, ukrainian_value in iter_string_pairs(old_catalog, new_catalog):
         if upstream_value == ukrainian_value:
             continue
+        # HomeMate help keys are injected into the localization catalogue for
+        # completeness, but this long hint is not compiled into the frontend;
+        # its visible short form is upgraded by add_inline_frontend_help().
+        if upstream_value.startswith(
+            "Швидкість природного відтоку лише за надлишку води"
+        ):
+            continue
         # This short value is shared by several catalogue entries. A previous
         # global replacement made the sensor-group name look like a zone name;
         # patch its anchored object property in add_inline_frontend_help instead.
@@ -508,8 +534,9 @@ def main() -> None:
         'PANEL_URL = f"/api/panel_custom/{DOMAIN}-homemate-uk-v3"',
         'PANEL_URL = f"/api/panel_custom/{DOMAIN}-homemate-uk-v4"',
         'PANEL_URL = f"/api/panel_custom/{DOMAIN}-homemate-uk-v5"',
+        'PANEL_URL = f"/api/panel_custom/{DOMAIN}-homemate-uk-v6"',
     )
-    new_url = 'PANEL_URL = f"/api/panel_custom/{DOMAIN}-homemate-uk-v6"'
+    new_url = 'PANEL_URL = f"/api/panel_custom/{DOMAIN}-homemate-uk-v7"'
     for old_url in old_urls:
         if old_url in source:
             source = source.replace(old_url, new_url, 1)
