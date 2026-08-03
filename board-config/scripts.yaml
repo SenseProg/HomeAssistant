@@ -148,3 +148,51 @@ tv_idle_slideshow:
           media_content_id: '{{ photo }}'
           media_content_type: image/jpeg
       - delay: 00:00:20
+poliv_zona_4:
+  alias: Полити зону 4
+  icon: mdi:sprinkler-variant
+  mode: single
+  max_exceeded: warning
+  sequence:
+  - action: switch.turn_on
+    target:
+      entity_id: switch.avtopoliv_kontroler_switch_4
+  - delay:
+      seconds: 3
+  - action: switch.turn_on
+    target:
+      entity_id: switch.mini_switch_k601_2_switch_1_2
+  - delay:
+      minutes: "{{ states('input_number.poliv_zona_4_hvylyn') | int(25) }}"
+  - action: switch.turn_off
+    target:
+      entity_id: switch.mini_switch_k601_2_switch_1_2
+  - delay:
+      seconds: 3
+  - action: switch.turn_off
+    target:
+      entity_id: switch.avtopoliv_kontroler_switch_4
+poliv_zona_5:
+  alias: Полити зону 5
+  icon: mdi:sprinkler-variant
+  mode: single
+  max_exceeded: warning
+  sequence:
+  - action: switch.turn_on
+    target:
+      entity_id: switch.avtopoliv_kontroler_switch_5
+  - delay:
+      seconds: 3
+  - action: switch.turn_on
+    target:
+      entity_id: switch.mini_switch_k601_2_switch_1_2
+  - delay:
+      minutes: "{{ states('input_number.poliv_zona_5_hvylyn') | int(25) }}"
+  - action: switch.turn_off
+    target:
+      entity_id: switch.mini_switch_k601_2_switch_1_2
+  - delay:
+      seconds: 3
+  - action: switch.turn_off
+    target:
+      entity_id: switch.avtopoliv_kontroler_switch_5

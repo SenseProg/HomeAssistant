@@ -320,31 +320,3 @@
     target:
       entity_id: script.tv_idle_slideshow
   mode: restart
-
-- id: cam1_motion_clip_to_nas
-  alias: Cam1 - зберегти уривок руху на NAS
-  description: >-
-    На фронт руху записує приблизно 5 секунд до події та 5 секунд після неї.
-    lookback працює завдяки ввімкненому в UI попередньому завантаженню потоку
-    camera.cam1. Каталог media/video є окремим RW NFS-монтуванням NAS; локальна
-    точка монтування не повинна бути придатною до запису, коли NAS відсутній.
-  triggers:
-  - trigger: state
-    entity_id: binary_sensor.cam1_motion
-    from: 'off'
-    to: 'on'
-  conditions:
-  - condition: template
-    value_template: >-
-      {{ states('camera.cam1') not in ['unknown', 'unavailable'] }}
-  actions:
-  - action: camera.record
-    target:
-      entity_id: camera.cam1
-    data:
-      filename: >-
-        /userdata/hass/config/media/video/cam1/cam1_{{ now().strftime('%Y%m%d_%H%M%S') }}.mp4
-      lookback: 5
-      duration: 5
-  mode: parallel
-  max: 3

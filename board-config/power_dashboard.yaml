@@ -14,6 +14,26 @@ views:
       green: 0
       yellow: 6
       red: 11
+  - type: markdown
+    title: Хто бере потужність зараз
+    content: "{% set loads = [\n            ('Зарядка авто','sensor.zariadka_7_5kvt_device_kw',1),\n \
+      \           ('Бойлер','sensor.boiler_potuzhnist',0.001),\n            ('Насос поливу','sensor.nasos_polivu_potuzhnist_zaraz',0.001),\n\
+      \            ('Тепла підлога 1','sensor.terneo_1_current_power',0.001),\n            ('Тепла підлога\
+      \ 2','sensor.terneo_2_current_power',0.001)] %}\n          {% set total = states('sensor.zagalne_navantazhennia')\
+      \ | float(0) %}\n          {% set ns = namespace(rows=[], known=0.0) %}\n          {% for name,\
+      \ ent, k in loads %}\n            {% set v = (states(ent) | float(0)) * k %}\n            {% if\
+      \ v > 0.05 %}{% set ns.rows = ns.rows + [(v, name)] %}\n            {% set ns.known = ns.known +\
+      \ v %}{% endif %}\n          {% endfor %}\n          {% set other = total - ns.known %}\n      \
+      \    {% if other > 0.05 %}{% set ns.rows = ns.rows + [(other,'Інше (не враховане)')] %}{% endif\
+      \ %}\n          {% if ns.rows | length == 0 %}\n          Зараз нічого суттєвого не працює — **{{\
+      \ total | round(2) }} кВт**.\n          {% else %}\n          {% for v, name in ns.rows | sort(reverse=true)\
+      \ %}\n          **{{ name }}** — {{ v | round(2) }} кВт&nbsp;&nbsp;({{ (100 * v / total) | round(0)\
+      \ | int if total > 0 else 0 }}%)\n          {% endfor %}\n          ---\n          Разом **{{ total\
+      \ | round(2) }} кВт** · тариф {{ states('sensor.tarif_elektroenergii_zaraz') }} грн/кВт·год\n  \
+      \        {% endif %}"
+  - type: tile
+    entity: sensor.naibilshii_spozhivach_zaraz
+    name: Найбільший споживач
   - type: entities
     title: Миттєві показники (локально, опитування 5 с)
     entities:
@@ -426,168 +446,11 @@ views:
       title: Як це працює
       grid_options:
         columns: full
-      content: >
-        Energy-дашборд рахує вартість не за фіксованою ціною, а за сутністю
-        `sensor.tarif_elektroenergii_zaraz`, яка сама перемикається між денною
-        і нічною ставкою о 07:00 і о 23:00. Ставки редагуються прямо тут -
-        YAML правити не треба.
+      content: 'Energy-дашборд рахує вартість не за фіксованою ціною, а за сутністю `sensor.tarif_elektroenergii_zaraz`,
+        яка сама перемикається між денною і нічною ставкою о 07:00 і о 23:00. Ставки редагуються прямо
+        тут - YAML правити не треба.
 
-        Важливо: перерахунок стосується лише споживання ПІСЛЯ підключення
-        тарифу (2026-08-03). Історія до цього моменту порахована за старою
-        плоскою ціною 2.5 грн і заднім числом не переписується.
-- title: Наживо
-  path: live
-  icon: mdi:pulse
-  type: sections
-  max_columns: 4
-  dense_section_placement: true
-  sections:
-  - type: grid
-    cards:
-    - type: heading
-      heading: Потужність зараз
-      grid_options:
-        columns: full
-    - type: tile
-      entity: sensor.zagalne_navantazhennia
-      name: Весь будинок
-      grid_options:
-        columns: full
-    - type: tile
-      entity: sensor.zariadka_7_5kvt_device_kw
-      name: Зарядка авто
-      grid_options:
-        columns: 6
-    - type: tile
-      entity: sensor.boiler_potuzhnist
-      name: Бойлер
-      grid_options:
-        columns: 6
-    - type: tile
-      entity: sensor.nasos_polivu_potuzhnist_zaraz
-      name: Насос поливу
-      grid_options:
-        columns: 6
-    - type: tile
-      entity: sensor.tarif_elektroenergii_zaraz
-      name: Тариф
-      grid_options:
-        columns: 6
-  - type: grid
-    cards:
-    - type: heading
-      heading: Спожито сьогодні (оновлюється миттєво)
-      grid_options:
-        columns: full
-    - type: entities
-      grid_options:
-        columns: full
-      entities:
-      - entity: sensor.energy_meter_budinok_spozhito_sogodni
-        name: Весь будинок
-      - type: divider
-      - entity: sensor.zariadka_avto_sogodni
-        name: Зарядка авто
-      - entity: sensor.boiler_sogodni
-        name: Бойлер
-      - entity: sensor.nasos_polivu_energiia_sogodni
-        name: Насос поливу
-      - entity: sensor.terneo_1_tepla_pidloga_1_sogodni
-        name: Тепла підлога 1
-  - type: grid
-    cards:
-    - type: heading
-      heading: Деталізація по 5 хвилин
-      grid_options:
-        columns: full
-    - type: statistics-graph
-      title: Зарядка авто
-      chart_type: bar
-      period: 5minute
-      days_to_show: 1
-      stat_types:
-      - change
-      grid_options:
-        columns: full
-      entities:
-      - entity: sensor.zariadka_avto_spozhito
-        name: Зарядка
-    - type: statistics-graph
-      title: Весь будинок
-      chart_type: bar
-      period: 5minute
-      days_to_show: 1
-      stat_types:
-      - change
-      grid_options:
-        columns: full
-      entities:
-      - entity: sensor.energy_meter_total_energy
-        name: Будинок
-  - type: grid
-    cards:
-    - type: markdown
-      title: Чому Енергія показує менше
-      grid_options:
-        columns: full
-      content: >
-        Розділ "Енергія" малює ГОДИННУ статистику. Поточна година туди
-        потрапляє лише після того, як вона закінчиться, тому о 23:40 там ще
-        видно дані за 22:00 - і це не застарілість, а те, як влаштований
-        дашборд. Оновлення сторінки не допоможе: годинного запису за поточну
-        годину просто ще не існує.
+        Важливо: перерахунок стосується лише споживання ПІСЛЯ підключення тарифу (2026-08-03). Історія
+        до цього моменту порахована за старою плоскою ціною 2.5 грн і заднім числом не переписується.
 
-        Перевірено 2026-08-03: годинна статистика зарядки давала 0.236 кВт-год
-        за 22:00, тоді як 5-хвилинна вже показувала 3.992, а сам сенсор -
-        4.125. Тому ця вкладка побудована на 5-хвилинній статистиці та на
-        добових лічильниках, які є звичайними сутностями й оновлюються з
-        кожною зміною - без очікування кінця години.
-  - type: grid
-    cards:
-    - type: heading
-      heading: Хто споживає зараз
-      grid_options:
-        columns: full
-    - type: tile
-      entity: sensor.naibilshii_spozhivach_zaraz
-      name: Найбільший споживач
-      grid_options:
-        columns: full
-    - type: markdown
-      grid_options:
-        columns: full
-      content: >
-        {% set loads = [
-          ('Зарядка авто','sensor.zariadka_7_5kvt_device_kw',1),
-          ('Бойлер','sensor.boiler_potuzhnist',0.001),
-          ('Насос поливу','sensor.nasos_polivu_potuzhnist_zaraz',0.001),
-          ('Тепла підлога 1','sensor.terneo_1_current_power',0.001),
-          ('Тепла підлога 2','sensor.terneo_2_current_power',0.001)] %}
-        {% set total = states('sensor.zagalne_navantazhennia') | float(0) %}
-        {% set ns = namespace(rows=[], known=0.0) %}
-        {% for name, ent, k in loads %}
-          {% set v = (states(ent) | float(0)) * k %}
-          {% if v > 0.05 %}{% set ns.rows = ns.rows + [(v, name)] %}
-          {% set ns.known = ns.known + v %}{% endif %}
-        {% endfor %}
-        {% set other = total - ns.known %}
-        {% if other > 0.05 %}{% set ns.rows = ns.rows + [(other,'Інше (не враховане)')] %}{% endif %}
-        {% if ns.rows | length == 0 %}
-        Зараз нічого суттєвого не працює. Загальне навантаження **{{ total | round(2) }} кВт**.
-        {% else %}
-        {% for v, name in ns.rows | sort(reverse=true) %}
-        **{{ name }}** — {{ v | round(2) }} кВт&nbsp;&nbsp;({{ (100 * v / total) | round(0) | int if total > 0 else 0 }}%)
-        {% endfor %}
-        ---
-        Разом: **{{ total | round(2) }} кВт** · тариф {{ states('sensor.tarif_elektroenergii_zaraz') }} грн/кВт·год
-        {% endif %}
-    - type: markdown
-      title: Про "Інше"
-      grid_options:
-        columns: full
-      content: >
-        Це різниця між показом загального лічильника і сумою тих приладів, у
-        яких є власне вимірювання. Туди потрапляє все неметроване -
-        холодильник, освітлення, техніка. Велике стабільне "Інше" вночі варте
-        уваги: це або забутий прилад, або той самий нез'ясований циклічний
-        навантажувач на фазі A, який досі не ідентифіковано.
+        '

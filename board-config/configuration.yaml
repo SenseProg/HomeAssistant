@@ -32,6 +32,23 @@ input_number:
     step: 1
     initial: 10
     icon: mdi:timer-outline
+  # Зони 4 і 5 додані 2026-08-03 на прохання - вони фізично існують.
+  # У Smart Irrigation НЕ заведені навмисно: там лишаються тільки зони 1 і 2,
+  # решта керується вручну з дашборда.
+  poliv_zona_4_hvylyn:
+    name: Зона 4 - хвилин поливу
+    min: 1
+    max: 60
+    step: 1
+    initial: 25
+    icon: mdi:timer-outline
+  poliv_zona_5_hvylyn:
+    name: Зона 5 - хвилин поливу
+    min: 1
+    max: 60
+    step: 1
+    initial: 25
+    icon: mdi:timer-outline
 
   # Показ лічильника енергії насоса на момент старту сесії поливу.
   # Заповнюється автоматизацією "Полив - фіксація лічильника на старті сесії".
