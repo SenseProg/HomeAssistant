@@ -114,14 +114,14 @@ commissioned zones use 250 m², 40 L/min, module `0: PyETO`, and sensor group
 `0: Група датчиків за замовчуванням`. Keep Smart Irrigation direct valve control
 disabled and map observed watering to `switch.avtopoliv_kontroler_switch_1` and
 `switch.avtopoliv_kontroler_switch_2`. The existing weekday automation remains
-the only start source (currently all weekdays at 20:00). It reads
+the only start source and runs 30 minutes before sunrise on enabled weekdays. It reads
 `sensor.smart_irrigation_zona1` and `sensor.smart_irrigation_zona2`, then
 queues the calculated durations on the corresponding Irrigation Unlimited zone
 entities. Until a Smart zone exists, that zone safely falls back to its current
 `input_number.poliv_zona_*_hvylyn` duration; a calculated value of zero skips
-the zone. Smart Irrigation's sunrise event is intentionally not connected to an
-automation, which prevents a second daily start. Zone 3 remains manual and is
-not part of weather-driven calculation.
+the zone. Smart Irrigation itself does not operate the valves: the weekday
+automation starts Irrigation Unlimited, which owns the safe valve/pump
+sequence. Zone 3 remains manual and is not part of weather-driven calculation.
 
 The duration formula is `abs(water deficit in mm) / precipitation rate × 3600`,
 where precipitation rate is `throughput × 60 / area`. At the commissioned

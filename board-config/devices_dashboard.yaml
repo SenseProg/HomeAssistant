@@ -328,12 +328,19 @@ views:
       heading: Розклад поливу
       grid_options:
         columns: full
+    - type: markdown
+      grid_options:
+        columns: full
+      content: >-
+        **Автоматичний старт:** за 30 хвилин до сходу сонця.
+
+        **Наступний запуск:**
+        {{ (as_timestamp(state_attr('sun.sun', 'next_rising')) - 1800)
+           | timestamp_custom('%d.%m.%Y %H:%M', true) }}
     - type: entities
       grid_options:
         columns: full
       entities:
-      - entity: input_datetime.poliv_chas
-        name: Час старту
       - type: section
         label: Дні тижня
       - entity: input_boolean.poliv_pn
@@ -374,7 +381,7 @@ views:
         columns: full
       entities:
       - entity: automation.poliv_rozklad_za_chasom_i_dniami_tizhnia
-        name: Розклад за часом і днями тижня
+        name: Автополив до сходу сонця
   - type: grid
     cards:
     - type: heading

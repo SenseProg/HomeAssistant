@@ -95,15 +95,6 @@ input_boolean:
     name: Зона 3 у розкладі
     icon: mdi:sprinkler
 
-# Час старту розкладу. initial навмисно НЕ задано, щоб значення переживало
-# перезапуск HA - з initial воно скидалось би на дефолт при кожному старті.
-input_datetime:
-  poliv_chas:
-    name: Полив - час старту
-    has_date: false
-    has_time: true
-    icon: mdi:clock-outline
-
 automation: !include automations.yaml
 script: !include scripts.yaml
 scene: !include scenes.yaml
