@@ -1,0 +1,13 @@
+{
+  "domain": "claude_code_conversation",
+  "name": "Claude Code Conversation",
+  "after_dependencies": ["assist_pipeline", "intent"],
+  "codeowners": [],
+  "config_flow": true,
+  "dependencies": ["conversation"],
+  "documentation": "https://github.com/SenseProg/HomeAssistant",
+  "integration_type": "service",
+  "iot_class": "cloud_polling",
+  "requirements": [],
+  "version": "0.1.0"
+}

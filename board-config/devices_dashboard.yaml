@@ -372,8 +372,6 @@ views:
         name: Зона 2
       - entity: input_number.poliv_zona_2_hvylyn
         name: "    хвилин"
-      - entity: input_boolean.poliv_zona_3_vkl
-        name: Зона 3
       - entity: input_number.poliv_zona_3_hvylyn
         name: "    хвилин"
       - type: section
@@ -479,6 +477,8 @@ views:
         name: Клапан
       - entity: binary_sensor.irrigation_unlimited_c1_z1
         name: Стан поливу зони 1
+      - entity: timer.poliv_zoni_1
+        name: Залишилось поливати
     - type: button
       name: Старт
       icon: mdi:play
@@ -517,6 +517,8 @@ views:
         name: Клапан
       - entity: binary_sensor.irrigation_unlimited_c1_z2
         name: Стан поливу зони 2
+      - entity: timer.poliv_zoni_2
+        name: Залишилось поливати
     - type: button
       name: Старт
       icon: mdi:play
@@ -555,6 +557,8 @@ views:
         name: Клапан
       - entity: binary_sensor.irrigation_unlimited_c1_z3
         name: Стан поливу зони 3
+      - entity: timer.poliv_zoni_3
+        name: Залишилось поливати
     - type: button
       name: Старт
       icon: mdi:play
@@ -593,6 +597,8 @@ views:
         name: Клапан
       - entity: script.poliv_zona_4
         name: Йде полив
+      - entity: timer.poliv_zoni_4
+        name: Залишилось поливати
     - type: button
       name: Старт
       icon: mdi:play
@@ -631,6 +637,8 @@ views:
         name: Клапан
       - entity: script.poliv_zona_5
         name: Йде полив
+      - entity: timer.poliv_zoni_5
+        name: Залишилось поливати
     - type: button
       name: Старт
       icon: mdi:play

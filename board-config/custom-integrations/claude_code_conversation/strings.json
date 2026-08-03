@@ -1,0 +1,33 @@
+{
+  "title": "Claude Code Conversation",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Домашній асистент Claude",
+        "description": "Створює безпечний чат Home Assistant через авторизований Claude Code на платі. Агент читає дозволені стани, але не керує пристроями.",
+        "data": {
+          "name": "Назва агента",
+          "model": "Модель Claude",
+          "prompt": "Системний промпт",
+          "max_history": "Кількість попередніх реплік",
+          "timeout": "Тайм-аут відповіді, с"
+        },
+        "data_description": {
+          "name": "Так агент відображатиметься у списку Assist.",
+          "model": "Sonnet швидший; Opus зазвичай повільніший і докладніший.",
+          "prompt": "Правила ролі, мови, достовірності та безпеки.",
+          "max_history": "Скільки пар повідомлень передавати для контексту діалогу.",
+          "timeout": "Максимальний час очікування Claude Code від 30 до 300 секунд."
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Claude Code не запускається або не відповідає.",
+      "not_authenticated": "Claude Code не авторизований через підписку Claude.",
+      "unknown": "Неочікувана помилка."
+    },
+    "abort": {
+      "already_configured": "Агент Claude Code вже налаштований."
+    }
+  }
+}

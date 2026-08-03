@@ -108,11 +108,13 @@
   alias: Полив - розклад за часом і днями тижня
   description: 'Слухає подію Smart Irrigation про початок поливу. Момент старту рахує сама SI: offset_minutes=0 разом з account_for_duration
     означає "почати рівно за стільки, скільки триватиме полив, щоб він ЗАКІНЧИВСЯ на схід сонця". Для газону з дощуванням
-    зверху це правильний час - вода встигає всотатися до спеки, а листя висихає одразу після сходу, тож не стоїть мокрим ніч.
-    Тривалість зон 1 і 2 береться з розрахунку SI; поки Smart-зона ще не створена, використовується ручне значення хвилин.
-    Нульова Smart-тривалість пропускає зону. Зона 3 лишається на ручній тривалості. Виконує полив Irrigation Unlimited, бо
-    тільки він керує насосом-майстром: прямий контроль клапанів у SI вимкнено навмисно - її valve_runner про насос не знає
-    і відкривав би клапани всуху.'
+    зверху це правильний час - вода встигає всотатися до спеки, а листя висихає одразу після сходу.
+
+    За розкладом поливаються ТІЛЬКИ зони 1 і 2 - саме вони заведені у Smart Irrigation і саме їхня сумарна тривалість задає
+    зсув від сходу. Зони 3, 4 і 5 автоматично не поливаються взагалі, лише вручну з дашборда (рішення користувача, 2026-08-04).
+
+    Виконує полив Irrigation Unlimited, бо тільки він керує насосом-майстром: прямий контроль клапанів у SI вимкнено навмисно
+    - її valve_runner про насос не знає і відкривав би клапани всуху.'
   triggers:
   - trigger: event
     event_type: smart_irrigation_start_irrigation_all_zones
@@ -222,28 +224,6 @@
       continue_on_timeout: false
     - wait_template: "{{ is_state('binary_sensor.irrigation_unlimited_c1_m', 'off')\n   and is_state('switch.mini_switch_k601_2_switch_1_2',\
         \ 'off')\n   and is_state('switch.avtopoliv_kontroler_switch_2', 'off') }}"
-      timeout: 00:01:00
-      continue_on_timeout: false
-    - delay: 00:00:10
-  - if:
-    - condition: state
-      entity_id: input_boolean.poliv_zona_3_vkl
-      state: 'on'
-    then:
-    - action: irrigation_unlimited.manual_run
-      data:
-        entity_id: binary_sensor.irrigation_unlimited_c1_z3
-        time: '{% set m = states(''input_number.poliv_zona_3_hvylyn'') | int(10) %} {{ ''%02d:%02d:00'' % (m // 60, m % 60)
-          }}'
-        queue: true
-    - wait_template: '{{ is_state(''binary_sensor.irrigation_unlimited_c1_z3'', ''on'') }}'
-      timeout: 00:00:30
-      continue_on_timeout: false
-    - wait_template: '{{ is_state(''binary_sensor.irrigation_unlimited_c1_z3'', ''off'') }}'
-      timeout: 01:02:00
-      continue_on_timeout: false
-    - wait_template: "{{ is_state('binary_sensor.irrigation_unlimited_c1_m', 'off')\n   and is_state('switch.mini_switch_k601_2_switch_1_2',\
-        \ 'off')\n   and is_state('switch.avtopoliv_kontroler_switch_3', 'off') }}"
       timeout: 00:01:00
       continue_on_timeout: false
     - delay: 00:00:10
