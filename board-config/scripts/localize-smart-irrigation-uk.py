@@ -13,6 +13,99 @@ UKRAINIAN_NAME = "Розумний полив"
 UPSTREAM_NAME = "Smart Irrigation"
 
 
+def add_frontend_help(data):
+    """Add concise, practical explanations to the Ukrainian configuration UI."""
+    common_labels = data.setdefault("common", {}).setdefault("labels", {})
+    common_labels["module"] = (
+        "Модуль розрахунку — PyETO за погодою, Static за сталою нормою"
+    )
+
+    zones = data.setdefault("panels", {}).setdefault("zones", {})
+    zones["description"] = (
+        "Площа та витрата не задають час напряму: вони переводять дефіцит води "
+        "в міліметрах у секунди. Для 250 м² і 40 л/хв інтенсивність становить "
+        "9,6 мм/год: 4 мм дефіциту — це 25 хвилин, а 0,05 мм — близько 19 секунд."
+    )
+    zone_labels = zones.setdefault("labels", {})
+    zone_labels.update(
+        {
+            "name": "Назва — довільне ім’я зони",
+            "size": "Площа ділянки, що поливається",
+            "throughput": "Загальна витрата води через усю зону",
+            "drainage_rate": "Дренаж насиченого ґрунту",
+            "state": "Режим роботи зони",
+            "mapping": "Джерело погодних даних",
+            "bucket": "Водний баланс ґрунту (− дефіцит, + запас)",
+            "maximum-bucket": "Максимальний запас води у ґрунті",
+            "et-deficiency": "Добовий дефіцит евапотранспірації (довідково)",
+            "lead-time": "Додатковий час до розрахованої тривалості",
+            "maximum-duration": "Гранична тривалість одного запуску",
+            "multiplier": "Коефіцієнт тривалості",
+            "duration": "Розрахована тривалість поливу",
+            "linked-entity-hint": (
+                "Фізичний клапан або реле цієї зони. У замкненому контурі "
+                "Розумний полив лише спостерігає, скільки часу цей перемикач "
+                "реально був увімкнений, і за витратою зони додає подану воду "
+                "до водного балансу. Пряме керування клапаном для HomeMate "
+                "залишається вимкненим — безпечну послідовність виконує "
+                "Irrigation Unlimited."
+            ),
+            "flow-sensor-hint": (
+                "Необов’язковий накопичувальний лічильник фактичного об’єму. "
+                "Якщо його немає, вода рахується як витрата зони × час роботи "
+                "підключеного клапана."
+            ),
+        }
+    )
+    states = zone_labels.setdefault("states", {})
+    states.update(
+        {
+            "automatic": "Автоматичний — використовувати розрахунок модуля",
+            "disabled": "Вимкнено — не розраховувати й не поливати",
+            "manual": "Ручний — використовувати задану тривалість",
+        }
+    )
+
+    calcmodules = data.setdefault("calcmodules", {})
+    calcmodules.setdefault("pyeto", {})["description"] = (
+        "PyETO: розраховує щоденний дефіцит за температурою, вологістю, "
+        "вітром, сонячною радіацією та опадами (FAO-56)."
+    )
+    calcmodules.setdefault("static", {})["description"] = (
+        "Static: щодня додає задану сталу зміну водного балансу. Від’ємне "
+        "значення означає дефіцит; −4 мм для 250 м² і 40 л/хв дає 25 хвилин."
+    )
+    calcmodules.setdefault("passthrough", {})["description"] = (
+        "Passthrough: бере готову добову зміну водного балансу із зовнішнього "
+        "датчика евапотранспірації."
+    )
+
+    modules = data.setdefault("panels", {}).setdefault("modules", {})
+    modules["description"] = (
+        "PyETO автоматично обчислює зміну водного балансу з погоди. Static "
+        "використовує одну сталу норму: поле Delta задається в мм за цикл "
+        "розрахунку; мінус означає нестачу води. Для цієї системи Delta = −4 "
+        "мм відповідає приблизно 25 хвилинам поливу."
+    )
+
+    observed = data.setdefault("observed_watering", {})
+    observed["title"] = "Облік фактичного поливу (замкнений контур)"
+    observed["description"] = (
+        "Замкнений контур означає зворотний зв’язок: інтеграція бачить реальний "
+        "стан прив’язаного клапана, рахує подану воду за часом і витратою та "
+        "поповнює водний баланс. Це облік, а не пряме керування клапаном."
+    )
+    observed["enabled_label"] = "Увімкнути облік фактичного поливу"
+    observed["direct_control_label"] = (
+        "Дозволити Smart Irrigation напряму керувати клапаном (небезпечно)"
+    )
+    observed["direct_control_description"] = (
+        "Для HomeMate залишити вимкненим: клапанами й насосом керує Irrigation "
+        "Unlimited, який забезпечує правильний порядок запуску та зупинки."
+    )
+    return data
+
+
 def replace_ukrainian_terms(value):
     """Replace untranslated irrigation jargon in Ukrainian display strings."""
     if isinstance(value, str):
@@ -63,6 +156,8 @@ def replace_brand(value):
 def update_json(path: Path, *, set_manifest_name: bool = False) -> None:
     data = json.loads(path.read_text(encoding="utf-8"))
     data = replace_ukrainian_terms(replace_brand(data))
+    if path.name == "uk.json" and path.parent.name == "languages":
+        data = add_frontend_help(data)
     if path.name == "uk.json" and path.parent.name == "translations":
         sensor_names = data.setdefault("entity", {}).setdefault("sensor", {})
         sensor_names.update(
@@ -172,7 +267,9 @@ def main() -> None:
         raise SystemExit("Missing Smart Irrigation files: " + ", ".join(missing))
 
     uk_catalog = json.loads(required_files[0].read_text(encoding="utf-8"))
-    localized_catalog = replace_ukrainian_terms(replace_brand(uk_catalog))
+    localized_catalog = add_frontend_help(
+        replace_ukrainian_terms(replace_brand(uk_catalog))
+    )
     update_frontend_bundle(component_root, uk_catalog, localized_catalog)
     update_json(required_files[0])
     update_json(required_files[1])
@@ -192,8 +289,10 @@ def main() -> None:
     old_urls = (
         'PANEL_URL = f"/api/panel_custom/{DOMAIN}"',
         'PANEL_URL = f"/api/panel_custom/{DOMAIN}-homemate-uk-v1"',
+        'PANEL_URL = f"/api/panel_custom/{DOMAIN}-homemate-uk-v2"',
+        'PANEL_URL = f"/api/panel_custom/{DOMAIN}-homemate-uk-v3"',
     )
-    new_url = 'PANEL_URL = f"/api/panel_custom/{DOMAIN}-homemate-uk-v2"'
+    new_url = 'PANEL_URL = f"/api/panel_custom/{DOMAIN}-homemate-uk-v4"'
     for old_url in old_urls:
         if old_url in source:
             source = source.replace(old_url, new_url, 1)

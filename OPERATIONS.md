@@ -123,6 +123,14 @@ the zone. Smart Irrigation's sunrise event is intentionally not connected to an
 automation, which prevents a second daily start. Zone 3 remains manual and is
 not part of weather-driven calculation.
 
+The duration formula is `abs(water deficit in mm) / precipitation rate × 3600`,
+where precipitation rate is `throughput × 60 / area`. At the commissioned
+250 m² and 40 L/min this is 9.6 mm/h: a 4 mm deficit produces 1500 seconds
+(25 minutes), while a freshly collected 0.05 mm deficit produces only about
+19 seconds. Module `1: Static` is kept as an optional fixed-reference module
+with delta `-4 mm`; the production zones remain on PyETO so weather and rain
+affect the result.
+
 Automatic irrigation must remain disabled until the physical values and a dry
 commissioning test have been completed. The pinned custom components can be
 reinstalled or upgraded reproducibly with
