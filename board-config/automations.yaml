@@ -1,7 +1,7 @@
 - id: irrigation_pump_session_energy
   alias: Полив - фіксація лічильника на старті сесії
-  description: На кожному вмиканні насоса запам'ятовує поточний показ наростаючого
-    лічильника енергії, щоб сенсор "спожито за сесію" рахував від нуля.
+  description: На кожному вмиканні насоса запам'ятовує поточний показ наростаючого лічильника енергії, щоб сенсор "спожито
+    за сесію" рахував від нуля.
   triggers:
   - trigger: state
     entity_id: switch.mini_switch_k601_2_switch_1_2
@@ -17,11 +17,9 @@
   mode: single
 - id: irrigation_manual_pump_opens_valve
   alias: Полив - ручний пуск насоса відкриває клапан
-  description: Якщо насос увімкнули вручну - фізичною кнопкою на модулі або тумблером
-    в інтерфейсі - і жоден клапан не відкритий, одразу відкриває зону, обрану в "Ручний
-    пуск - яку зону відкривати". Спрацьовує за секунду, тому захист "насос без відкритого
-    клапана" (10 с) не встигає вимкнути насос. Сам захист лишається недоторканим як
-    останній рубіж, якщо клапан не відкриється.
+  description: Якщо насос увімкнули вручну - фізичною кнопкою на модулі або тумблером в інтерфейсі - і жоден клапан не відкритий,
+    одразу відкриває зону, обрану в "Ручний пуск - яку зону відкривати". Спрацьовує за секунду, тому захист "насос без відкритого
+    клапана" (10 с) не встигає вимкнути насос. Сам захист лишається недоторканим як останній рубіж, якщо клапан не відкриється.
   triggers:
   - trigger: state
     entity_id: switch.mini_switch_k601_2_switch_1_2
@@ -29,26 +27,27 @@
     to: 'on'
   conditions:
   - condition: template
-    value_template: "{{ not is_state('switch.avtopoliv_kontroler_switch_1', 'on')\n
-      \  and not is_state('switch.avtopoliv_kontroler_switch_2', 'on')\n   and not
-      is_state('switch.avtopoliv_kontroler_switch_3', 'on') }}\n"
+    value_template: "{{ not is_state('switch.avtopoliv_kontroler_switch_1', 'on')\n   and not is_state('switch.avtopoliv_kontroler_switch_2',\
+      \ 'on')\n   and not is_state('switch.avtopoliv_kontroler_switch_3', 'on')\n   and not is_state('switch.avtopoliv_kontroler_switch_4',\
+      \ 'on')\n   and not is_state('switch.avtopoliv_kontroler_switch_5', 'on') }}\n"
   actions:
   - action: switch.turn_on
     target:
-      entity_id: "{% set z = states('input_select.poliv_ruchna_zona') %} {{ 'switch.avtopoliv_kontroler_switch_2'
-        if z == 'Зона 2'\n   else 'switch.avtopoliv_kontroler_switch_3' if z == 'Зона
-        3'\n   else 'switch.avtopoliv_kontroler_switch_1' }}\n"
+      entity_id: "{% set z = states('input_select.poliv_ruchna_zona') %} {{ 'switch.avtopoliv_kontroler_switch_2' if z ==\
+        \ 'Зона 2'\n   else 'switch.avtopoliv_kontroler_switch_3' if z == 'Зона 3'\n   else 'switch.avtopoliv_kontroler_switch_4'\
+        \ if z == 'Зона 4'\n   else 'switch.avtopoliv_kontroler_switch_5' if z == 'Зона 5'\n   else 'switch.avtopoliv_kontroler_switch_1'\
+        \ }}\n"
   mode: single
 - id: irrigation_close_valves_when_pump_idle
   alias: Полив - закрити клапани, якщо насос давно вимкнений
-  description: Прибирає забутий відкритий клапан після ручного пуску. Irrigation Unlimited
-    закриває свої клапани за 3 секунди після зупинки насоса, тому 5-хвилинна витримка
-    у його роботу не втручається.
+  description: Прибирає забутий відкритий клапан після ручного пуску. Irrigation Unlimited закриває свої клапани за 3 секунди
+    після зупинки насоса, тому 5-хвилинна витримка у його роботу не втручається.
   triggers:
   - trigger: template
-    value_template: "{{ is_state('switch.mini_switch_k601_2_switch_1_2', 'off')\n
-      \  and (is_state('switch.avtopoliv_kontroler_switch_1', 'on')\n        or is_state('switch.avtopoliv_kontroler_switch_2',
-      'on')\n        or is_state('switch.avtopoliv_kontroler_switch_3', 'on')) }}\n"
+    value_template: "{{ is_state('switch.mini_switch_k601_2_switch_1_2', 'off')\n   and (is_state('switch.avtopoliv_kontroler_switch_1',\
+      \ 'on')\n        or is_state('switch.avtopoliv_kontroler_switch_2', 'on')\n        or is_state('switch.avtopoliv_kontroler_switch_3',\
+      \ 'on')\n        or is_state('switch.avtopoliv_kontroler_switch_4', 'on')\n        or is_state('switch.avtopoliv_kontroler_switch_5',\
+      \ 'on')) }}\n"
     for: 00:05:00
   conditions: []
   actions:
@@ -58,6 +57,8 @@
       - switch.avtopoliv_kontroler_switch_1
       - switch.avtopoliv_kontroler_switch_2
       - switch.avtopoliv_kontroler_switch_3
+      - switch.avtopoliv_kontroler_switch_4
+      - switch.avtopoliv_kontroler_switch_5
   mode: single
 - id: irrigation_fail_safe_on_ha_start
   alias: Полив - безпечний стан після запуску HA
@@ -74,9 +75,10 @@
   description: Вимикає насос, якщо протягом 10 секунд жоден клапан не відкритий.
   triggers:
   - trigger: template
-    value_template: "{{ is_state('switch.mini_switch_k601_2_switch_1_2', 'on')\n   and
-      not is_state('switch.avtopoliv_kontroler_switch_1', 'on')\n   and not is_state('switch.avtopoliv_kontroler_switch_2',
-      'on')\n   and not is_state('switch.avtopoliv_kontroler_switch_3', 'on') }}\n"
+    value_template: "{{ is_state('switch.mini_switch_k601_2_switch_1_2', 'on')\n   and not is_state('switch.avtopoliv_kontroler_switch_1',\
+      \ 'on')\n   and not is_state('switch.avtopoliv_kontroler_switch_2', 'on')\n   and not is_state('switch.avtopoliv_kontroler_switch_3',\
+      \ 'on')\n   and not is_state('switch.avtopoliv_kontroler_switch_4', 'on')\n   and not is_state('switch.avtopoliv_kontroler_switch_5',\
+      \ 'on') }}\n"
     for: 00:00:10
   conditions: []
   actions:
@@ -104,16 +106,13 @@
   mode: single
 - id: irrigation_scheduled_weekday
   alias: Полив - розклад за часом і днями тижня
-  description: 'Слухає подію Smart Irrigation про початок поливу. Момент старту рахує
-    сама SI: offset_minutes=0 разом з account_for_duration означає "почати рівно за
-    стільки, скільки триватиме полив, щоб він ЗАКІНЧИВСЯ на схід сонця". Для газону
-    з дощуванням зверху це правильний час - вода встигає всотатися до спеки, а листя
-    висихає одразу після сходу, тож не стоїть мокрим ніч. Тривалість зон 1 і 2 береться
-    з розрахунку SI; поки Smart-зона ще не створена, використовується ручне значення
-    хвилин. Нульова Smart-тривалість пропускає зону. Зона 3 лишається на ручній тривалості.
-    Виконує полив Irrigation Unlimited, бо тільки він керує насосом-майстром: прямий
-    контроль клапанів у SI вимкнено навмисно - її valve_runner про насос не знає і
-    відкривав би клапани всуху.'
+  description: 'Слухає подію Smart Irrigation про початок поливу. Момент старту рахує сама SI: offset_minutes=0 разом з account_for_duration
+    означає "почати рівно за стільки, скільки триватиме полив, щоб він ЗАКІНЧИВСЯ на схід сонця". Для газону з дощуванням
+    зверху це правильний час - вода встигає всотатися до спеки, а листя висихає одразу після сходу, тож не стоїть мокрим ніч.
+    Тривалість зон 1 і 2 береться з розрахунку SI; поки Smart-зона ще не створена, використовується ручне значення хвилин.
+    Нульова Smart-тривалість пропускає зону. Зона 3 лишається на ручній тривалості. Виконує полив Irrigation Unlimited, бо
+    тільки він керує насосом-майстром: прямий контроль клапанів у SI вимкнено навмисно - її valve_runner про насос не знає
+    і відкривав би клапани всуху.'
   triggers:
   - trigger: event
     event_type: smart_irrigation_start_irrigation_all_zones
@@ -122,18 +121,15 @@
     entity_id: input_boolean.poliv_avtomatika_dozvolena
     state: 'on'
   - condition: template
-    value_template: "{{ is_state(['input_boolean.poliv_pn', 'input_boolean.poliv_vt',\n
-      \            'input_boolean.poliv_sr', 'input_boolean.poliv_cht',\n             'input_boolean.poliv_pt',
-      'input_boolean.poliv_sb',\n             'input_boolean.poliv_nd'][now().weekday()],
-      'on') }}\n"
+    value_template: "{{ is_state(['input_boolean.poliv_pn', 'input_boolean.poliv_vt',\n             'input_boolean.poliv_sr',\
+      \ 'input_boolean.poliv_cht',\n             'input_boolean.poliv_pt', 'input_boolean.poliv_sb',\n             'input_boolean.poliv_nd'][now().weekday()],\
+      \ 'on') }}\n"
   actions:
   - variables:
-      zona_1_seconds: "{% set smart = states('sensor.smart_irrigation_zona1') %} {%
-        if is_number(smart) %}\n  {{ smart | int(0) }}\n{% else %}\n  {{ (states('input_number.poliv_zona_1_hvylyn')
-        | int(25)) * 60 }}\n{% endif %}"
-      zona_2_seconds: "{% set smart = states('sensor.smart_irrigation_zona2') %} {%
-        if is_number(smart) %}\n  {{ smart | int(0) }}\n{% else %}\n  {{ (states('input_number.poliv_zona_2_hvylyn')
-        | int(25)) * 60 }}\n{% endif %}"
+      zona_1_seconds: "{% set smart = states('sensor.smart_irrigation_zona1') %} {% if is_number(smart) %}\n  {{ smart | int(0)\
+        \ }}\n{% else %}\n  {{ (states('input_number.poliv_zona_1_hvylyn') | int(25)) * 60 }}\n{% endif %}"
+      zona_2_seconds: "{% set smart = states('sensor.smart_irrigation_zona2') %} {% if is_number(smart) %}\n  {{ smart | int(0)\
+        \ }}\n{% else %}\n  {{ (states('input_number.poliv_zona_2_hvylyn') | int(25)) * 60 }}\n{% endif %}"
   - action: weather.get_forecasts
     target:
       entity_id: weather.forecast_golovna
@@ -141,13 +137,12 @@
       type: hourly
     response_variable: fc
   - variables:
-      rain_now: "{{ states('weather.forecast_golovna') in\n   ['rainy', 'pouring',
-        'lightning-rainy', 'snowy-rainy', 'hail'] }}\n"
-      rain_soon: "{% set fl = (fc.get('weather.forecast_golovna', {}).get('forecast',
-        []))[:6] %} {% set ns = namespace(wet=false) %} {% for f in fl %}\n  {% if
-        f.condition in ['rainy', 'pouring', 'lightning-rainy', 'snowy-rainy', 'hail']\n
-        \       or (f.precipitation | default(0) | float(0)) > 0.2 %}\n    {% set
-        ns.wet = true %}\n  {% endif %}\n{% endfor %} {{ ns.wet }}\n"
+      rain_now: "{{ states('weather.forecast_golovna') in\n   ['rainy', 'pouring', 'lightning-rainy', 'snowy-rainy', 'hail']\
+        \ }}\n"
+      rain_soon: "{% set fl = (fc.get('weather.forecast_golovna', {}).get('forecast', []))[:6] %} {% set ns = namespace(wet=false)\
+        \ %} {% for f in fl %}\n  {% if f.condition in ['rainy', 'pouring', 'lightning-rainy', 'snowy-rainy', 'hail']\n  \
+        \      or (f.precipitation | default(0) | float(0)) > 0.2 %}\n    {% set ns.wet = true %}\n  {% endif %}\n{% endfor\
+        \ %} {{ ns.wet }}\n"
   - if:
     - condition: template
       value_template: '{{ rain_now or rain_soon }}'
@@ -155,8 +150,7 @@
     - action: notify.mobile_app_sm_s918b
       data:
         title: Полив за розкладом
-        message: '{{ ''Зараз дощ.'' if rain_now else ''Найближчими годинами прогнозують
-          дощ.'' }} Поливати попри це?'
+        message: '{{ ''Зараз дощ.'' if rain_now else ''Найближчими годинами прогнозують дощ.'' }} Поливати попри це?'
         data:
           tag: poliv_dosh
           actions:
@@ -177,8 +171,7 @@
       continue_on_timeout: true
     - if:
       - condition: template
-        value_template: "{{ wait.trigger is none\n   or wait.trigger.event.data.action
-          != 'POLIV_YES' }}\n"
+        value_template: "{{ wait.trigger is none\n   or wait.trigger.event.data.action != 'POLIV_YES' }}\n"
       then:
       - action: notify.mobile_app_sm_s918b
         data:
@@ -198,17 +191,14 @@
         entity_id: binary_sensor.irrigation_unlimited_c1_z1
         time: '{{ timedelta(seconds=zona_1_seconds | int(0)) }}'
         queue: true
-    - wait_template: '{{ is_state(''binary_sensor.irrigation_unlimited_c1_z1'', ''on'')
-        }}'
+    - wait_template: '{{ is_state(''binary_sensor.irrigation_unlimited_c1_z1'', ''on'') }}'
       timeout: 00:00:30
       continue_on_timeout: false
-    - wait_template: '{{ is_state(''binary_sensor.irrigation_unlimited_c1_z1'', ''off'')
-        }}'
+    - wait_template: '{{ is_state(''binary_sensor.irrigation_unlimited_c1_z1'', ''off'') }}'
       timeout: 01:02:00
       continue_on_timeout: false
-    - wait_template: "{{ is_state('binary_sensor.irrigation_unlimited_c1_m', 'off')\n
-        \  and is_state('switch.mini_switch_k601_2_switch_1_2', 'off')\n   and is_state('switch.avtopoliv_kontroler_switch_1',
-        'off') }}"
+    - wait_template: "{{ is_state('binary_sensor.irrigation_unlimited_c1_m', 'off')\n   and is_state('switch.mini_switch_k601_2_switch_1_2',\
+        \ 'off')\n   and is_state('switch.avtopoliv_kontroler_switch_1', 'off') }}"
       timeout: 00:01:00
       continue_on_timeout: false
     - delay: 00:00:10
@@ -224,17 +214,14 @@
         entity_id: binary_sensor.irrigation_unlimited_c1_z2
         time: '{{ timedelta(seconds=zona_2_seconds | int(0)) }}'
         queue: true
-    - wait_template: '{{ is_state(''binary_sensor.irrigation_unlimited_c1_z2'', ''on'')
-        }}'
+    - wait_template: '{{ is_state(''binary_sensor.irrigation_unlimited_c1_z2'', ''on'') }}'
       timeout: 00:00:30
       continue_on_timeout: false
-    - wait_template: '{{ is_state(''binary_sensor.irrigation_unlimited_c1_z2'', ''off'')
-        }}'
+    - wait_template: '{{ is_state(''binary_sensor.irrigation_unlimited_c1_z2'', ''off'') }}'
       timeout: 01:02:00
       continue_on_timeout: false
-    - wait_template: "{{ is_state('binary_sensor.irrigation_unlimited_c1_m', 'off')\n
-        \  and is_state('switch.mini_switch_k601_2_switch_1_2', 'off')\n   and is_state('switch.avtopoliv_kontroler_switch_2',
-        'off') }}"
+    - wait_template: "{{ is_state('binary_sensor.irrigation_unlimited_c1_m', 'off')\n   and is_state('switch.mini_switch_k601_2_switch_1_2',\
+        \ 'off')\n   and is_state('switch.avtopoliv_kontroler_switch_2', 'off') }}"
       timeout: 00:01:00
       continue_on_timeout: false
     - delay: 00:00:10
@@ -246,30 +233,24 @@
     - action: irrigation_unlimited.manual_run
       data:
         entity_id: binary_sensor.irrigation_unlimited_c1_z3
-        time: '{% set m = states(''input_number.poliv_zona_3_hvylyn'') | int(10) %}
-          {{ ''%02d:%02d:00'' % (m // 60, m % 60) }}'
+        time: '{% set m = states(''input_number.poliv_zona_3_hvylyn'') | int(10) %} {{ ''%02d:%02d:00'' % (m // 60, m % 60)
+          }}'
         queue: true
-    - wait_template: '{{ is_state(''binary_sensor.irrigation_unlimited_c1_z3'', ''on'')
-        }}'
+    - wait_template: '{{ is_state(''binary_sensor.irrigation_unlimited_c1_z3'', ''on'') }}'
       timeout: 00:00:30
       continue_on_timeout: false
-    - wait_template: '{{ is_state(''binary_sensor.irrigation_unlimited_c1_z3'', ''off'')
-        }}'
+    - wait_template: '{{ is_state(''binary_sensor.irrigation_unlimited_c1_z3'', ''off'') }}'
       timeout: 01:02:00
       continue_on_timeout: false
-    - wait_template: "{{ is_state('binary_sensor.irrigation_unlimited_c1_m', 'off')\n
-        \  and is_state('switch.mini_switch_k601_2_switch_1_2', 'off')\n   and is_state('switch.avtopoliv_kontroler_switch_3',
-        'off') }}"
+    - wait_template: "{{ is_state('binary_sensor.irrigation_unlimited_c1_m', 'off')\n   and is_state('switch.mini_switch_k601_2_switch_1_2',\
+        \ 'off')\n   and is_state('switch.avtopoliv_kontroler_switch_3', 'off') }}"
       timeout: 00:01:00
       continue_on_timeout: false
     - delay: 00:00:10
   mode: single
-
 - id: tcl_idle_slideshow_start
   alias: TCL - запустити фотозаставку після 5 хвилин простою
-  description: >-
-    Не вмикає телевізор. Стартує лише якщо вже ввімкнений TCL безперервно
-    перебуває у стані idle п'ять хвилин.
+  description: Не вмикає телевізор. Стартує лише якщо вже ввімкнений TCL безперервно перебуває у стані idle п'ять хвилин.
   triggers:
   - trigger: state
     entity_id: media_player.televizor_tcl
@@ -284,13 +265,10 @@
     target:
       entity_id: script.tv_idle_slideshow
   mode: restart
-
 - id: tcl_idle_slideshow_stop_on_activity
   alias: TCL - зупинити фотозаставку при активності
-  description: >-
-    Не дає заставці перебивати відео чи застосунок, який запустив користувач.
-    Дві секунди потрібні, щоб не прийняти власний запуск JPEG через стандартний
-    Cast receiver за сторонню активність.
+  description: Не дає заставці перебивати відео чи застосунок, який запустив користувач. Дві секунди потрібні, щоб не прийняти
+    власний запуск JPEG через стандартний Cast receiver за сторонню активність.
   triggers:
   - trigger: state
     entity_id: media_player.televizor_tcl
@@ -307,15 +285,10 @@
   actions:
   - delay: 00:00:02
   - condition: template
-    value_template: >-
-      {% set tv = 'media_player.televizor_tcl' %}
-      {% set st = states(tv) %}
-      {% set app = state_attr(tv, 'app_name') | default('', true) %}
-      {% set kind = state_attr(tv, 'media_content_type') | default('', true) %}
-      {{ st in ['off', 'unavailable']
-         or (st not in ['idle']
-             and kind != 'image/jpeg'
-             and app not in ['Default Media Receiver', 'Home Assistant Cast']) }}
+    value_template: "{% set tv = 'media_player.televizor_tcl' %} {% set st = states(tv) %} {% set app = state_attr(tv, 'app_name')\
+      \ | default('', true) %} {% set kind = state_attr(tv, 'media_content_type') | default('', true) %} {{ st in ['off',\
+      \ 'unavailable']\n   or (st not in ['idle']\n       and kind != 'image/jpeg'\n       and app not in ['Default Media\
+      \ Receiver', 'Home Assistant Cast']) }}"
   - action: script.turn_off
     target:
       entity_id: script.tv_idle_slideshow

@@ -1,0 +1,11 @@
+[Unit]
+Description=Run Home Assistant house analysis daily at 21:30
+
+[Timer]
+OnCalendar=*-*-* 21:30:00
+Persistent=true
+AccuracySec=1min
+Unit=house-analyst.service
+
+[Install]
+WantedBy=timers.target

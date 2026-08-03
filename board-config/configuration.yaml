@@ -69,6 +69,8 @@ input_select:
       - Зона 1
       - Зона 2
       - Зона 3
+      - Зона 4
+      - Зона 5
     icon: mdi:water-pump
 
 # Master commissioning gate. It starts off on first creation and is checked by

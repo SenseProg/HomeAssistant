@@ -1,0 +1,25 @@
+[Unit]
+Description=Daily Home Assistant house analysis through Claude Code
+After=network-online.target home-assistant.service
+Wants=network-online.target
+ConditionPathExists=/home/forlinx/.ha_token
+
+[Service]
+Type=oneshot
+User=forlinx
+Group=forlinx
+Environment=HOME=/home/forlinx
+Environment=PATH=/usr/local/bin:/usr/bin:/bin
+WorkingDirectory=/home/forlinx/house-analyst
+ExecStart=/home/forlinx/house-analyst/analyze.sh
+TimeoutStartSec=12min
+Nice=10
+IOSchedulingClass=idle
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/home/forlinx/house-analyst /home/forlinx/.claude /home/forlinx/.claude.json /userdata/hass/config/www/analyst
+
+[Install]
+WantedBy=multi-user.target

@@ -70,7 +70,6 @@ poliv_zona_3:
   - action: switch.turn_off
     target:
       entity_id: switch.avtopoliv_kontroler_switch_3
-
 poliv_stop_all:
   alias: Аварійно зупинити полив
   icon: mdi:stop-circle
@@ -82,6 +81,8 @@ poliv_stop_all:
       - script.poliv_zona_1
       - script.poliv_zona_2
       - script.poliv_zona_3
+      - script.poliv_zona_4
+      - script.poliv_zona_5
   - action: switch.turn_off
     target:
       entity_id: switch.mini_switch_k601_2_switch_1_2
@@ -93,14 +94,13 @@ poliv_stop_all:
       - switch.avtopoliv_kontroler_switch_1
       - switch.avtopoliv_kontroler_switch_2
       - switch.avtopoliv_kontroler_switch_3
-
+      - switch.avtopoliv_kontroler_switch_4
+      - switch.avtopoliv_kontroler_switch_5
 tv_idle_slideshow:
   alias: TCL - фотозаставка у режимі простою
-  description: >-
-    Показує випадкові JPEG з двох перевірених альбомів NAS кожні 20 секунд.
-    Запускається автоматизацією лише після 5 хвилин idle. Вимкнений телевізор
-    не будить. Цикл завершується, коли телевізор стає недоступним, вимикається
-    або користувач запускає інший застосунок/медіа.
+  description: Показує випадкові JPEG з двох перевірених альбомів NAS кожні 20 секунд. Запускається автоматизацією
+    лише після 5 хвилин idle. Вимкнений телевізор не будить. Цикл завершується, коли телевізор стає недоступним,
+    вимикається або користувач запускає інший застосунок/медіа.
   icon: mdi:image-multiple
   mode: restart
   sequence:
@@ -130,14 +130,10 @@ tv_idle_slideshow:
   - repeat:
       while:
       - condition: template
-        value_template: >-
-          {% set st = states(tv) %}
-          {% set app = state_attr(tv, 'app_name') | default('', true) %}
-          {% set kind = state_attr(tv, 'media_content_type') | default('', true) %}
-          {{ st == 'idle'
-             or (st in ['playing', 'paused']
-                 and (kind == 'image/jpeg'
-                      or app in ['Default Media Receiver', 'Home Assistant Cast'])) }}
+        value_template: "{% set st = states(tv) %} {% set app = state_attr(tv, 'app_name') | default('',\
+          \ true) %} {% set kind = state_attr(tv, 'media_content_type') | default('', true) %} {{ st ==\
+          \ 'idle'\n   or (st in ['playing', 'paused']\n       and (kind == 'image/jpeg'\n           \
+          \ or app in ['Default Media Receiver', 'Home Assistant Cast'])) }}"
       sequence:
       - variables:
           photo: '{{ photos | random }}'
@@ -163,7 +159,7 @@ poliv_zona_4:
     target:
       entity_id: switch.mini_switch_k601_2_switch_1_2
   - delay:
-      minutes: "{{ states('input_number.poliv_zona_4_hvylyn') | int(25) }}"
+      minutes: '{{ states(''input_number.poliv_zona_4_hvylyn'') | int(25) }}'
   - action: switch.turn_off
     target:
       entity_id: switch.mini_switch_k601_2_switch_1_2
@@ -187,7 +183,7 @@ poliv_zona_5:
     target:
       entity_id: switch.mini_switch_k601_2_switch_1_2
   - delay:
-      minutes: "{{ states('input_number.poliv_zona_5_hvylyn') | int(25) }}"
+      minutes: '{{ states(''input_number.poliv_zona_5_hvylyn'') | int(25) }}'
   - action: switch.turn_off
     target:
       entity_id: switch.mini_switch_k601_2_switch_1_2
