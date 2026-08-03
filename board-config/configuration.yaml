@@ -191,6 +191,33 @@ template:
       # 6 незалежних вмиканнях/вимиканнях 2026-08-03; фази A і C не реагували.
       # Напруга, яку реально бачить насос: він на фазі B (встановлено тим самим
       # вимірюванням). Це показ домового лічильника, а не самого насоса.
+      - name: "Полив - стан системи"
+        unique_id: irrigation_system_status
+        icon: >-
+          {% if is_state('switch.mini_switch_k601_2_switch_1_2', 'on') %}
+            mdi:sprinkler-variant
+          {% elif is_state('switch.avtopoliv_kontroler_switch_1', 'on')
+                  or is_state('switch.avtopoliv_kontroler_switch_2', 'on')
+                  or is_state('switch.avtopoliv_kontroler_switch_3', 'on') %}
+            mdi:valve-open
+          {% else %}
+            mdi:water-off
+          {% endif %}
+        state: >-
+          {% set pump = is_state('switch.mini_switch_k601_2_switch_1_2', 'on') %}
+          {% set z1 = is_state('switch.avtopoliv_kontroler_switch_1', 'on') %}
+          {% set z2 = is_state('switch.avtopoliv_kontroler_switch_2', 'on') %}
+          {% set z3 = is_state('switch.avtopoliv_kontroler_switch_3', 'on') %}
+          {% if pump and z1 %}ПОЛИВАЄ — ЗОНА 1
+          {% elif pump and z2 %}ПОЛИВАЄ — ЗОНА 2
+          {% elif pump and z3 %}ПОЛИВАЄ — ЗОНА 3
+          {% elif pump %}АВАРІЯ — НАСОС БЕЗ КЛАПАНА
+          {% elif z1 %}ПІДГОТОВКА/ЗУПИНКА — ЗОНА 1
+          {% elif z2 %}ПІДГОТОВКА/ЗУПИНКА — ЗОНА 2
+          {% elif z3 %}ПІДГОТОВКА/ЗУПИНКА — ЗОНА 3
+          {% else %}ЗУПИНЕНО
+          {% endif %}
+
       - name: "Насос поливу - напруга"
         unique_id: pump_voltage_phase_b
         unit_of_measurement: "V"

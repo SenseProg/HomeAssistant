@@ -382,6 +382,14 @@ views:
       grid_options:
         columns: full
     - type: tile
+      entity: sensor.poliv_stan_sistemi
+      name: СТАН ПОЛИВУ
+      icon: mdi:sprinkler-variant
+      color: state
+      vertical: false
+      grid_options:
+        columns: full
+    - type: tile
       entity: input_boolean.poliv_avtomatika_dozvolena
       name: Дозволити автоматичний полив
       icon: mdi:sprinkler-variant
@@ -457,8 +465,8 @@ views:
       entities:
       - entity: switch.avtopoliv_kontroler_switch_1
         name: Клапан
-      - entity: script.poliv_zona_1
-        name: Йде полив
+      - entity: binary_sensor.irrigation_unlimited_c1_z1
+        name: Стан поливу зони 1
     - type: button
       name: Старт
       icon: mdi:play
@@ -495,8 +503,8 @@ views:
       entities:
       - entity: switch.avtopoliv_kontroler_switch_2
         name: Клапан
-      - entity: script.poliv_zona_2
-        name: Йде полив
+      - entity: binary_sensor.irrigation_unlimited_c1_z2
+        name: Стан поливу зони 2
     - type: button
       name: Старт
       icon: mdi:play
@@ -533,8 +541,8 @@ views:
       entities:
       - entity: switch.avtopoliv_kontroler_switch_3
         name: Клапан
-      - entity: script.poliv_zona_3
-        name: Йде полив
+      - entity: binary_sensor.irrigation_unlimited_c1_z3
+        name: Стан поливу зони 3
     - type: button
       name: Старт
       icon: mdi:play
