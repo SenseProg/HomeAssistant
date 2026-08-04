@@ -310,6 +310,7 @@ views:
       entities:
       - entity: binary_sensor.cam1_motion
         name: Рух
+        secondary_info: last-changed
       - entity: binary_sensor.cam1_illegal_access
         name: Illegal access
       - entity: binary_sensor.cam1_video_mismatch
@@ -320,6 +321,19 @@ views:
       entities:
       - entity: binary_sensor.cam1_motion
         name: Рух
+- title: Останній рух
+  path: motion
+  icon: mdi:motion-sensor
+  type: sections
+  max_columns: 4
+  dense_section_placement: true
+  sections:
+  - type: grid
+    cards:
+    - type: markdown
+      content: '![Останній рух](/local/motion/latest.jpg)'
+      grid_options:
+        columns: full
 - title: Автополив
   path: poliv
   icon: mdi:sprinkler-variant
@@ -929,6 +943,137 @@ views:
         Ця колонка свідомо названа «Станція 1». Кожну наступну зарядну станцію
         буде додано окремою колонкою з власними станом, лічильником, графіками та
         налаштуваннями — без змішування статистики між автомобілями або станціями.
+- title: Вентиляція
+  path: ventilation
+  icon: mdi:hvac
+  type: sections
+  max_columns: 4
+  dense_section_placement: true
+  sections:
+  - type: grid
+    cards:
+    - type: heading
+      heading: PRANA · 2 поверх
+      icon: mdi:air-filter
+      grid_options:
+        columns: full
+    - type: tile
+      entity: fan.2_floor_supply_fan
+      name: Приплив
+      icon: mdi:weather-windy
+      features_position: bottom
+      features:
+      - type: fan-speed
+      grid_options:
+        columns: 6
+    - type: tile
+      entity: fan.2_floor_extract_fan
+      name: Витяжка
+      icon: mdi:fan-chevron-down
+      features_position: bottom
+      features:
+      - type: fan-speed
+      grid_options:
+        columns: 6
+    - type: entities
+      title: Режими роботи
+      show_header_toggle: false
+      grid_options:
+        columns: full
+      entities:
+      - entity: switch.2_floor_auto
+        name: Автоматичний режим
+      - entity: switch.2_floor_auto_plus
+        name: Розширений автоматичний режим
+      - entity: switch.2_floor_bound
+        name: Синхронізувати приплив і витяжку
+      - entity: switch.2_floor_heater
+        name: Підігрів припливного повітря
+      - entity: switch.2_floor_winter
+        name: Зимовий режим
+      - entity: number.2_floor_display_brightness
+        name: Яскравість дисплея
+  - type: grid
+    cards:
+    - type: heading
+      heading: Якість повітря
+      icon: mdi:air-filter
+      grid_options:
+        columns: full
+    - type: entities
+      grid_options:
+        columns: full
+      entities:
+      - entity: sensor.2_floor_carbon_dioxide
+        name: Вуглекислий газ (CO₂)
+      - entity: sensor.2_floor_volatile_organic_compounds_parts
+        name: Леткі органічні сполуки (VOC)
+      - entity: sensor.2_floor_humidity
+        name: Вологість
+      - entity: sensor.2_floor_pressure
+        name: Атмосферний тиск
+    - type: history-graph
+      title: CO₂, VOC і вологість · 24 години
+      hours_to_show: 24
+      grid_options:
+        columns: full
+      entities:
+      - entity: sensor.2_floor_carbon_dioxide
+        name: CO₂
+      - entity: sensor.2_floor_volatile_organic_compounds_parts
+        name: VOC
+      - entity: sensor.2_floor_humidity
+        name: Вологість
+  - type: grid
+    cards:
+    - type: heading
+      heading: Температури
+      icon: mdi:thermometer-lines
+      grid_options:
+        columns: full
+    - type: entities
+      grid_options:
+        columns: full
+      entities:
+      - entity: sensor.2_floor_inside_temperature
+        name: Температура в приміщенні
+      - entity: sensor.2_floor_outside_temperature
+        name: Температура зовні · датчик 1
+      - entity: sensor.2_floor_outside_temperature_2
+        name: Температура зовні · датчик 2
+    - type: history-graph
+      title: Температури · 24 години
+      hours_to_show: 24
+      grid_options:
+        columns: full
+      entities:
+      - entity: sensor.2_floor_inside_temperature
+        name: Усередині
+      - entity: sensor.2_floor_outside_temperature
+        name: Зовні 1
+      - entity: sensor.2_floor_outside_temperature_2
+        name: Зовні 2
+  - type: grid
+    cards:
+    - type: heading
+      heading: Пояснення і наступні рекуператори
+      icon: mdi:information-outline
+      grid_options:
+        columns: full
+    - type: markdown
+      grid_options:
+        columns: full
+      content: >-
+        **Приплив** подає свіже повітря, **витяжка** видаляє відпрацьоване.
+        Швидкість кожного вентилятора можна змінювати окремо. Режим
+        **«Синхронізувати приплив і витяжку»** зв'язує їхні швидкості.
+        **Автоматичний режим** керує вентиляцією за датчиками PRANA, а
+        **розширений автоматичний режим** використовує посилений алгоритм
+        пристрою. Підігрів і зимовий режим вмикайте за потреби в холодний
+        період.
+
+        Інші рекуператори додамо сюди окремими блоками після виявлення в
+        локальній мережі та підключення до Home Assistant.
 - title: Присутність
   path: presence
   icon: mdi:map-marker-account
