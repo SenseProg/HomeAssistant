@@ -116,11 +116,14 @@ views:
       content: |
         {% set clients = state_attr('sensor.tenda_ap_clients', 'onlineList') or [] %}
         {% set wifi = clients | selectattr('qosListConnectType', 'equalto', 'wifi') | list %}
+        {% set names = {
+          '1E:C0:D2:73:2C:C9': 'Samsung Galaxy S21 — Катерина'
+        } %}
         {% if wifi | count == 0 %}
         Немає активних прямих Wi-Fi-клієнтів.
         {% else %}
         {% for client in wifi %}
-        - **{{ client.qosListHostname if client.qosListHostname not in ['', 'Unknown'] else 'Невідомий пристрій' }}**
+        - **{{ names.get(client.qosListMac | upper, client.qosListHostname if client.qosListHostname not in ['', 'Unknown'] else 'Невідомий пристрій') }}**
           — `{{ client.qosListIP }}` · `{{ client.qosListMac | upper }}` ·
           {{ '2,4 ГГц' if client.qosListAccessType | default('') == 'wifi_2G' else ('5 ГГц' if client.qosListAccessType | default('') == 'wifi_5G' else 'Wi-Fi') }} ·
           ↓ {{ client.qosListDownSpeed | float(0) | round(1) }} кБ/с ·
@@ -173,19 +176,22 @@ views:
         {% set names = {
           '192.168.50.13': 'Термостат Terneo — контур 1',
           '192.168.50.27': 'Рекуператор Blauberg',
-          '192.168.50.36': 'Пристрій Tuya',
+          '192.168.50.36': 'Зарядна станція авто — 7,5 кВт',
           '192.168.50.118': 'Бойлер Midea',
           '192.168.50.157': 'Термостат Terneo — контур 2',
           '192.168.50.164': 'SONOFF ZBBridge — Zigbee-шлюз',
-          '192.168.50.176': 'Перемикач eWeLink/Sonoff',
+          '192.168.50.176': 'Контролер гаражних воріт — Sonoff/eWeLink',
           '192.168.50.179': 'Інвертор Deye',
-          '192.168.50.219': 'Пристрій Tuya'
+          '192.168.50.219': 'Трифазний лічильник електроенергії будинку'
+        } %}
+        {% set mac_names = {
+          'DC:6A:E7:A1:09:F2': 'Xiaomi — модель не визначена'
         } %}
         {% set ns = namespace(found=false) %}
         {% for client in clients if client.devIp is defined %}
         {% set ns.found = true %}
-        - **{{ names.get(client.devIp, client.devName if client.devName not in ['', 'UnKnown'] else 'Невідомий пристрій') }}**
-          — `{{ client.devIp }}` · `{{ client.devMac | upper }}`
+        - **{{ names.get(client.devIp, mac_names.get(client.devMac | upper, client.devName if client.devName not in ['', 'UnKnown'] else 'Невідомий пристрій')) }}**
+          — {% if client.devIp not in ['', 'UnKnown'] %}`{{ client.devIp }}`{% else %}IP не отримано{% endif %} · `{{ client.devMac | upper }}`
         {% endfor %}
         {% if not ns.found %}
         Немає активних клієнтів або повторювач недоступний.
