@@ -8,6 +8,28 @@ After joining, authorize node `46faf402eb` in ZeroTier Central, restrict routes
 to the Home Assistant host, and verify both SSH and `http://<zerotier-ip>:8123`.
 Only then disable SSH password authentication.
 
+## Network topology and presence
+
+`ASUS RT-AX55` (`192.168.50.1`) is the main router, DHCP server and the source
+of the `asuswrt` device trackers. Its primary Wi-Fi network is `Отаке`.
+`Tenda AC10 v3` (`192.168.50.2`) is an access point for SSID `Промінь`, while
+`Tenda A9` (`192.168.50.102`) repeats `Отаке`. All three devices bridge the same
+`192.168.50.0/24` LAN.
+
+The Network dashboard correlates each active ASUS tracker MAC with the live
+client lists reported by both Tenda devices. It labels the current connection as
+direct ASUS/`Отаке`, Tenda AC10/`Промінь`, or the Tenda A9 repeater. A device
+absent from both Tenda lists but present in ASUS is classified as a direct ASUS
+client. For example, Galaxy J8 (`192.168.50.56`) currently follows the direct
+ASUS path, while grandmother Sima's Galaxy S21 (`192.168.50.74`) is connected
+through Tenda AC10/`Промінь`.
+
+Presence is person-based, not access-point-based. `person.dim_kovtuni` is
+displayed as Дмитро and combines his mobile-app GPS and ASUS S23 tracker. The
+storage person `person.babusia_sima` uses
+`device_tracker.s21_pol_zovatela_kateryna`. Therefore moving between `Отаке`,
+`Промінь`, and the repeater does not make a person disappear from the home list.
+
 ## NAS backup and journal archive
 
 The NAS is `CloudMate` (`192.168.50.25`), share `HomeAssistant`. The dedicated
