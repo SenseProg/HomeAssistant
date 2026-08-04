@@ -2,6 +2,12 @@
 # Loads default set of integrations. Do not remove.
 default_config:
 
+# Preserve the raw 16 kHz WAV for every Assist voice run. The Claude chat panel
+# exposes this private archive only to authenticated administrators so a long
+# dictation can be played back and sent through STT again.
+assist_pipeline:
+  debug_recording_dir: /userdata/hass/config/.private/claude-code-conversation/voice-recordings
+
 # Keep schedules and log timestamps aligned with the physical installation.
 homeassistant:
   time_zone: Europe/Kyiv

@@ -16,6 +16,10 @@ CLAUDE_WORKING_DIRECTORY = "/home/forlinx/house-analyst"
 HISTORY_FILE = (
     "/userdata/hass/config/.private/claude-code-conversation/history.jsonl"
 )
+VOICE_RECORDING_DIR = (
+    "/userdata/hass/config/.private/claude-code-conversation/voice-recordings"
+)
+VOICE_RECORDING_LIST_LIMIT = 50
 HISTORY_RETENTION_DAYS = 180
 HISTORY_MAX_RECORDS = 2000
 HISTORY_DEFAULT_LOOKBACK_HOURS = 24

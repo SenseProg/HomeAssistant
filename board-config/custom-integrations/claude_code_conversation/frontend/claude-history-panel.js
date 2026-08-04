@@ -28,6 +28,8 @@ class ClaudeHistoryPanel extends HTMLElement {
     this._transcript = "";
     this._assistantResponse = "";
     this._ttsUrl = "";
+    this._archivedPcmBytes = null;
+    this._recordings = [];
   }
 
   set hass(value) {
@@ -36,6 +38,7 @@ class ClaudeHistoryPanel extends HTMLElement {
       this._renderShell();
       this._ready = true;
       void this._loadHistory();
+      void this._loadVoiceRecordings();
     }
   }
 
@@ -48,6 +51,7 @@ class ClaudeHistoryPanel extends HTMLElement {
       this._renderShell();
       this._ready = true;
       void this._loadHistory();
+      void this._loadVoiceRecordings();
     }
   }
 
@@ -73,6 +77,22 @@ class ClaudeHistoryPanel extends HTMLElement {
           background: var(--secondary-background-color); color: var(--secondary-text-color);
           line-height: 1.45;
         }
+        .archive {
+          margin-bottom: 14px; padding: 12px 14px; border-radius: 14px;
+          background: var(--card-background-color); border: 1px solid var(--divider-color);
+        }
+        .archive-head { display: flex; align-items: center; gap: 10px; }
+        .archive-head h2 { flex: 1; margin: 0; font-size: 17px; }
+        .recording-list { display: grid; gap: 8px; margin-top: 10px; }
+        .recording-row {
+          display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 10px;
+          padding: 9px 10px; border-radius: 10px; background: var(--secondary-background-color);
+        }
+        .recording-meta { color: var(--secondary-text-color); font-size: 13px; line-height: 1.4; }
+        .recording-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+        .recording-actions button { padding: 7px 10px; font-size: 13px; }
+        .archive-empty { color: var(--secondary-text-color); font-size: 13px; }
+        #archive-audio { width: 100%; margin-top: 10px; }
         .history {
           min-height: 300px; max-height: calc(100vh - 390px); overflow-y: auto;
           display: flex; flex-direction: column; gap: 10px; padding: 12px;
@@ -142,6 +162,8 @@ class ClaudeHistoryPanel extends HTMLElement {
           .composer-actions { flex-direction: row; }
           .composer-actions button { flex: 1; }
           .voice-controls button { flex: 1 1 42%; }
+          .recording-row { grid-template-columns: 1fr; }
+          .recording-actions button { flex: 1; }
         }
       </style>
       <div class="page">
@@ -153,6 +175,14 @@ class ClaudeHistoryPanel extends HTMLElement {
           Тут зберігається історія розмов. Голосовий запис не надсилається автоматично:
           натисніть <b>«Зупинити запис»</b>, прослухайте візуальний результат і окремо
           натисніть <b>«Надіслати запис»</b>. Максимальна тривалість — 2 хвилини.
+        </div>
+        <div class="archive">
+          <div class="archive-head">
+            <h2>Збережені голосові повідомлення</h2>
+            <button id="refresh-recordings" class="secondary" type="button">Оновити</button>
+          </div>
+          <div id="recording-list" class="recording-list"></div>
+          <audio id="archive-audio" controls hidden></audio>
         </div>
         <div id="history" class="history" aria-live="polite"></div>
         <div id="voice-card" class="voice-card" aria-live="polite">
@@ -179,6 +209,7 @@ class ClaudeHistoryPanel extends HTMLElement {
       </div>
     `;
     this.shadowRoot.getElementById("refresh").addEventListener("click", () => void this._loadHistory());
+    this.shadowRoot.getElementById("refresh-recordings").addEventListener("click", () => void this._loadVoiceRecordings());
     this.shadowRoot.getElementById("send").addEventListener("click", () => void this._sendMessage());
     this.shadowRoot.getElementById("record").addEventListener("click", () => void this._startRecording());
     this.shadowRoot.getElementById("message").addEventListener("keydown", (event) => {
@@ -199,6 +230,90 @@ class ClaudeHistoryPanel extends HTMLElement {
       this._setStatus(`Збережено повідомлень: ${(result.records || []).length}`);
     } catch (error) {
       this._setStatus(`Не вдалося завантажити історію: ${this._errorText(error)}`);
+    }
+  }
+
+  async _loadVoiceRecordings() {
+    if (!this._hass) return;
+    const container = this.shadowRoot.getElementById("recording-list");
+    container.textContent = "Завантажую архів…";
+    container.className = "recording-list archive-empty";
+    try {
+      const result = await this._hass.callWS({ type: "claude_code_conversation/voice_recordings" });
+      this._recordings = result.recordings || [];
+      this._renderVoiceRecordings();
+    } catch (error) {
+      container.textContent = `Не вдалося завантажити архів: ${this._errorText(error)}`;
+    }
+  }
+
+  _renderVoiceRecordings() {
+    const container = this.shadowRoot.getElementById("recording-list");
+    container.replaceChildren();
+    container.className = "recording-list";
+    if (!this._recordings.length) {
+      container.classList.add("archive-empty");
+      container.textContent = "Архів порожній. Наступний надісланий голосовий запис буде збережено як WAV.";
+      return;
+    }
+    for (const recording of this._recordings.slice(0, 12)) {
+      const row = document.createElement("div");
+      row.className = "recording-row";
+      const meta = document.createElement("div");
+      meta.className = "recording-meta";
+      const created = new Date(recording.created * 1000);
+      meta.textContent = `${created.toLocaleString("uk-UA")} · ${this._formatTime(recording.duration)} · ${this._formatBytes(recording.size)}`;
+      const actions = document.createElement("div");
+      actions.className = "recording-actions";
+      actions.append(
+        this._button("▶ Прослухати", "secondary", () => void this._playArchivedRecording(recording)),
+        this._button("↻ Розпізнати знову", "", () => void this._retryArchivedRecording(recording)),
+      );
+      row.append(meta, actions);
+      container.appendChild(row);
+    }
+  }
+
+  async _signedRecordingUrl(recording) {
+    const path = `/api/claude_code_conversation/voice-recording/${encodeURIComponent(recording.id)}`;
+    const result = await this._hass.callWS({ type: "auth/sign_path", path, expires: 300 });
+    return result.path;
+  }
+
+  async _playArchivedRecording(recording) {
+    try {
+      const audio = this.shadowRoot.getElementById("archive-audio");
+      audio.src = await this._signedRecordingUrl(recording);
+      audio.hidden = false;
+      await audio.play();
+    } catch (error) {
+      this._setStatus(`Не вдалося відтворити запис: ${this._errorText(error)}`);
+    }
+  }
+
+  async _retryArchivedRecording(recording) {
+    if (this._voiceState === "recording" || this._voiceState === "sending") return;
+    this._voiceState = "sending";
+    this._voiceHint = "Завантажую збережений WAV для повторного розпізнавання…";
+    this._voiceError = "";
+    this._transcript = "";
+    this._assistantResponse = "";
+    this._ttsUrl = "";
+    this._elapsedSeconds = recording.duration || 0;
+    this._renderVoiceState();
+    try {
+      const response = await fetch(await this._signedRecordingUrl(recording));
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      this._archivedPcmBytes = this._pcmBytesFromWav(await response.arrayBuffer());
+      this._audioChunks = [];
+      this._voiceState = "recorded";
+      this._voiceHint = "Збережений WAV завантажено. Запускаю повторне розпізнавання без відсікання на паузах…";
+      this._renderVoiceState();
+      await this._sendRecording();
+    } catch (error) {
+      this._voiceState = "error";
+      this._voiceError = `Не вдалося повторно використати WAV: ${this._errorText(error)}`;
+      this._renderVoiceState();
     }
   }
 
@@ -321,7 +436,8 @@ class ClaudeHistoryPanel extends HTMLElement {
   }
 
   async _sendRecording() {
-    if (this._voiceState !== "recorded" || !this._audioChunks.length || !this._hass) return;
+    const hasAudio = this._audioChunks.length || this._archivedPcmBytes?.length;
+    if (!["recorded", "complete", "error"].includes(this._voiceState) || !hasAudio || !this._hass) return;
     this._voiceState = "sending";
     this._transcript = "";
     this._assistantResponse = "";
@@ -331,7 +447,7 @@ class ClaudeHistoryPanel extends HTMLElement {
     try {
       const socket = this._hass.connection?.socket;
       if (!socket || socket.readyState !== WebSocket.OPEN) throw new Error("немає активного з’єднання з Home Assistant");
-      const pcm = this._createPcm16();
+      const bytes = this._archivedPcmBytes || new Uint8Array(this._createPcm16().buffer);
       const handlerReady = new Promise((resolve, reject) => {
         this._voiceReadyResolve = resolve;
         this._voiceReadyReject = reject;
@@ -341,14 +457,13 @@ class ClaudeHistoryPanel extends HTMLElement {
         {
           type: "assist_pipeline/run", start_stage: "stt", end_stage: "tts",
           pipeline: PIPELINE_ID, conversation_id: PANEL_CONVERSATION_ID,
-          input: { sample_rate: TARGET_SAMPLE_RATE }, timeout: 120,
+          input: { sample_rate: TARGET_SAMPLE_RATE, no_vad: true }, timeout: 180,
         },
       );
       const handlerId = await Promise.race([
         handlerReady,
         new Promise((_, reject) => window.setTimeout(() => reject(new Error("пайплайн не прийняв аудіо")), 10000)),
       ]);
-      const bytes = new Uint8Array(pcm.buffer);
       for (let offset = 0; offset < bytes.length; offset += 3200) {
         const piece = bytes.subarray(offset, Math.min(bytes.length, offset + 3200));
         const packet = new Uint8Array(piece.length + 1);
@@ -390,9 +505,10 @@ class ClaudeHistoryPanel extends HTMLElement {
       void this._closeVoiceSubscription();
     } else if (type === "run-end") {
       this._voiceState = "complete";
-      this._voiceHint = "Готово. Розшифровку й відповідь збережено в історії чату.";
+      this._voiceHint = "Готово. WAV збережено у приватному архіві, а розшифровку й відповідь — в історії чату.";
       void this._closeVoiceSubscription();
       void this._loadHistory();
+      window.setTimeout(() => void this._loadVoiceRecordings(), 800);
     }
     this._renderVoiceState();
   }
@@ -418,6 +534,40 @@ class ClaudeHistoryPanel extends HTMLElement {
       output[outputIndex] = sample < 0 ? sample * 32768 : sample * 32767;
     }
     return output;
+  }
+
+  _pcmBytesFromWav(buffer) {
+    const view = new DataView(buffer);
+    const tag = (offset) => String.fromCharCode(
+      view.getUint8(offset), view.getUint8(offset + 1),
+      view.getUint8(offset + 2), view.getUint8(offset + 3),
+    );
+    if (buffer.byteLength < 44 || tag(0) !== "RIFF" || tag(8) !== "WAVE") throw new Error("файл не є WAV");
+    let offset = 12;
+    let format = null;
+    let dataOffset = 0;
+    let dataSize = 0;
+    while (offset + 8 <= buffer.byteLength) {
+      const chunkTag = tag(offset);
+      const size = view.getUint32(offset + 4, true);
+      const start = offset + 8;
+      if (chunkTag === "fmt " && size >= 16) {
+        format = {
+          codec: view.getUint16(start, true), channels: view.getUint16(start + 2, true),
+          sampleRate: view.getUint32(start + 4, true), bits: view.getUint16(start + 14, true),
+        };
+      } else if (chunkTag === "data") {
+        dataOffset = start;
+        dataSize = Math.min(size, buffer.byteLength - start);
+        break;
+      }
+      offset = start + size + (size % 2);
+    }
+    if (!format || format.codec !== 1 || format.channels !== 1 || format.sampleRate !== TARGET_SAMPLE_RATE || format.bits !== 16) {
+      throw new Error("потрібен PCM WAV mono 16 кГц / 16 біт");
+    }
+    if (!dataOffset || !dataSize) throw new Error("WAV не містить аудіоданих");
+    return new Uint8Array(buffer.slice(dataOffset, dataOffset + dataSize));
   }
 
   _stopCaptureTracks() {
@@ -459,6 +609,7 @@ class ClaudeHistoryPanel extends HTMLElement {
     this._transcript = "";
     this._assistantResponse = "";
     this._ttsUrl = "";
+    this._archivedPcmBytes = null;
     this._voiceReadyResolve = null;
     this._voiceReadyReject = null;
   }
@@ -556,8 +707,11 @@ class ClaudeHistoryPanel extends HTMLElement {
       disabled.disabled = true;
       controls.append(disabled, this._button("Скасувати", "secondary", () => this._cancelVoice()));
     } else if (this._voiceState === "complete" || this._voiceState === "error") {
+      if (this._audioChunks.length || this._archivedPcmBytes?.length) {
+        controls.append(this._button("↻ Розпізнати ще раз", "", () => void this._sendRecording()));
+      }
       controls.append(
-        this._button("Записати ще", "", () => void this._startRecording()),
+        this._button("Записати ще", "secondary", () => void this._startRecording()),
         this._button("Закрити", "secondary", () => this._cancelVoice()),
       );
     }
@@ -581,6 +735,12 @@ class ClaudeHistoryPanel extends HTMLElement {
   _formatTime(seconds) {
     const value = Math.max(0, Math.floor(seconds || 0));
     return `${String(Math.floor(value / 60)).padStart(2, "0")}:${String(value % 60).padStart(2, "0")}`;
+  }
+
+  _formatBytes(bytes) {
+    if (bytes < 1024) return `${bytes} Б`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} КБ`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} МБ`;
   }
 
   _errorText(error) {

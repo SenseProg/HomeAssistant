@@ -44,9 +44,11 @@ def _ensure_private_history_file(path: Path) -> None:
 
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     """Set up the integration domain."""
+    from .http_api import VoiceRecordingView
     from .websocket_api import async_register_websocket_api
 
     async_register_websocket_api(hass)
+    hass.http.register_view(VoiceRecordingView())
     await hass.http.async_register_static_paths(
         [StaticPathConfig(FRONTEND_URL, str(FRONTEND_DIR), cache_headers=False)]
     )
@@ -56,7 +58,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         webcomponent_name="claude-history-panel",
         sidebar_title="Claude чат",
         sidebar_icon="mdi:message-text-clock-outline",
-        module_url=f"{FRONTEND_URL}/claude-history-panel.js?v=0.3.0",
+        module_url=f"{FRONTEND_URL}/claude-history-panel.js?v=0.4.0",
         embed_iframe=False,
         require_admin=True,
     )
