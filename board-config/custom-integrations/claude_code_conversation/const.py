@@ -13,6 +13,16 @@ DEFAULT_TIMEOUT = 120
 CLAUDE_PATH = "/usr/local/bin/claude"
 CLAUDE_WORKING_DIRECTORY = "/home/forlinx/house-analyst"
 
+HISTORY_FILE = (
+    "/userdata/hass/config/.private/claude-code-conversation/history.jsonl"
+)
+HISTORY_RETENTION_DAYS = 180
+HISTORY_MAX_RECORDS = 2000
+HISTORY_DEFAULT_LOOKBACK_HOURS = 24
+HISTORY_MAX_LOOKBACK_DAYS = 14
+HISTORY_MAX_ENTITIES = 24
+HISTORY_MAX_CHARS = 16000
+
 DEFAULT_PROMPT = """Ти — «Домашній асистент Claude» для будинку HomeMate.
 
 Відповідай українською, якщо користувач явно не попросив іншу мову. Твоя спеціалізація — Home Assistant, домашня енергетика, клімат, бойлер, тепла підлога, заряджання авто, камери та полив.
