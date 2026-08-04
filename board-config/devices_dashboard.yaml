@@ -1248,7 +1248,31 @@ views:
   - type: grid
     cards:
     - type: heading
-      heading: Пояснення і наступні рекуператори
+      heading: Blauberg · 2 рекуператори
+      icon: mdi:fan
+      grid_options:
+        columns: full
+    - type: markdown
+      title: Кімната хлопців та кімната Олесі
+      grid_options:
+        columns: full
+      content: |
+        {% set clients = state_attr('sensor.tenda_repeater_clients', 'onlineList') or [] %}
+        {% set unit_27 = clients | selectattr('devIp', 'equalto', '192.168.50.27') | list %}
+        - **Blauberg №1** — `192.168.50.27` · `98:F4:AB:EE:A5:C5` · {% if unit_27 | count > 0 %}🟢 у мережі{% else %}🔴 недоступний{% endif %}
+
+        - **Blauberg №2** — `192.168.50.123` · `98:F4:AB:EE:A8:4E` · {% if is_state('device_tracker.esp_eea84e', 'home') %}🟢 у мережі{% else %}🔴 недоступний{% endif %}
+
+        Один рекуператор встановлений у **кімнаті хлопців**, другий — у
+        **кімнаті Олесі**. Який IP відповідає якій кімнаті, ще потрібно
+        фізично зіставити.
+
+        ⚠️ Зараз Home Assistant бачить лише їхню присутність у мережі.
+        Керування швидкістю, напрямком і режимами Blauberg ще не інтегроване.
+  - type: grid
+    cards:
+    - type: heading
+      heading: Пояснення
       icon: mdi:information-outline
       grid_options:
         columns: full
@@ -1264,8 +1288,9 @@ views:
         пристрою. Підігрів і зимовий режим вмикайте за потреби в холодний
         період.
 
-        Інші рекуператори додамо сюди окремими блоками після виявлення в
-        локальній мережі та підключення до Home Assistant.
+        Рекуператори Blauberg показані окремо як мережеві пристрої. Повні
+        елементи керування з'являться після підключення їхнього локального
+        протоколу до Home Assistant.
 - title: Присутність
   path: presence
   icon: mdi:map-marker-account
