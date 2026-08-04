@@ -1,0 +1,116 @@
+# Local read-only monitoring for the two Tenda Wi-Fi devices.
+# The queried modules intentionally omit Wi-Fi configuration fields because
+# those responses contain network passwords. Client lists change dynamically.
+
+- resource: "http://192.168.50.2/goform/getQos?random=1&modules=localhost%2ConlineList%2CmacFilter"
+  method: GET
+  timeout: 5
+  scan_interval: 30
+  sensor:
+    - name: "Tenda AP Clients"
+      unique_id: tenda_ap_clients
+      icon: mdi:access-point-network
+      value_template: >
+        {{ value_json.onlineList
+           | default([])
+           | selectattr('qosListConnectType', 'equalto', 'wifi')
+           | list | count }}
+      json_attributes:
+        - onlineList
+    - name: "Tenda AP Download Speed"
+      unique_id: tenda_ap_download_speed
+      icon: mdi:download-network
+      unit_of_measurement: "kB/s"
+      state_class: measurement
+      value_template: >
+        {% set ns = namespace(total=0) %}
+        {% for client in value_json.onlineList | default([]) %}
+          {% if client.qosListConnectType == 'wifi' %}
+            {% set ns.total = ns.total + (client.qosListDownSpeed | float(0)) %}
+          {% endif %}
+        {% endfor %}
+        {{ ns.total | round(1) }}
+    - name: "Tenda AP Upload Speed"
+      unique_id: tenda_ap_upload_speed
+      icon: mdi:upload-network
+      unit_of_measurement: "kB/s"
+      state_class: measurement
+      value_template: >
+        {% set ns = namespace(total=0) %}
+        {% for client in value_json.onlineList | default([]) %}
+          {% if client.qosListConnectType == 'wifi' %}
+            {% set ns.total = ns.total + (client.qosListUpSpeed | float(0)) %}
+          {% endif %}
+        {% endfor %}
+        {{ ns.total | round(1) }}
+
+- resource: "http://192.168.50.2/goform/getStatus?random=1&modules=deviceStatistics%2CsystemInfo"
+  method: GET
+  timeout: 5
+  scan_interval: 60
+  sensor:
+    - name: "Tenda AP Status"
+      unique_id: tenda_ap_status
+      icon: mdi:access-point
+      value_template: "{{ value_json.systemInfo.softVersion | default('online') }}"
+      json_attributes_path: "$.systemInfo"
+      json_attributes:
+        - lanIP
+        - statusWanMAC
+        - softVersion
+
+- resource: "http://192.168.50.2/goform/getHomePageInfo?sysmanage_get_NewSoftVersion=false&random=1&modules=loginAuth%2CproductInfo"
+  method: GET
+  timeout: 5
+  scan_interval: 300
+  sensor:
+    - name: "Tenda AP Security"
+      unique_id: tenda_ap_security
+      icon: mdi:shield-lock-outline
+      value_template: >
+        {{ 'Встановлено' if value_json.loginAuth.hasLoginPwd == 'true'
+           else 'Не встановлено' }}
+
+- resource: "http://192.168.50.102/goform/getStatus?module1=sysStatusInfo"
+  method: GET
+  timeout: 5
+  scan_interval: 60
+  sensor:
+    - name: "Tenda Repeater Status"
+      unique_id: tenda_repeater_status
+      icon: mdi:wifi-sync
+      value_template: >
+        {{ 'Підключено' if value_json.sysStatusInfo.extended == '1'
+           else 'Не підключено' }}
+      json_attributes_path: "$.sysStatusInfo"
+      json_attributes:
+        - statusOnlineNumber
+        - statusBlackNum
+        - hasLoginPwd
+        - extended
+        - wifiRate
+        - routerName
+        - extendName
+    - name: "Tenda Repeater Signal"
+      unique_id: tenda_repeater_signal
+      icon: mdi:wifi-strength-3
+      device_class: signal_strength
+      unit_of_measurement: "dBm"
+      state_class: measurement
+      value_template: "{{ value_json.sysStatusInfo.wifiRate | int(-100) }}"
+
+- resource: "http://192.168.50.102/goform/getUserList?module1=onlineList"
+  method: GET
+  timeout: 5
+  scan_interval: 30
+  sensor:
+    - name: "Tenda Repeater Clients"
+      unique_id: tenda_repeater_clients
+      icon: mdi:access-point-network
+      value_template: >
+        {{ value_json.onlineList
+           | default([])
+           | selectattr('devIp', 'defined')
+           | list | count }}
+      json_attributes:
+        - onlineList

@@ -12,6 +12,9 @@ assist_pipeline:
 homeassistant:
   time_zone: Europe/Kyiv
 
+# Read-only local telemetry from the Tenda access point and range extender.
+rest: !include network_monitoring.yaml
+
 # Load frontend themes from the themes folder
 frontend:
   themes: !include_dir_merge_named themes
@@ -281,6 +284,14 @@ recorder:
       - automation
       - script
       - persistent_notification
+    # Dynamic client-list attributes are useful on the live dashboard but
+    # would create needless SQLite/eMMC churn when devices roam between APs.
+    entities:
+      - sensor.tenda_ap_clients
+      - sensor.tenda_ap_status
+      - sensor.tenda_ap_security
+      - sensor.tenda_repeater_status
+      - sensor.tenda_repeater_clients
 
 # --- Separate YAML dashboard with instantaneous power graphs ---
 lovelace:
@@ -440,3 +451,22 @@ logger:
 #
 # ВАЖЛИВО: перерахунок діє лише на споживання ПІСЛЯ 2026-08-03. Історія
 # статистики вартості заднім числом не переписується - там лишається 2.5 грн.
+
+# --- Камера "Двір": перегляд моменту виявлення руху (додано 2026-08-04) ---
+#
+# Hikvision сам не зберігає кадри для HA - camera.cam1 віддає лише живий потік.
+# При кожному спрацюванні binary_sensor.cam1_motion автоматизація
+# "hikvision_motion_snapshot" (automations.yaml) робить camera.snapshot і кладе
+# файл у www/motion/ (роздається як /local/motion/motion_*.jpg), а також
+# оновлює www/motion/latest.jpg. Окрема вкладка дашборда "Останній рух"
+# (devices_dashboard.yaml, path: motion) показує latest.jpg через звичайний
+# markdown-image БЕЗ jinja/cache-busting - той варіант з timestamp-текстом і
+# query-параметром постійно ловив InvalidStateError у sections-грід (див.
+# GOTCHA у dashboards.md) і картка зникала. Час останнього руху натомість
+# видно на вкладці Камера (рядок "Рух", secondary_info: last-changed).
+# НЕ через platform: local_file - той більше не підтримує YAML-налаштування
+# в цій версії HA ("does not support platform setup").
+# shell_command.update_motion_snapshot лишає останні 30 знімків, старі видаляє.
+
+shell_command:
+  update_motion_snapshot: "cd /userdata/hass/config/www/motion && ls -t motion_*.jpg 2>/dev/null | head -1 | xargs -I{} cp {} latest.jpg && ls -t motion_*.jpg 2>/dev/null | tail -n +31 | xargs -r rm --"
