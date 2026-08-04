@@ -929,3 +929,79 @@ views:
         Ця колонка свідомо названа «Станція 1». Кожну наступну зарядну станцію
         буде додано окремою колонкою з власними станом, лічильником, графіками та
         налаштуваннями — без змішування статистики між автомобілями або станціями.
+- title: Присутність
+  path: presence
+  icon: mdi:map-marker-account
+  type: sections
+  max_columns: 4
+  dense_section_placement: true
+  sections:
+  - type: grid
+    cards:
+    - type: heading
+      heading: Де хто зараз
+      grid_options:
+        columns: full
+    - type: map
+      default_zoom: 17
+      theme_mode: auto
+      aspect_ratio: '1'
+      grid_options:
+        columns: full
+      entities:
+      - person.dim_kovtuni
+      - person.katerina
+      - person.olesia
+      - zone.home
+    - type: entities
+      title: Особи
+      grid_options:
+        columns: full
+      entities:
+      - entity: person.dim_kovtuni
+        name: Дім
+      - entity: person.katerina
+        name: Катерина
+      - entity: person.olesia
+        name: Олеся
+  - type: grid
+    cards:
+    - type: heading
+      heading: Телефони в мережі
+      grid_options:
+        columns: full
+    - type: entities
+      grid_options:
+        columns: full
+      entities:
+      - entity: device_tracker.sm_s918b
+        name: SM-S918B (GPS)
+      - entity: device_tracker.s24_koristuvaca_kateryna
+        name: S24 (Катерина)
+      - entity: device_tracker.s20_fe_koristuvaca_kateryna
+        name: S20 FE (Олеся)
+      - entity: device_tracker.s23_ultra_dvk
+        name: S23 Ultra
+      - entity: device_tracker.s21_pol_zovatela_kateryna
+        name: S21
+      - entity: device_tracker.a24_koristuvaca_vasilij
+        name: A24 (Василь)
+      - entity: device_tracker.galaxy_j8
+        name: Galaxy J8
+      - entity: device_tracker.galaxy_m12
+        name: Galaxy M12
+    - type: markdown
+      title: Що мапа показує, а що ні
+      grid_options:
+        columns: full
+      content: >
+        На мапі видно лише тих, у кого є координати - тобто лише телефони з
+        встановленим застосунком Home Assistant (зараз це один SM-S918B).
+        Решта телефонів визначаються роутером і мають лише два стани: вдома
+        або ні. Роутер бачить факт підключення до Wi-Fi, а не місце, тому
+        поставити їх на мапу неможливо в принципі.
+
+        Мережі «Отаке» і «Промінь» - це одна підмережа 192.168.50.0/24. Tenda
+        на 192.168.50.2 працює точкою доступу без власного WAN, тож її клієнти
+        отримують адреси від ASUS і теж видимі. Окремо трекати «Промінь» не
+        треба - усе вже тут.
