@@ -179,6 +179,12 @@ a backup for an importable integration.
 
 ## Blauberg room recuperators
 
+The PRANA RECUPERATOR 150 (`2 floor` integration device) is physically installed
+in `Спальня батьків`. The complete PRANA device is assigned to that Home
+Assistant area, so its supply/extract fans, operating modes, air-quality sensors
+and temperature sensors are available together on the room page. Its full
+control and monitoring cards also remain on the dedicated `Вентиляція` dashboard.
+
 The two Blauberg/Siku room recuperators are connected directly over the local
 UDP protocol; no vendor cloud is involved. Home Assistant uses the pinned
 `Siku (Blauberg) Fan` custom integration `2.2.6` at upstream commit

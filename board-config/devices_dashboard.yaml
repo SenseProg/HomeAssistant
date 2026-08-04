@@ -1145,7 +1145,7 @@ views:
   - type: grid
     cards:
     - type: heading
-      heading: PRANA · 2 поверх
+      heading: PRANA · спальня батьків
       icon: mdi:air-filter
       grid_options:
         columns: full
