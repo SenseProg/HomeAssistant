@@ -16,13 +16,15 @@ of the `asuswrt` device trackers. Its primary Wi-Fi network is `Отаке`.
 `Tenda A9` (`192.168.50.102`) repeats `Отаке`. All three devices bridge the same
 `192.168.50.0/24` LAN.
 
-The Network dashboard correlates each active ASUS tracker MAC with the live
-client lists reported by both Tenda devices. It labels the current connection as
-direct ASUS/`Отаке`, Tenda AC10/`Промінь`, or the Tenda A9 repeater. A device
-absent from both Tenda lists but present in ASUS is classified as a direct ASUS
-client. For example, Galaxy J8 (`192.168.50.56`) currently follows the direct
-ASUS path, while grandmother Sima's Galaxy S21 (`192.168.50.74`) is connected
-through Tenda AC10/`Промінь`.
+The Network dashboard combines active ASUS trackers with both live Tenda client
+lists, deduplicates them by MAC, and labels the current connection as direct
+ASUS/`Отаке`, Tenda AC10/`Промінь`, or the Tenda A9 repeater. A device absent
+from both Tenda lists but present in ASUS is classified as a direct ASUS client.
+For example, Galaxy J8 (`192.168.50.56`) currently follows the direct ASUS path,
+grandmother Sima's Galaxy S21 (`192.168.50.74`) is connected through Tenda
+AC10/`Промінь`, and Blauberg №1 (`192.168.50.27`) is visible only through the
+Tenda A9 client list. ASUS may report such repeater clients as `not_home`, so the
+combined list must not depend on ASUS trackers alone.
 
 Presence is person-based, not access-point-based. `person.dim_kovtuni` is
 displayed as Дмитро and combines his mobile-app GPS and ASUS S23 tracker. The

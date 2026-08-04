@@ -64,7 +64,7 @@ views:
         unavailable/0.0.0.0 - це обмеження прошивки ASUS, не Home
         Assistant. Прибрано з дашборда свідомо.
     - type: markdown
-      title: Активні клієнти ASUS та їхня точка підключення
+      title: Усі активні клієнти та їхня точка підключення
       grid_options:
         columns: full
       content: |
@@ -89,13 +89,28 @@ views:
           'device_tracker.esp_eea5c5': 'Blauberg №1 — кімната хлопців',
           'device_tracker.esp_eea84e': 'Blauberg №2 — кімната Олесі'
         } %}
-        {% set ns = namespace(found=false) %}
+        {% set ip_names = {
+          '192.168.50.13': 'Термостат Terneo — контур 1',
+          '192.168.50.27': 'Blauberg №1 — кімната хлопців',
+          '192.168.50.36': 'Зарядна станція авто — 7,5 кВт',
+          '192.168.50.118': 'Бойлер Midea',
+          '192.168.50.157': 'Термостат Terneo — контур 2',
+          '192.168.50.164': 'SONOFF ZBBridge — Zigbee-шлюз',
+          '192.168.50.176': 'Контролер гаражних воріт — Sonoff/eWeLink',
+          '192.168.50.179': 'Інвертор Deye',
+          '192.168.50.219': 'Трифазний лічильник електроенергії будинку'
+        } %}
+        {% set mac_names = {
+          'DC:6A:E7:A1:09:F2': 'Xiaomi — модель не визначена'
+        } %}
+        {% set ns = namespace(found=false, seen=[]) %}
         {% for tracker in states.device_tracker if tracker.state == 'home' %}
           {% set source = tracker.attributes.source_type | default('') %}
           {% set ip = tracker.attributes.ip | default('', true) %}
           {% set mac = tracker.attributes.mac | default('', true) | lower %}
           {% if source == 'router' and ip %}
             {% set ns.found = true %}
+            {% set ns.seen = ns.seen + [mac] %}
             {% if mac in ap.macs %}
               {% set connection = 'Tenda AC10 · «Промінь»' %}
             {% elif mac in repeater.macs %}
@@ -106,8 +121,28 @@ views:
         - **{{ names.get(tracker.entity_id, tracker.name) }}** — `{{ ip }}` · `{{ mac | upper }}` · **{{ connection }}**
           {% endif %}
         {% endfor %}
+        {% for client in ap_clients if client.qosListConnectType | default('') == 'wifi' and client.qosListMac is defined %}
+          {% set mac = client.qosListMac | lower %}
+          {% if mac not in ns.seen %}
+            {% set ns.found = true %}
+            {% set ns.seen = ns.seen + [mac] %}
+            {% set ip = client.qosListIP | default('IP не отримано', true) %}
+            {% set fallback = client.qosListHostname if client.qosListHostname | default('Unknown') not in ['', 'Unknown'] else 'Невідомий пристрій' %}
+        - **{{ ip_names.get(ip, mac_names.get(mac | upper, fallback)) }}** — `{{ ip }}` · `{{ mac | upper }}` · **Tenda AC10 · «Промінь»**
+          {% endif %}
+        {% endfor %}
+        {% for client in repeater_clients if client.devMac is defined %}
+          {% set mac = client.devMac | lower %}
+          {% if mac not in ns.seen %}
+            {% set ns.found = true %}
+            {% set ns.seen = ns.seen + [mac] %}
+            {% set ip = client.devIp | default('IP не отримано', true) %}
+            {% set fallback = client.devName if client.devName | default('UnKnown') not in ['', 'UnKnown'] else 'Невідомий пристрій' %}
+        - **{{ ip_names.get(ip, mac_names.get(mac | upper, fallback)) }}** — {% if ip != 'UnKnown' %}`{{ ip }}`{% else %}IP не отримано{% endif %} · `{{ mac | upper }}` · **Tenda A9 · повторювач «Отаке»**
+          {% endif %}
+        {% endfor %}
         {% if not ns.found %}
-        Немає активних клієнтів або ASUS недоступний.
+        Немає активних клієнтів або мережеві пристрої недоступні.
         {% endif %}
   - type: grid
     cards:
