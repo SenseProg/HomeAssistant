@@ -74,7 +74,7 @@ views:
       - entity: device_tracker.s20_fe_koristuvaca_kateryna
         name: S20 FE (Катерина)
       - entity: device_tracker.s21_pol_zovatela_kateryna
-        name: S21 (Катерина)
+        name: Samsung Galaxy S21 — бабуся Сіма
       - entity: device_tracker.s23_ultra_dvk
         name: S23 Ultra
       - entity: device_tracker.laptop_u1i8pnmk
@@ -117,7 +117,7 @@ views:
         {% set clients = state_attr('sensor.tenda_ap_clients', 'onlineList') or [] %}
         {% set wifi = clients | selectattr('qosListConnectType', 'equalto', 'wifi') | list %}
         {% set names = {
-          '1E:C0:D2:73:2C:C9': 'Samsung Galaxy S21 — Катерина'
+          '1E:C0:D2:73:2C:C9': 'Samsung Galaxy S21 — бабуся Сіма'
         } %}
         {% if wifi | count == 0 %}
         Немає активних прямих Wi-Fi-клієнтів.
