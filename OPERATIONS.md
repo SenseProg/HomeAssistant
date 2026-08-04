@@ -197,8 +197,8 @@ Current local units:
 
 | Dashboard name | Address | MAC | Physical room |
 |---|---|---|---|
-| Blauberg №1 | `192.168.50.27:4000/UDP` | `98:F4:AB:EE:A5:C5` | Boys' room or Olesia's room — confirm physically |
-| Blauberg №2 | `192.168.50.123:4000/UDP` | `98:F4:AB:EE:A8:4E` | Boys' room or Olesia's room — confirm physically |
+| Blauberg №1 | `192.168.50.27:4000/UDP` | `98:F4:AB:EE:A5:C5` | Кімната хлопців |
+| Blauberg №2 | `192.168.50.123:4000/UDP` | `98:F4:AB:EE:A8:4E` | Кімната Олесі |
 
 Each dashboard card exposes power, three speed levels, automatic/manual/on,
 party and sleep presets, airflow direction and alternating direction. It also
@@ -206,7 +206,7 @@ shows humidity, RPM, alarms, filter/timer countdowns and firmware. The filter
 alarm reset button is intentionally omitted from the main dashboard; use it
 only after physical filter service.
 
-Do not assign the devices to `Кімната хлопців` and `Кімната Олесі` until the IP
-mapping has been confirmed by a short, observed low-speed run. Configuration
-entry credentials remain only in Home Assistant storage and are never written
-to Git.
+The physical mapping was confirmed on 2026-08-05: unit №1 (`.27`) belongs to
+`Кімната хлопців`, and unit №2 (`.123`) belongs to `Кімната Олесі`. The Home
+Assistant device registry uses these same areas. Configuration entry credentials
+remain only in Home Assistant storage and are never written to Git.
