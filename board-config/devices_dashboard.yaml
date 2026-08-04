@@ -176,7 +176,7 @@ views:
           '192.168.50.36': 'Пристрій Tuya',
           '192.168.50.118': 'Бойлер Midea',
           '192.168.50.157': 'Термостат Terneo — контур 2',
-          '192.168.50.164': 'Невідомий ESP-пристрій',
+          '192.168.50.164': 'SONOFF ZBBridge — Zigbee-шлюз',
           '192.168.50.176': 'Перемикач eWeLink/Sonoff',
           '192.168.50.179': 'Інвертор Deye',
           '192.168.50.219': 'Пристрій Tuya'
@@ -210,6 +210,69 @@ views:
         зазвичай придатне, але запас невеликий.
 
         ⚠️ На повторювачі зараз не встановлено пароль адміністратора.
+  - type: grid
+    cards:
+    - type: heading
+      heading: SONOFF ZBBridge — Zigbee-мережа
+      icon: mdi:zigbee
+      grid_options:
+        columns: full
+    - type: markdown
+      title: Шлюз · 192.168.50.164
+      grid_options:
+        columns: full
+      content: |
+        {% set clients = state_attr('sensor.tenda_repeater_clients', 'onlineList') or [] %}
+        {% set bridge = clients | selectattr('devIp', 'equalto', '192.168.50.164') | list %}
+        {% if bridge | count > 0 %}
+        ## 🟢 Онлайн
+        **SONOFF ZBBridge** з'єднаний через повторювач Tenda A9.
+
+        IP: `192.168.50.164` · MAC: `{{ bridge[0].devMac | upper }}` ·
+        прошивка `1.7.0` · SONOFF ID `100124a572`
+        {% else %}
+        ## 🔴 Недоступний
+        Шлюз відсутній у поточному списку клієнтів Tenda A9. Дочірні
+        Zigbee-датчики можуть не оновлюватися.
+        {% endif %}
+
+        Шлюз передає у Home Assistant показники кліматичних датчиків,
+        датчиків гаражних воріт і руху.
+    - type: markdown
+      title: Підключені Zigbee-пристрої
+      grid_options:
+        columns: full
+      content: |
+        {% set bad = ['unknown', 'unavailable', 'none', ''] %}
+        {% set t = states('sensor.sonoff_a4800819f3_temperature') %}
+        {% set h = states('sensor.sonoff_a4800819f3_humidity') %}
+        {% set b = states('sensor.sonoff_a4800819f3_battery') %}
+        - **2 поверх — температура/вологість** — {% if t in bad %}🔴 недоступний{% else %}🟢 {{ t }} °C · {{ h }}% · батарея {{ b }}%{% endif %}
+
+        {% set t = states('sensor.sonoff_a48005e8ed_temperature') %}
+        {% set h = states('sensor.sonoff_a48005e8ed_humidity') %}
+        {% set b = states('sensor.sonoff_a48005e8ed_battery') %}
+        - **Температура будинку — 2 поверх** — {% if t in bad %}🔴 недоступний{% else %}🟢 {{ t }} °C · {{ h }}% · батарея {{ b }}%{% endif %}
+
+        {% set t = states('sensor.sonoff_a48005a66a_temperature') %}
+        {% set h = states('sensor.sonoff_a48005a66a_humidity') %}
+        {% set b = states('sensor.sonoff_a48005a66a_battery') %}
+        - **Вулиця — балкон** — {% if t in bad %}🔴 недоступний{% else %}🟢 {{ t }} °C · {{ h }}% · батарея {{ b }}%{% endif %}
+
+        {% set t = states('sensor.sonoff_a48001c18f_temperature') %}
+        {% set h = states('sensor.sonoff_a48001c18f_humidity') %}
+        {% set b = states('sensor.sonoff_a48001c18f_battery') %}
+        - **Гостьова — температура/вологість** — {% if t in bad %}🔴 недоступний{% else %}🟢 {{ t }} °C · {{ h }}% · батарея {{ b }}%{% endif %}
+
+        {% set b = states('sensor.sonoff_a48001bcf2_battery') %}
+        - **Гаражні ворота — датчик 1** — {% if b in bad %}🔴 недоступний{% else %}🟢 на зв'язку · батарея {{ b }}%{% endif %}
+
+        {% set b = states('sensor.sonoff_a48005b691_battery') %}
+        - **Гаражні ворота — датчик 2** — {% if b in bad %}🔴 недоступний{% else %}🟢 на зв'язку · батарея {{ b }}%{% endif %}
+
+        {% set motion = states('binary_sensor.sonoff_a48001bcc7') %}
+        {% set b = states('sensor.sonoff_a48001bcc7_battery') %}
+        - **Датчик руху** — {% if motion == 'on' %}🟠 виявлено рух · батарея {{ b }}%{% elif motion == 'off' %}🟢 руху немає · батарея {{ b }}%{% else %}🔴 недоступний{% endif %}
 - title: Бойлер
   path: midea
   icon: mdi:water-boiler
