@@ -4,6 +4,8 @@ import asyncio
 from dataclasses import dataclass
 from pathlib import Path
 
+from homeassistant.components import panel_custom
+from homeassistant.components.http import StaticPathConfig
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
@@ -14,6 +16,8 @@ from .const import DOMAIN, HISTORY_FILE
 
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 PLATFORMS = (Platform.CONVERSATION,)
+FRONTEND_DIR = Path(__file__).parent / "frontend"
+FRONTEND_URL = "/claude_code_conversation_static"
 
 @dataclass(slots=True)
 class ClaudeCodeRuntimeData:
@@ -40,6 +44,22 @@ def _ensure_private_history_file(path: Path) -> None:
 
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     """Set up the integration domain."""
+    from .websocket_api import async_register_websocket_api
+
+    async_register_websocket_api(hass)
+    await hass.http.async_register_static_paths(
+        [StaticPathConfig(FRONTEND_URL, str(FRONTEND_DIR), cache_headers=False)]
+    )
+    await panel_custom.async_register_panel(
+        hass=hass,
+        frontend_url_path="claude-home",
+        webcomponent_name="claude-history-panel",
+        sidebar_title="Claude чат",
+        sidebar_icon="mdi:message-text-clock-outline",
+        module_url=f"{FRONTEND_URL}/claude-history-panel.js?v=0.2.0",
+        embed_iframe=False,
+        require_admin=True,
+    )
     return True
 
 

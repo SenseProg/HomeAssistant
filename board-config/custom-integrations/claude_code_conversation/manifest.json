@@ -4,10 +4,10 @@
   "after_dependencies": ["assist_pipeline", "intent"],
   "codeowners": [],
   "config_flow": true,
-  "dependencies": ["conversation"],
+  "dependencies": ["conversation", "frontend", "http", "panel_custom", "websocket_api"],
   "documentation": "https://github.com/SenseProg/HomeAssistant",
   "integration_type": "service",
   "iot_class": "cloud_polling",
   "requirements": [],
-  "version": "0.1.0"
+  "version": "0.2.0"
 }
