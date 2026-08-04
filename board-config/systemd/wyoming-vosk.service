@@ -1,0 +1,24 @@
+[Unit]
+Description=Wyoming Vosk Ukrainian speech-to-text for Home Assistant
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=forlinx
+Group=forlinx
+WorkingDirectory=/home/forlinx/wyoming-vosk
+ExecStart=/home/forlinx/wyoming-vosk-venv-314/bin/python -m wyoming_vosk --uri tcp://127.0.0.1:10300 --data-dir /home/forlinx/wyoming-vosk-data --sentences-dir /home/forlinx/wyoming-vosk-sentences --language uk --preload-language uk --model-for-language uk vosk-model-small-uk-v3-small
+Restart=on-failure
+RestartSec=5s
+TimeoutStartSec=5min
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+MemoryHigh=900M
+MemoryMax=1200M
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+
+[Install]
+WantedBy=multi-user.target

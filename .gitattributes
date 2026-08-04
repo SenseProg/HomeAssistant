@@ -1,0 +1,4 @@
+board-config/scripts/install-wyoming-vosk.sh text eol=lf
+board-config/scripts/configure-voice-assist.py text eol=lf
+board-config/scripts/test-voice-assist.py text eol=lf
+board-config/systemd/wyoming-vosk.service text eol=lf
