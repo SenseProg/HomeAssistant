@@ -56,7 +56,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         webcomponent_name="claude-history-panel",
         sidebar_title="Claude чат",
         sidebar_icon="mdi:message-text-clock-outline",
-        module_url=f"{FRONTEND_URL}/claude-history-panel.js?v=0.2.0",
+        module_url=f"{FRONTEND_URL}/claude-history-panel.js?v=0.3.0",
         embed_iframe=False,
         require_admin=True,
     )

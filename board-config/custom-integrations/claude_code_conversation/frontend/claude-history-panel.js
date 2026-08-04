@@ -1,5 +1,8 @@
 const AGENT_ID = "conversation.domashnii_asistent_claude";
+const PIPELINE_ID = "01kz4r9qs1qzp5hsvg9vc7c0m0";
 const PANEL_CONVERSATION_ID = "claude-homemate-persistent-panel";
+const TARGET_SAMPLE_RATE = 16000;
+const MAX_RECORDING_SECONDS = 120;
 
 class ClaudeHistoryPanel extends HTMLElement {
   constructor() {
@@ -8,6 +11,23 @@ class ClaudeHistoryPanel extends HTMLElement {
     this._hass = null;
     this._ready = false;
     this._busy = false;
+    this._voiceState = "idle";
+    this._audioChunks = [];
+    this._levels = [];
+    this._elapsedSeconds = 0;
+    this._recordingStartedAt = 0;
+    this._timer = null;
+    this._stream = null;
+    this._audioContext = null;
+    this._source = null;
+    this._processor = null;
+    this._silentGain = null;
+    this._unsubscribeVoice = null;
+    this._voiceReadyResolve = null;
+    this._voiceReadyReject = null;
+    this._transcript = "";
+    this._assistantResponse = "";
+    this._ttsUrl = "";
   }
 
   set hass(value) {
@@ -31,13 +51,17 @@ class ClaudeHistoryPanel extends HTMLElement {
     }
   }
 
+  disconnectedCallback() {
+    this._stopCaptureTracks();
+    this._clearTimer();
+    void this._closeVoiceSubscription();
+  }
+
   _renderShell() {
     this.shadowRoot.innerHTML = `
       <style>
         :host {
-          display: block;
-          min-height: 100%;
-          color: var(--primary-text-color);
+          display: block; min-height: 100%; color: var(--primary-text-color);
           background: var(--primary-background-color);
           font-family: var(--paper-font-body1_-_font-family, Roboto, sans-serif);
         }
@@ -46,26 +70,34 @@ class ClaudeHistoryPanel extends HTMLElement {
         .header h1 { flex: 1; margin: 0; font-size: 26px; }
         .note {
           padding: 12px 14px; margin-bottom: 14px; border-radius: 12px;
-          background: var(--secondary-background-color);
-          color: var(--secondary-text-color);
+          background: var(--secondary-background-color); color: var(--secondary-text-color);
           line-height: 1.45;
         }
         .history {
-          min-height: 360px; max-height: calc(100vh - 330px); overflow-y: auto;
+          min-height: 300px; max-height: calc(100vh - 390px); overflow-y: auto;
           display: flex; flex-direction: column; gap: 10px; padding: 12px;
           border-radius: 14px; background: var(--card-background-color);
           box-shadow: var(--ha-card-box-shadow, 0 2px 6px rgba(0,0,0,.15));
         }
-        .message { max-width: 82%; padding: 10px 12px; border-radius: 14px; line-height: 1.45; white-space: pre-wrap; overflow-wrap: anywhere; }
-        .user { align-self: flex-end; background: var(--primary-color); color: var(--text-primary-color, white); border-bottom-right-radius: 4px; }
-        .assistant { align-self: flex-start; background: var(--secondary-background-color); border-bottom-left-radius: 4px; }
+        .message {
+          max-width: 82%; padding: 10px 12px; border-radius: 14px; line-height: 1.45;
+          white-space: pre-wrap; overflow-wrap: anywhere;
+        }
+        .user {
+          align-self: flex-end; background: var(--primary-color);
+          color: var(--text-primary-color, white); border-bottom-right-radius: 4px;
+        }
+        .assistant {
+          align-self: flex-start; background: var(--secondary-background-color);
+          border-bottom-left-radius: 4px;
+        }
         .meta { display: block; margin-top: 6px; opacity: .72; font-size: 11px; }
         .composer { display: grid; grid-template-columns: 1fr auto; gap: 10px; margin-top: 14px; }
+        .composer-actions { display: flex; flex-direction: column; gap: 8px; }
         textarea {
-          min-height: 72px; resize: vertical; box-sizing: border-box; width: 100%;
+          min-height: 76px; resize: vertical; box-sizing: border-box; width: 100%;
           border: 1px solid var(--divider-color); border-radius: 12px; padding: 12px;
-          color: var(--primary-text-color); background: var(--card-background-color);
-          font: inherit;
+          color: var(--primary-text-color); background: var(--card-background-color); font: inherit;
         }
         button {
           border: 0; border-radius: 12px; padding: 10px 16px; cursor: pointer;
@@ -73,13 +105,43 @@ class ClaudeHistoryPanel extends HTMLElement {
           font: inherit; font-weight: 600;
         }
         button.secondary { color: var(--primary-text-color); background: var(--secondary-background-color); }
+        button.danger { color: white; background: var(--error-color, #db4437); }
         button:disabled { opacity: .55; cursor: wait; }
         .status { min-height: 22px; padding: 7px 2px 0; color: var(--secondary-text-color); font-size: 13px; }
+        .voice-card {
+          display: none; margin-top: 14px; padding: 16px; border-radius: 16px;
+          background: var(--card-background-color); border: 1px solid var(--divider-color);
+          box-shadow: var(--ha-card-box-shadow, 0 2px 6px rgba(0,0,0,.15));
+        }
+        .voice-card.visible { display: block; }
+        .voice-head { display: flex; align-items: center; gap: 10px; }
+        .voice-title { flex: 1; font-size: 17px; font-weight: 650; }
+        .record-dot { width: 12px; height: 12px; border-radius: 50%; background: #8b8b8b; }
+        .recording .record-dot { background: #ef5350; animation: pulse 1.2s infinite; }
+        .voice-time { font-variant-numeric: tabular-nums; font-size: 18px; font-weight: 650; }
+        @keyframes pulse { 50% { opacity: .28; transform: scale(.82); } }
+        .wave-wrap {
+          margin: 14px 0 10px; height: 72px; border-radius: 12px; overflow: hidden;
+          background: color-mix(in srgb, var(--primary-background-color) 76%, var(--primary-color));
+        }
+        canvas { width: 100%; height: 72px; display: block; }
+        .voice-hint { color: var(--secondary-text-color); line-height: 1.4; margin-bottom: 12px; }
+        .voice-controls { display: flex; flex-wrap: wrap; gap: 8px; }
+        .voice-result {
+          display: none; margin: 12px 0; padding: 12px; border-radius: 10px;
+          background: var(--secondary-background-color); line-height: 1.45;
+        }
+        .voice-result.visible { display: block; }
+        .voice-result b { display: block; margin-bottom: 4px; }
+        audio { width: 100%; margin-top: 10px; }
         @media (max-width: 600px) {
           .page { padding: 10px; }
-          .history { max-height: calc(100vh - 350px); }
+          .history { max-height: calc(100vh - 430px); }
           .message { max-width: 92%; }
           .composer { grid-template-columns: 1fr; }
+          .composer-actions { flex-direction: row; }
+          .composer-actions button { flex: 1; }
+          .voice-controls button { flex: 1 1 42%; }
         }
       </style>
       <div class="page">
@@ -88,44 +150,55 @@ class ClaudeHistoryPanel extends HTMLElement {
           <button id="refresh" class="secondary" type="button">Оновити</button>
         </div>
         <div class="note">
-          Тут показана збережена міжвіконна історія. Для голосового вводу відкрийте
-          Assist через кнопку у верхній панелі. У Chrome мікрофон працює через
-          <b>http://localhost:8123</b> або через HTTPS/застосунок Home Assistant.
+          Тут зберігається історія розмов. Голосовий запис не надсилається автоматично:
+          натисніть <b>«Зупинити запис»</b>, прослухайте візуальний результат і окремо
+          натисніть <b>«Надіслати запис»</b>. Максимальна тривалість — 2 хвилини.
         </div>
         <div id="history" class="history" aria-live="polite"></div>
+        <div id="voice-card" class="voice-card" aria-live="polite">
+          <div id="voice-state-class" class="voice-head">
+            <span class="record-dot" aria-hidden="true"></span>
+            <span id="voice-title" class="voice-title">Голосовий запис</span>
+            <span id="voice-time" class="voice-time">00:00</span>
+          </div>
+          <div class="wave-wrap"><canvas id="wave" width="760" height="72" aria-label="Рівень звуку з мікрофона"></canvas></div>
+          <div id="voice-hint" class="voice-hint"></div>
+          <div id="voice-transcript" class="voice-result"></div>
+          <div id="voice-response" class="voice-result"></div>
+          <audio id="voice-audio" controls hidden></audio>
+          <div id="voice-controls" class="voice-controls"></div>
+        </div>
         <div class="composer">
           <textarea id="message" aria-label="Повідомлення Claude" placeholder="Напишіть запит до домашнього асистента…"></textarea>
-          <button id="send" type="button">Надіслати</button>
+          <div class="composer-actions">
+            <button id="send" type="button">Надіслати</button>
+            <button id="record" class="secondary" type="button">🎙 Записати голосом</button>
+          </div>
         </div>
         <div id="status" class="status"></div>
       </div>
     `;
-    this.shadowRoot.getElementById("refresh").addEventListener("click", () => {
-      void this._loadHistory();
-    });
-    this.shadowRoot.getElementById("send").addEventListener("click", () => {
-      void this._sendMessage();
-    });
+    this.shadowRoot.getElementById("refresh").addEventListener("click", () => void this._loadHistory());
+    this.shadowRoot.getElementById("send").addEventListener("click", () => void this._sendMessage());
+    this.shadowRoot.getElementById("record").addEventListener("click", () => void this._startRecording());
     this.shadowRoot.getElementById("message").addEventListener("keydown", (event) => {
       if (event.key === "Enter" && !event.shiftKey) {
         event.preventDefault();
         void this._sendMessage();
       }
     });
+    this._renderVoiceState();
   }
 
   async _loadHistory() {
     if (!this._hass) return;
     this._setStatus("Завантажую історію…");
     try {
-      const result = await this._hass.callWS({
-        type: "claude_code_conversation/history",
-        limit: 200,
-      });
+      const result = await this._hass.callWS({ type: "claude_code_conversation/history", limit: 200 });
       this._renderHistory(result.records || []);
       this._setStatus(`Збережено повідомлень: ${(result.records || []).length}`);
     } catch (error) {
-      this._setStatus(`Не вдалося завантажити історію: ${String(error)}`);
+      this._setStatus(`Не вдалося завантажити історію: ${this._errorText(error)}`);
     }
   }
 
@@ -161,25 +234,358 @@ class ClaudeHistoryPanel extends HTMLElement {
     const text = input.value.trim();
     if (!text) return;
     this._busy = true;
-    this.shadowRoot.getElementById("send").disabled = true;
+    this._setComposerDisabled(true);
     this._setStatus("Claude готує відповідь…");
     try {
       await this._hass.callWS({
-        type: "conversation/process",
-        text,
-        language: "uk",
-        agent_id: AGENT_ID,
-        conversation_id: PANEL_CONVERSATION_ID,
+        type: "conversation/process", text, language: "uk",
+        agent_id: AGENT_ID, conversation_id: PANEL_CONVERSATION_ID,
       });
       input.value = "";
       await this._loadHistory();
     } catch (error) {
-      this._setStatus(`Помилка запиту: ${String(error)}`);
+      this._setStatus(`Помилка запиту: ${this._errorText(error)}`);
     } finally {
       this._busy = false;
-      this.shadowRoot.getElementById("send").disabled = false;
+      this._setComposerDisabled(false);
       input.focus();
     }
+  }
+
+  async _startRecording() {
+    if (this._voiceState === "recording" || this._voiceState === "sending") return;
+    if (!window.isSecureContext || !navigator.mediaDevices?.getUserMedia) {
+      this._voiceState = "error";
+      this._voiceError = "Браузер не дозволяє мікрофон на цій адресі. Відкрийте Home Assistant через HTTPS, застосунок або http://localhost:8123.";
+      this._renderVoiceState();
+      return;
+    }
+    this._resetVoiceData();
+    this._voiceState = "requesting";
+    this._renderVoiceState();
+    try {
+      this._stream = await navigator.mediaDevices.getUserMedia({
+        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+      });
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+      this._audioContext = new AudioContextClass();
+      this._source = this._audioContext.createMediaStreamSource(this._stream);
+      this._processor = this._audioContext.createScriptProcessor(4096, 1, 1);
+      this._silentGain = this._audioContext.createGain();
+      this._silentGain.gain.value = 0;
+      this._processor.onaudioprocess = (event) => this._captureAudio(event);
+      this._source.connect(this._processor);
+      this._processor.connect(this._silentGain);
+      this._silentGain.connect(this._audioContext.destination);
+      this._recordingStartedAt = performance.now();
+      this._voiceState = "recording";
+      this._timer = window.setInterval(() => {
+        this._elapsedSeconds = (performance.now() - this._recordingStartedAt) / 1000;
+        if (this._elapsedSeconds >= MAX_RECORDING_SECONDS) {
+          this._stopRecording("Досягнуто ліміт 2 хвилини. Запис зупинено — тепер його можна надіслати.");
+          return;
+        }
+        this._updateRecordingDisplay();
+      }, 200);
+      this._renderVoiceState();
+    } catch (error) {
+      this._stopCaptureTracks();
+      this._voiceState = "error";
+      this._voiceError = `Не вдалося ввімкнути мікрофон: ${this._errorText(error)}. Перевірте дозвіл браузера.`;
+      this._renderVoiceState();
+    }
+  }
+
+  _captureAudio(event) {
+    if (this._voiceState !== "recording") return;
+    const input = event.inputBuffer.getChannelData(0);
+    const copy = new Float32Array(input.length);
+    copy.set(input);
+    this._audioChunks.push(copy);
+    let sum = 0;
+    for (let index = 0; index < input.length; index += 1) sum += input[index] * input[index];
+    this._levels.push(Math.min(1, Math.sqrt(sum / input.length) * 4));
+    if (this._levels.length > 110) this._levels.shift();
+    this._drawWave();
+  }
+
+  _stopRecording(hint = "Запис зупинено. Натисніть «Надіслати запис» або запишіть заново.") {
+    if (this._voiceState !== "recording") return;
+    this._elapsedSeconds = (performance.now() - this._recordingStartedAt) / 1000;
+    this._stopCaptureTracks();
+    this._clearTimer();
+    this._voiceState = this._audioChunks.length ? "recorded" : "error";
+    this._voiceError = this._audioChunks.length ? "" : "Мікрофон не передав аудіодані.";
+    this._voiceHint = hint;
+    this._renderVoiceState();
+  }
+
+  async _sendRecording() {
+    if (this._voiceState !== "recorded" || !this._audioChunks.length || !this._hass) return;
+    this._voiceState = "sending";
+    this._transcript = "";
+    this._assistantResponse = "";
+    this._ttsUrl = "";
+    this._voiceError = "";
+    this._renderVoiceState();
+    try {
+      const socket = this._hass.connection?.socket;
+      if (!socket || socket.readyState !== WebSocket.OPEN) throw new Error("немає активного з’єднання з Home Assistant");
+      const pcm = this._createPcm16();
+      const handlerReady = new Promise((resolve, reject) => {
+        this._voiceReadyResolve = resolve;
+        this._voiceReadyReject = reject;
+      });
+      this._unsubscribeVoice = await this._hass.connection.subscribeMessage(
+        (event) => this._handlePipelineEvent(event),
+        {
+          type: "assist_pipeline/run", start_stage: "stt", end_stage: "tts",
+          pipeline: PIPELINE_ID, conversation_id: PANEL_CONVERSATION_ID,
+          input: { sample_rate: TARGET_SAMPLE_RATE }, timeout: 120,
+        },
+      );
+      const handlerId = await Promise.race([
+        handlerReady,
+        new Promise((_, reject) => window.setTimeout(() => reject(new Error("пайплайн не прийняв аудіо")), 10000)),
+      ]);
+      const bytes = new Uint8Array(pcm.buffer);
+      for (let offset = 0; offset < bytes.length; offset += 3200) {
+        const piece = bytes.subarray(offset, Math.min(bytes.length, offset + 3200));
+        const packet = new Uint8Array(piece.length + 1);
+        packet[0] = handlerId;
+        packet.set(piece, 1);
+        socket.send(packet.buffer);
+      }
+      socket.send(new Uint8Array([handlerId]).buffer);
+      this._voiceHint = "Аудіо надіслано. Розпізнаю мовлення…";
+      this._renderVoiceState();
+    } catch (error) {
+      this._voiceState = "error";
+      this._voiceError = `Не вдалося надіслати запис: ${this._errorText(error)}`;
+      this._renderVoiceState();
+      await this._closeVoiceSubscription();
+    }
+  }
+
+  _handlePipelineEvent(event) {
+    const type = event?.type;
+    const data = event?.data || {};
+    if (type === "run-start") {
+      const handlerId = data.runner_data?.stt_binary_handler_id;
+      if (Number.isInteger(handlerId)) this._voiceReadyResolve?.(handlerId);
+    } else if (type === "stt-start") {
+      this._voiceHint = "Розпізнаю мовлення…";
+    } else if (type === "stt-end") {
+      this._transcript = data.stt_output?.text || "";
+      this._voiceHint = "Мовлення розпізнано. Claude готує відповідь…";
+    } else if (type === "intent-end") {
+      this._assistantResponse = data.intent_output?.response?.speech?.plain?.speech || "";
+      this._voiceHint = "Відповідь готова. Готую озвучення…";
+    } else if (type === "tts-end") {
+      this._ttsUrl = data.tts_output?.url || "";
+    } else if (type === "error") {
+      this._voiceReadyReject?.(new Error(data.message || data.code || "помилка голосового пайплайна"));
+      this._voiceState = "error";
+      this._voiceError = data.message || data.code || "Помилка голосового пайплайна.";
+      void this._closeVoiceSubscription();
+    } else if (type === "run-end") {
+      this._voiceState = "complete";
+      this._voiceHint = "Готово. Розшифровку й відповідь збережено в історії чату.";
+      void this._closeVoiceSubscription();
+      void this._loadHistory();
+    }
+    this._renderVoiceState();
+  }
+
+  _createPcm16() {
+    const sourceRate = this._audioContext?.sampleRate || 48000;
+    const sourceLength = this._audioChunks.reduce((total, chunk) => total + chunk.length, 0);
+    const source = new Float32Array(sourceLength);
+    let sourceOffset = 0;
+    for (const chunk of this._audioChunks) {
+      source.set(chunk, sourceOffset);
+      sourceOffset += chunk.length;
+    }
+    const outputLength = Math.max(1, Math.floor(source.length * TARGET_SAMPLE_RATE / sourceRate));
+    const output = new Int16Array(outputLength);
+    const ratio = sourceRate / TARGET_SAMPLE_RATE;
+    for (let outputIndex = 0; outputIndex < outputLength; outputIndex += 1) {
+      const start = Math.floor(outputIndex * ratio);
+      const end = Math.max(start + 1, Math.floor((outputIndex + 1) * ratio));
+      let sum = 0;
+      for (let sourceIndex = start; sourceIndex < end && sourceIndex < source.length; sourceIndex += 1) sum += source[sourceIndex];
+      const sample = Math.max(-1, Math.min(1, sum / (end - start)));
+      output[outputIndex] = sample < 0 ? sample * 32768 : sample * 32767;
+    }
+    return output;
+  }
+
+  _stopCaptureTracks() {
+    if (this._processor) this._processor.onaudioprocess = null;
+    try { this._source?.disconnect(); } catch (_error) { /* already disconnected */ }
+    try { this._processor?.disconnect(); } catch (_error) { /* already disconnected */ }
+    try { this._silentGain?.disconnect(); } catch (_error) { /* already disconnected */ }
+    for (const track of this._stream?.getTracks?.() || []) track.stop();
+    if (this._audioContext && this._audioContext.state !== "closed") void this._audioContext.close();
+    this._stream = null;
+    this._source = null;
+    this._processor = null;
+    this._silentGain = null;
+  }
+
+  async _closeVoiceSubscription() {
+    const unsubscribe = this._unsubscribeVoice;
+    this._unsubscribeVoice = null;
+    if (unsubscribe) {
+      try { await unsubscribe(); } catch (_error) { /* pipeline already ended */ }
+    }
+  }
+
+  _cancelVoice() {
+    this._stopCaptureTracks();
+    this._clearTimer();
+    void this._closeVoiceSubscription();
+    this._resetVoiceData();
+    this._voiceState = "idle";
+    this._renderVoiceState();
+  }
+
+  _resetVoiceData() {
+    this._audioChunks = [];
+    this._levels = [];
+    this._elapsedSeconds = 0;
+    this._voiceHint = "";
+    this._voiceError = "";
+    this._transcript = "";
+    this._assistantResponse = "";
+    this._ttsUrl = "";
+    this._voiceReadyResolve = null;
+    this._voiceReadyReject = null;
+  }
+
+  _clearTimer() {
+    if (this._timer) window.clearInterval(this._timer);
+    this._timer = null;
+  }
+
+  _updateRecordingDisplay() {
+    const timer = this.shadowRoot.getElementById("voice-time");
+    if (timer) timer.textContent = this._formatTime(this._elapsedSeconds);
+  }
+
+  _drawWave() {
+    const canvas = this.shadowRoot.getElementById("wave");
+    if (!canvas) return;
+    const context = canvas.getContext("2d");
+    const width = canvas.width;
+    const height = canvas.height;
+    context.clearRect(0, 0, width, height);
+    context.strokeStyle = getComputedStyle(this).getPropertyValue("--primary-color").trim() || "#03a9f4";
+    context.lineWidth = 3;
+    const center = height / 2;
+    const spacing = width / 110;
+    context.beginPath();
+    for (let index = 0; index < 110; index += 1) {
+      const level = this._levels[index] || 0.02;
+      const amplitude = Math.max(1.5, level * (height * 0.44));
+      const x = index * spacing + spacing / 2;
+      context.moveTo(x, center - amplitude);
+      context.lineTo(x, center + amplitude);
+    }
+    context.stroke();
+  }
+
+  _renderVoiceState() {
+    if (!this._ready) return;
+    const card = this.shadowRoot.getElementById("voice-card");
+    const head = this.shadowRoot.getElementById("voice-state-class");
+    const title = this.shadowRoot.getElementById("voice-title");
+    const hint = this.shadowRoot.getElementById("voice-hint");
+    const controls = this.shadowRoot.getElementById("voice-controls");
+    const transcript = this.shadowRoot.getElementById("voice-transcript");
+    const response = this.shadowRoot.getElementById("voice-response");
+    const audio = this.shadowRoot.getElementById("voice-audio");
+    const visible = this._voiceState !== "idle";
+    card.classList.toggle("visible", visible);
+    head.classList.toggle("recording", this._voiceState === "recording");
+    const titles = {
+      requesting: "Дозвіл на мікрофон…", recording: "Запис триває — говоріть",
+      recorded: "Запис готовий до надсилання", sending: "Обробляю запис…",
+      complete: "Голосовий запит виконано", error: "Помилка голосового вводу",
+    };
+    title.textContent = titles[this._voiceState] || "Голосовий запис";
+    this._updateRecordingDisplay();
+    hint.textContent = this._voiceError || this._voiceHint || (this._voiceState === "recording"
+      ? "Рівень звуку рухається під час мовлення. Натисніть «Зупинити запис», коли закінчите."
+      : "");
+    transcript.classList.toggle("visible", Boolean(this._transcript));
+    transcript.replaceChildren();
+    if (this._transcript) {
+      const label = document.createElement("b");
+      label.textContent = "Розпізнано:";
+      transcript.append(label, document.createTextNode(this._transcript));
+    }
+    response.classList.toggle("visible", Boolean(this._assistantResponse));
+    response.replaceChildren();
+    if (this._assistantResponse) {
+      const label = document.createElement("b");
+      label.textContent = "Відповідь Claude:";
+      response.append(label, document.createTextNode(this._assistantResponse));
+    }
+    if (this._ttsUrl) {
+      audio.src = this._ttsUrl;
+      audio.hidden = false;
+    } else {
+      audio.removeAttribute("src");
+      audio.hidden = true;
+    }
+    controls.replaceChildren();
+    if (this._voiceState === "recording") {
+      controls.append(
+        this._button("■ Зупинити запис", "danger", () => this._stopRecording()),
+        this._button("Скасувати", "secondary", () => this._cancelVoice()),
+      );
+    } else if (this._voiceState === "recorded") {
+      controls.append(
+        this._button("↑ Надіслати запис", "", () => void this._sendRecording()),
+        this._button("Записати заново", "secondary", () => void this._startRecording()),
+        this._button("Скасувати", "secondary", () => this._cancelVoice()),
+      );
+    } else if (this._voiceState === "sending" || this._voiceState === "requesting") {
+      const disabled = this._button("Зачекайте…", "secondary", () => {});
+      disabled.disabled = true;
+      controls.append(disabled, this._button("Скасувати", "secondary", () => this._cancelVoice()));
+    } else if (this._voiceState === "complete" || this._voiceState === "error") {
+      controls.append(
+        this._button("Записати ще", "", () => void this._startRecording()),
+        this._button("Закрити", "secondary", () => this._cancelVoice()),
+      );
+    }
+    this._drawWave();
+  }
+
+  _button(text, className, handler) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.textContent = text;
+    if (className) button.className = className;
+    button.addEventListener("click", handler);
+    return button;
+  }
+
+  _setComposerDisabled(disabled) {
+    this.shadowRoot.getElementById("send").disabled = disabled;
+    this.shadowRoot.getElementById("record").disabled = disabled;
+  }
+
+  _formatTime(seconds) {
+    const value = Math.max(0, Math.floor(seconds || 0));
+    return `${String(Math.floor(value / 60)).padStart(2, "0")}:${String(value % 60).padStart(2, "0")}`;
+  }
+
+  _errorText(error) {
+    if (error?.message) return error.message;
+    return String(error);
   }
 
   _setStatus(text) {
