@@ -294,3 +294,18 @@
     target:
       entity_id: script.tv_idle_slideshow
   mode: restart
+- id: hikvision_motion_snapshot
+  alias: Камера - знімок при виявленні руху
+  description: При спрацюванні binary_sensor.cam1_motion зберігає кадр з camera.cam1, оновлює www/motion/latest.jpg для дашборда і лишає останні 30 знімків.
+  triggers:
+  - trigger: state
+    entity_id: binary_sensor.cam1_motion
+    to: 'on'
+  actions:
+  - action: camera.snapshot
+    target:
+      entity_id: camera.cam1
+    data:
+      filename: /userdata/hass/config/www/motion/motion_{{ now().strftime('%Y%m%d_%H%M%S') }}.jpg
+  - action: shell_command.update_motion_snapshot
+  mode: single
