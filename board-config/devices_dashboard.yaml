@@ -1248,27 +1248,159 @@ views:
   - type: grid
     cards:
     - type: heading
-      heading: Blauberg · 2 рекуператори
+      heading: Blauberg №1 · кімнату уточнити
       icon: mdi:fan
       grid_options:
         columns: full
-    - type: markdown
-      title: Кімната хлопців та кімната Олесі
+    - type: tile
+      entity: fan.siku_blauberg_fan_192_168_50_27
+      name: Blauberg №1
+      icon: mdi:fan
+      features_position: bottom
+      features:
+      - type: fan-speed
+      - type: fan-preset-modes
+        style: dropdown
+        preset_modes:
+        - auto
+        - manual
+        - 'on'
+        - party
+        - sleep
+      - type: fan-direction
+      - type: fan-oscillate
       grid_options:
         columns: full
-      content: |
-        {% set clients = state_attr('sensor.tenda_repeater_clients', 'onlineList') or [] %}
-        {% set unit_27 = clients | selectattr('devIp', 'equalto', '192.168.50.27') | list %}
-        - **Blauberg №1** — `192.168.50.27` · `98:F4:AB:EE:A5:C5` · {% if unit_27 | count > 0 %}🟢 у мережі{% else %}🔴 недоступний{% endif %}
-
-        - **Blauberg №2** — `192.168.50.123` · `98:F4:AB:EE:A8:4E` · {% if is_state('device_tracker.esp_eea84e', 'home') %}🟢 у мережі{% else %}🔴 недоступний{% endif %}
-
-        Один рекуператор встановлений у **кімнаті хлопців**, другий — у
-        **кімнаті Олесі**. Який IP відповідає якій кімнаті, ще потрібно
-        фізично зіставити.
-
-        ⚠️ Зараз Home Assistant бачить лише їхню присутність у мережі.
-        Керування швидкістю, напрямком і режимами Blauberg ще не інтегроване.
+    - type: entities
+      title: Стан і датчики
+      show_header_toggle: false
+      grid_options:
+        columns: full
+      entities:
+      - entity: sensor.siku_blauberg_fan_192_168_50_27_mode
+        name: Режим
+      - entity: sensor.siku_blauberg_fan_192_168_50_27_humidity
+        name: Вологість
+      - entity: sensor.siku_blauberg_fan_192_168_50_27_rpm
+        name: Оберти вентилятора
+      - entity: sensor.siku_blauberg_fan_192_168_50_27_alarm
+        name: Аварія
+      - entity: sensor.siku_blauberg_fan_192_168_50_27_filter_timer_countdown
+        name: Залишок ресурсу фільтра
+      - entity: sensor.siku_blauberg_fan_192_168_50_27_timer_countdown
+        name: Залишок таймера
+      - entity: sensor.siku_blauberg_fan_192_168_50_27_firmware_version
+        name: Прошивка
+    - type: horizontal-stack
+      cards:
+      - type: button
+        entity: button.siku_blauberg_fan_192_168_50_27_party_mode
+        name: Посилений режим
+        icon: mdi:weather-windy
+        show_state: false
+      - type: button
+        entity: button.siku_blauberg_fan_192_168_50_27_sleep_mode
+        name: Нічний режим
+        icon: mdi:weather-night
+        show_state: false
+      grid_options:
+        columns: full
+    - type: history-graph
+      title: Вологість і оберти · 24 години
+      hours_to_show: 24
+      grid_options:
+        columns: full
+      entities:
+      - entity: sensor.siku_blauberg_fan_192_168_50_27_humidity
+        name: Вологість
+      - entity: sensor.siku_blauberg_fan_192_168_50_27_rpm
+        name: Оберти
+    - type: markdown
+      grid_options:
+        columns: full
+      content: >-
+        Локальна адреса: `192.168.50.27`. Фізично це **кімната хлопців** або
+        **кімната Олесі**; відповідність кімнаті потрібно підтвердити коротким
+        пробним запуском. Скидання попередження фільтра навмисно не винесене на
+        головну картку — його слід натискати лише після обслуговування фільтра.
+  - type: grid
+    cards:
+    - type: heading
+      heading: Blauberg №2 · кімнату уточнити
+      icon: mdi:fan
+      grid_options:
+        columns: full
+    - type: tile
+      entity: fan.siku_blauberg_fan_192_168_50_123
+      name: Blauberg №2
+      icon: mdi:fan
+      features_position: bottom
+      features:
+      - type: fan-speed
+      - type: fan-preset-modes
+        style: dropdown
+        preset_modes:
+        - auto
+        - manual
+        - 'on'
+        - party
+        - sleep
+      - type: fan-direction
+      - type: fan-oscillate
+      grid_options:
+        columns: full
+    - type: entities
+      title: Стан і датчики
+      show_header_toggle: false
+      grid_options:
+        columns: full
+      entities:
+      - entity: sensor.siku_blauberg_fan_192_168_50_123_mode
+        name: Режим
+      - entity: sensor.siku_blauberg_fan_192_168_50_123_humidity
+        name: Вологість
+      - entity: sensor.siku_blauberg_fan_192_168_50_123_rpm
+        name: Оберти вентилятора
+      - entity: sensor.siku_blauberg_fan_192_168_50_123_alarm
+        name: Аварія
+      - entity: sensor.siku_blauberg_fan_192_168_50_123_filter_timer_countdown
+        name: Залишок ресурсу фільтра
+      - entity: sensor.siku_blauberg_fan_192_168_50_123_timer_countdown
+        name: Залишок таймера
+      - entity: sensor.siku_blauberg_fan_192_168_50_123_firmware_version
+        name: Прошивка
+    - type: horizontal-stack
+      cards:
+      - type: button
+        entity: button.siku_blauberg_fan_192_168_50_123_party_mode
+        name: Посилений режим
+        icon: mdi:weather-windy
+        show_state: false
+      - type: button
+        entity: button.siku_blauberg_fan_192_168_50_123_sleep_mode
+        name: Нічний режим
+        icon: mdi:weather-night
+        show_state: false
+      grid_options:
+        columns: full
+    - type: history-graph
+      title: Вологість і оберти · 24 години
+      hours_to_show: 24
+      grid_options:
+        columns: full
+      entities:
+      - entity: sensor.siku_blauberg_fan_192_168_50_123_humidity
+        name: Вологість
+      - entity: sensor.siku_blauberg_fan_192_168_50_123_rpm
+        name: Оберти
+    - type: markdown
+      grid_options:
+        columns: full
+      content: >-
+        Локальна адреса: `192.168.50.123`. Фізично це **кімната хлопців** або
+        **кімната Олесі**; відповідність кімнаті потрібно підтвердити коротким
+        пробним запуском. Картка дозволяє вмикати рекуператор, задавати швидкість,
+        режим, напрямок потоку та чергування напрямків.
   - type: grid
     cards:
     - type: heading
@@ -1288,9 +1420,11 @@ views:
         пристрою. Підігрів і зимовий режим вмикайте за потреби в холодний
         період.
 
-        Рекуператори Blauberg показані окремо як мережеві пристрої. Повні
-        елементи керування з'являться після підключення їхнього локального
-        протоколу до Home Assistant.
+        Рекуператори **Blauberg** підключені локально, без хмарного сервісу.
+        На їхніх картках доступні живлення, швидкість, автоматичний, ручний,
+        посилений і нічний режими, напрямок повітря та чергування напрямків.
+        Вологість, оберти, аварійний стан, таймери й версія прошивки відображаються
+        окремо; історія вологості та обертів зберігається у Home Assistant.
 - title: Присутність
   path: presence
   icon: mdi:map-marker-account

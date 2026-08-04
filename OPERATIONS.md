@@ -176,3 +176,37 @@ The pinned component installer applies the same overlay automatically.
 Component backups are kept under `/userdata/hass/backups/custom_components`,
 outside the live `custom_components` directory, so Home Assistant cannot mistake
 a backup for an importable integration.
+
+## Blauberg room recuperators
+
+The two Blauberg/Siku room recuperators are connected directly over the local
+UDP protocol; no vendor cloud is involved. Home Assistant uses the pinned
+`Siku (Blauberg) Fan` custom integration `2.2.6` at upstream commit
+`589b266f5464701c218af554ede135d9edf333e2`. Reinstall or reproduce it with:
+
+```bash
+/home/forlinx/homemate-scripts/homemate-install-siku.sh
+```
+
+The repository copy is
+`board-config/scripts/homemate-install-siku.sh`; it verifies the upstream
+archive SHA-256, compiles the component, backs up any replaced component under
+`/userdata/hass/backups/custom_components`, and runs `check_config`.
+
+Current local units:
+
+| Dashboard name | Address | MAC | Physical room |
+|---|---|---|---|
+| Blauberg №1 | `192.168.50.27:4000/UDP` | `98:F4:AB:EE:A5:C5` | Boys' room or Olesia's room — confirm physically |
+| Blauberg №2 | `192.168.50.123:4000/UDP` | `98:F4:AB:EE:A8:4E` | Boys' room or Olesia's room — confirm physically |
+
+Each dashboard card exposes power, three speed levels, automatic/manual/on,
+party and sleep presets, airflow direction and alternating direction. It also
+shows humidity, RPM, alarms, filter/timer countdowns and firmware. The filter
+alarm reset button is intentionally omitted from the main dashboard; use it
+only after physical filter service.
+
+Do not assign the devices to `Кімната хлопців` and `Кімната Олесі` until the IP
+mapping has been confirmed by a short, observed low-speed run. Configuration
+entry credentials remain only in Home Assistant storage and are never written
+to Git.
