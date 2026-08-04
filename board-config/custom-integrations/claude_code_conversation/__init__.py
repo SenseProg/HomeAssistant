@@ -22,6 +22,9 @@ class ClaudeCodeRuntimeData:
     claude_lock: asyncio.Lock
     history_lock: asyncio.Lock
     history_path: Path
+    system_lock: asyncio.Lock
+    system_snapshot: str | None
+    system_snapshot_monotonic: float
 
 
 type ClaudeCodeConfigEntry = ConfigEntry[ClaudeCodeRuntimeData]
@@ -50,6 +53,9 @@ async def async_setup_entry(
         claude_lock=asyncio.Lock(),
         history_lock=asyncio.Lock(),
         history_path=history_path,
+        system_lock=asyncio.Lock(),
+        system_snapshot=None,
+        system_snapshot_monotonic=0.0,
     )
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
