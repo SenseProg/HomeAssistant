@@ -1,27 +1,28 @@
+
+
+# Firmware images - too large for GitHub (100 MB hard limit per file)
 # Home Assistant secrets and runtime state - never commit
-.storage/
-secrets.yaml
+# Never commit live NAS credentials or backup encryption material.
+# OS noise
+# backupSW_MB35x8.zip is 2.7 GB, see README for its location on the NAS
 *.db
 *.db-shm
 *.db-wal
+*.img
 *.log
 *.log.*
+*.pyc
+*emergency*kit*
+.DS_Store
 .HA_VERSION
 .ha_run.lock
-deps/
-tts/
-custom_components/
-
-# Firmware images - too large for GitHub (100 MB hard limit per file)
-# backupSW_MB35x8.zip is 2.7 GB, see README for its location on the NAS
-
-# Never commit live NAS credentials or backup encryption material.
-board-config/nas/ha-nas.credentials
-*emergency*kit*
-*.img
-backupSW_MB35x8.zip
-
-# OS noise
+.storage/
 Thumbs.db
+__pycache__/
+backupSW_MB35x8.zip
+board-config/nas/ha-nas.credentials
+custom_components/
+deps/
 desktop.ini
-.DS_Store
+secrets.yaml
+tts/
