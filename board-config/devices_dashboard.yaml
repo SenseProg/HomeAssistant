@@ -102,6 +102,7 @@ views:
           '192.168.50.25': 'CloudMate — NAS QNAP',
           '192.168.50.27': 'Blauberg №1 — кімната хлопців',
           '192.168.50.36': 'Зарядна станція авто — 7,5 кВт',
+          '192.168.50.91': 'Насос автополиву K601',
           '192.168.50.118': 'Бойлер Midea',
           '192.168.50.157': 'Термостат Terneo — контур 2',
           '192.168.50.164': 'SONOFF ZBBridge — Zigbee-шлюз',
@@ -211,6 +212,13 @@ views:
           {% set ns.seen = ns.seen + [irrigation_mac] %}
         - **Контролер автополиву Tuya — 8 зон** — `192.168.50.221` · `38:2C:E5:2D:5B:32` · **📶 Wi-Fi · 2,4 ГГц** · **ASUS RT-AX55 · «Отаке»**
         {% endif %}
+        {% set pump_mac = '80:64:7c:46:e8:d1' %}
+        {% set pump_entity = 'switch.mini_switch_k601_2_switch_1_2' %}
+        {% if states(pump_entity) not in missing and pump_mac not in ns.seen %}
+          {% set ns.found = true %}
+          {% set ns.seen = ns.seen + [pump_mac] %}
+        - **Насос автополиву K601** — `192.168.50.91` · `80:64:7C:46:E8:D1` · **📶 Wi-Fi · 2,4 ГГц** · **ASUS RT-AX55 · «Отаке»**
+        {% endif %}
         {% for client in ap_clients if client.qosListConnectType | default('') == 'wifi' and client.qosListMac is defined %}
           {% set mac = client.qosListMac | lower %}
           {% if mac not in ns.seen %}
@@ -316,6 +324,30 @@ views:
         Контролер очікується на `192.168.50.221` (`38:2C:E5:2D:5B:32`), але
         LocalTuya зараз має стан **{{ states(entity) }}**. Клапани в такому стані
         не слід запускати до відновлення зв'язку.
+        {% endif %}
+    - type: markdown
+      title: Насос автополиву K601 · мережевий стан
+      grid_options:
+        columns: full
+      content: |
+        {% set entity = 'switch.mini_switch_k601_2_switch_1_2' %}
+        {% if states(entity) in ['on', 'off'] %}
+        ## 🟢 Підключений локально
+
+        **Стан насоса:** {{ 'увімкнений' if is_state(entity, 'on') else 'вимкнений' }}<br>
+        **IP:** `192.168.50.91` · **MAC:** `80:64:7C:46:E8:D1`<br>
+        **Підключення:** 📶 Wi-Fi · 2,4 ГГц · ASUS RT-AX55 · мережа «Отаке»<br>
+        **DHCP:** адреса закріплена в ASUS RT-AX55<br>
+        **LocalTuya:** локальний зв'язок працює · TCP `6668`
+
+        Картка залишається на вкладці «Мережа» незалежно від того, чи створив
+        ASUSWRT для насоса окремий `device_tracker`.
+        {% else %}
+        ## 🔴 Локальний зв'язок відсутній
+
+        Насос очікується на `192.168.50.91` (`80:64:7C:46:E8:D1`), але LocalTuya
+        зараз має стан **{{ states(entity) }}**. Не запускайте полив до відновлення
+        зв'язку з насосом.
         {% endif %}
   - type: grid
     cards:
