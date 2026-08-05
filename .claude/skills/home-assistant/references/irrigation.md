@@ -30,6 +30,13 @@ calculates demand from weather/evapotranspiration. Direct valve control in Smart
 Irrigation remains off; link zones to the physical valve entities but let the
 existing execution layer perform safe pump/valve ordering.
 
+Dashboard manual starts for zones owned by Irrigation Unlimited must call
+`irrigation_unlimited.manual_run`; never turn their physical valve and master
+pump switches on directly. Irrigation Unlimited synchronises owned switches to
+its logical state, so an out-of-band `switch.turn_on` is immediately corrected
+back to `off`. A global Stop must cancel the Irrigation Unlimited controller
+before applying the pump-first, valve-second hardware fallback.
+
 Never let a delayed Tuya cloud state abort a known-good local run. Safety guards
 must use the local valve/pump entities and Irrigation Unlimited binary sensors.
 

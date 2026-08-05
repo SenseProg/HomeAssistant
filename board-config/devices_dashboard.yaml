@@ -1244,14 +1244,20 @@ views:
       grid_options:
         columns: full
       entities:
-      - entity: switch.avtopoliv_kontroler_avtopoliv_klapan_1
-        name: Клапан
       - entity: binary_sensor.irrigation_unlimited_c1_z1
         name: Стан поливу зони 1
       - entity: timer.poliv_zoni_1
         name: Залишилось поливати
+    - type: markdown
+      grid_options:
+        columns: full
+      content: |
+        **Фізичний клапан:** {{ '🟢 відкритий' if is_state('switch.avtopoliv_kontroler_avtopoliv_klapan_1', 'on') else ('🔴 закритий' if is_state('switch.avtopoliv_kontroler_avtopoliv_klapan_1', 'off') else '🟡 зв’язок відсутній') }}
+
+        Для ручного поливу задайте тривалість вище та натисніть **«Ручний старт»**.
+        Клапаном і насосом безпечно керує Irrigation Unlimited.
     - type: button
-      name: Старт
+      name: Ручний старт
       icon: mdi:play
       grid_options:
         columns: 6
@@ -1284,14 +1290,20 @@ views:
       grid_options:
         columns: full
       entities:
-      - entity: switch.avtopoliv_kontroler_avtopoliv_klapan_2
-        name: Клапан
       - entity: binary_sensor.irrigation_unlimited_c1_z2
         name: Стан поливу зони 2
       - entity: timer.poliv_zoni_2
         name: Залишилось поливати
+    - type: markdown
+      grid_options:
+        columns: full
+      content: |
+        **Фізичний клапан:** {{ '🟢 відкритий' if is_state('switch.avtopoliv_kontroler_avtopoliv_klapan_2', 'on') else ('🔴 закритий' if is_state('switch.avtopoliv_kontroler_avtopoliv_klapan_2', 'off') else '🟡 зв’язок відсутній') }}
+
+        Для ручного поливу задайте тривалість вище та натисніть **«Ручний старт»**.
+        Клапаном і насосом безпечно керує Irrigation Unlimited.
     - type: button
-      name: Старт
+      name: Ручний старт
       icon: mdi:play
       grid_options:
         columns: 6

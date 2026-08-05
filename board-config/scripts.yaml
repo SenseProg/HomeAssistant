@@ -4,101 +4,56 @@ poliv_zona_1:
   mode: single
   max_exceeded: warning
   sequence:
-  - action: switch.turn_on
-    target:
-      entity_id: switch.avtopoliv_kontroler_switch_1
+  - action: irrigation_unlimited.manual_run
+    data:
+      entity_id: binary_sensor.irrigation_unlimited_c1_z1
+      time: '{% set m = states(''input_number.poliv_zona_1_hvylyn'') | int(25) %}{{ ''%02d:%02d:00'' | format(m // 60, m % 60) }}'
+      queue: true
   - action: timer.start
     target:
       entity_id: timer.poliv_zoni_1
     data:
       duration: '{% set m = states(''input_number.poliv_zona_1_hvylyn'') | int(25) %}{{ ''%02d:%02d:00'' | format(m // 60, m % 60) }}'
-  - delay:
-      seconds: 3
-  - action: switch.turn_on
-    target:
-      entity_id: switch.mini_switch_k601_2_switch_1_2
-  - delay:
-      minutes: '{{ states(''input_number.poliv_zona_1_hvylyn'') | int(10) }}'
-  - action: switch.turn_off
-    target:
-      entity_id: switch.mini_switch_k601_2_switch_1_2
-  - delay:
-      seconds: 3
-  - action: switch.turn_off
-    target:
-      entity_id: switch.avtopoliv_kontroler_switch_1
-  - action: timer.cancel
-    target:
-      entity_id: timer.poliv_zoni_1
 poliv_zona_2:
   alias: Полити зону 2
   icon: mdi:sprinkler-variant
   mode: single
   max_exceeded: warning
   sequence:
-  - action: switch.turn_on
-    target:
-      entity_id: switch.avtopoliv_kontroler_switch_2
+  - action: irrigation_unlimited.manual_run
+    data:
+      entity_id: binary_sensor.irrigation_unlimited_c1_z2
+      time: '{% set m = states(''input_number.poliv_zona_2_hvylyn'') | int(25) %}{{ ''%02d:%02d:00'' | format(m // 60, m % 60) }}'
+      queue: true
   - action: timer.start
     target:
       entity_id: timer.poliv_zoni_2
     data:
       duration: '{% set m = states(''input_number.poliv_zona_2_hvylyn'') | int(25) %}{{ ''%02d:%02d:00'' | format(m // 60, m % 60) }}'
-  - delay:
-      seconds: 3
-  - action: switch.turn_on
-    target:
-      entity_id: switch.mini_switch_k601_2_switch_1_2
-  - delay:
-      minutes: '{{ states(''input_number.poliv_zona_2_hvylyn'') | int(10) }}'
-  - action: switch.turn_off
-    target:
-      entity_id: switch.mini_switch_k601_2_switch_1_2
-  - delay:
-      seconds: 3
-  - action: switch.turn_off
-    target:
-      entity_id: switch.avtopoliv_kontroler_switch_2
-  - action: timer.cancel
-    target:
-      entity_id: timer.poliv_zoni_2
 poliv_zona_3:
   alias: Полити зону 3
   icon: mdi:sprinkler-variant
   mode: single
   max_exceeded: warning
   sequence:
-  - action: switch.turn_on
-    target:
-      entity_id: switch.avtopoliv_kontroler_switch_3
+  - action: irrigation_unlimited.manual_run
+    data:
+      entity_id: binary_sensor.irrigation_unlimited_c1_z3
+      time: '{% set m = states(''input_number.poliv_zona_3_hvylyn'') | int(10) %}{{ ''%02d:%02d:00'' | format(m // 60, m % 60) }}'
+      queue: true
   - action: timer.start
     target:
       entity_id: timer.poliv_zoni_3
     data:
-      duration: '{% set m = states(''input_number.poliv_zona_3_hvylyn'') | int(25) %}{{ ''%02d:%02d:00'' | format(m // 60, m % 60) }}'
-  - delay:
-      seconds: 3
-  - action: switch.turn_on
-    target:
-      entity_id: switch.mini_switch_k601_2_switch_1_2
-  - delay:
-      minutes: '{{ states(''input_number.poliv_zona_3_hvylyn'') | int(10) }}'
-  - action: switch.turn_off
-    target:
-      entity_id: switch.mini_switch_k601_2_switch_1_2
-  - delay:
-      seconds: 3
-  - action: switch.turn_off
-    target:
-      entity_id: switch.avtopoliv_kontroler_switch_3
-  - action: timer.cancel
-    target:
-      entity_id: timer.poliv_zoni_3
+      duration: '{% set m = states(''input_number.poliv_zona_3_hvylyn'') | int(10) %}{{ ''%02d:%02d:00'' | format(m // 60, m % 60) }}'
 poliv_stop_all:
   alias: Аварійно зупинити полив
   icon: mdi:stop-circle
   mode: restart
   sequence:
+  - action: irrigation_unlimited.cancel
+    data:
+      entity_id: binary_sensor.irrigation_unlimited_c1_m
   - action: script.turn_off
     target:
       entity_id:
@@ -107,6 +62,9 @@ poliv_stop_all:
       - script.poliv_zona_3
       - script.poliv_zona_4
       - script.poliv_zona_5
+  - wait_template: '{{ is_state(''switch.mini_switch_k601_2_switch_1_2'', ''off'') }}'
+    timeout: 00:00:08
+    continue_on_timeout: true
   - action: switch.turn_off
     target:
       entity_id: switch.mini_switch_k601_2_switch_1_2
@@ -115,6 +73,14 @@ poliv_stop_all:
   - action: switch.turn_off
     target:
       entity_id:
+      - switch.avtopoliv_kontroler_avtopoliv_klapan_1
+      - switch.avtopoliv_kontroler_avtopoliv_klapan_2
+      - switch.avtopoliv_kontroler_avtopoliv_klapan_3
+      - switch.avtopoliv_kontroler_avtopoliv_klapan_4
+      - switch.avtopoliv_kontroler_avtopoliv_klapan_5
+      - switch.avtopoliv_kontroler_avtopoliv_klapan_6
+      - switch.avtopoliv_kontroler_avtopoliv_klapan_7
+      - switch.avtopoliv_kontroler_avtopoliv_klapan_8
       - switch.avtopoliv_kontroler_switch_1
       - switch.avtopoliv_kontroler_switch_2
       - switch.avtopoliv_kontroler_switch_3
@@ -181,7 +147,7 @@ poliv_zona_4:
   sequence:
   - action: switch.turn_on
     target:
-      entity_id: switch.avtopoliv_kontroler_switch_4
+      entity_id: switch.avtopoliv_kontroler_avtopoliv_klapan_4
   - action: timer.start
     target:
       entity_id: timer.poliv_zoni_4
@@ -201,7 +167,7 @@ poliv_zona_4:
       seconds: 3
   - action: switch.turn_off
     target:
-      entity_id: switch.avtopoliv_kontroler_switch_4
+      entity_id: switch.avtopoliv_kontroler_avtopoliv_klapan_4
   - action: timer.cancel
     target:
       entity_id: timer.poliv_zoni_4
@@ -211,29 +177,13 @@ poliv_zona_5:
   mode: single
   max_exceeded: warning
   sequence:
-  - action: switch.turn_on
-    target:
-      entity_id: switch.avtopoliv_kontroler_switch_5
+  - action: irrigation_unlimited.manual_run
+    data:
+      entity_id: binary_sensor.irrigation_unlimited_c1_z4
+      time: '{% set m = states(''input_number.poliv_zona_5_hvylyn'') | int(25) %}{{ ''%02d:%02d:00'' | format(m // 60, m % 60) }}'
+      queue: true
   - action: timer.start
     target:
       entity_id: timer.poliv_zoni_5
     data:
       duration: '{% set m = states(''input_number.poliv_zona_5_hvylyn'') | int(25) %}{{ ''%02d:%02d:00'' | format(m // 60, m % 60) }}'
-  - delay:
-      seconds: 3
-  - action: switch.turn_on
-    target:
-      entity_id: switch.mini_switch_k601_2_switch_1_2
-  - delay:
-      minutes: '{{ states(''input_number.poliv_zona_5_hvylyn'') | int(25) }}'
-  - action: switch.turn_off
-    target:
-      entity_id: switch.mini_switch_k601_2_switch_1_2
-  - delay:
-      seconds: 3
-  - action: switch.turn_off
-    target:
-      entity_id: switch.avtopoliv_kontroler_switch_5
-  - action: timer.cancel
-    target:
-      entity_id: timer.poliv_zoni_5

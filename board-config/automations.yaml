@@ -25,21 +25,21 @@
     to: 'on'
   conditions:
   - condition: template
-    value_template: "{{ not is_state('switch.avtopoliv_kontroler_switch_1', 'on')\n   and not is_state('switch.avtopoliv_kontroler_switch_2', 'on')\n   and not is_state('switch.avtopoliv_kontroler_switch_3',\
-      \ 'on')\n   and not is_state('switch.avtopoliv_kontroler_switch_4', 'on')\n   and not is_state('switch.avtopoliv_kontroler_switch_5', 'on') }}\n"
+    value_template: "{{ not is_state('switch.avtopoliv_kontroler_avtopoliv_klapan_1', 'on')\n   and not is_state('switch.avtopoliv_kontroler_avtopoliv_klapan_2', 'on')\n   and not is_state('switch.avtopoliv_kontroler_avtopoliv_klapan_3',\
+      \ 'on')\n   and not is_state('switch.avtopoliv_kontroler_avtopoliv_klapan_4', 'on')\n   and not is_state('switch.avtopoliv_kontroler_avtopoliv_klapan_5', 'on') }}\n"
   actions:
   - action: switch.turn_on
     target:
-      entity_id: "{% set z = states('input_select.poliv_ruchna_zona') %} {{ 'switch.avtopoliv_kontroler_switch_2' if z == 'Зона 2'\n   else 'switch.avtopoliv_kontroler_switch_3' if z == 'Зона 3'\n   else\
-        \ 'switch.avtopoliv_kontroler_switch_4' if z == 'Зона 4'\n   else 'switch.avtopoliv_kontroler_switch_5' if z == 'Зона 5'\n   else 'switch.avtopoliv_kontroler_switch_1' }}\n"
+      entity_id: "{% set z = states('input_select.poliv_ruchna_zona') %} {{ 'switch.avtopoliv_kontroler_avtopoliv_klapan_2' if z == 'Зона 2'\n   else 'switch.avtopoliv_kontroler_avtopoliv_klapan_3' if z == 'Зона 3'\n   else\
+        \ 'switch.avtopoliv_kontroler_avtopoliv_klapan_4' if z == 'Зона 4'\n   else 'switch.avtopoliv_kontroler_avtopoliv_klapan_5' if z == 'Зона 5'\n   else 'switch.avtopoliv_kontroler_avtopoliv_klapan_1' }}\n"
   mode: single
 - id: irrigation_close_valves_when_pump_idle
   alias: Полив - закрити клапани, якщо насос давно вимкнений
   description: Прибирає забутий відкритий клапан після ручного пуску. Irrigation Unlimited закриває свої клапани за 3 секунди після зупинки насоса, тому 5-хвилинна витримка у його роботу не втручається.
   triggers:
   - trigger: template
-    value_template: "{{ is_state('switch.mini_switch_k601_2_switch_1_2', 'off')\n   and (is_state('switch.avtopoliv_kontroler_switch_1', 'on')\n        or is_state('switch.avtopoliv_kontroler_switch_2',\
-      \ 'on')\n        or is_state('switch.avtopoliv_kontroler_switch_3', 'on')\n        or is_state('switch.avtopoliv_kontroler_switch_4', 'on')\n        or is_state('switch.avtopoliv_kontroler_switch_5',\
+    value_template: "{{ is_state('switch.mini_switch_k601_2_switch_1_2', 'off')\n   and (is_state('switch.avtopoliv_kontroler_avtopoliv_klapan_1', 'on')\n        or is_state('switch.avtopoliv_kontroler_avtopoliv_klapan_2',\
+      \ 'on')\n        or is_state('switch.avtopoliv_kontroler_avtopoliv_klapan_3', 'on')\n        or is_state('switch.avtopoliv_kontroler_avtopoliv_klapan_4', 'on')\n        or is_state('switch.avtopoliv_kontroler_avtopoliv_klapan_5',\
       \ 'on')) }}\n"
     for: 00:05:00
   conditions: []
@@ -47,11 +47,11 @@
   - action: switch.turn_off
     target:
       entity_id:
-      - switch.avtopoliv_kontroler_switch_1
-      - switch.avtopoliv_kontroler_switch_2
-      - switch.avtopoliv_kontroler_switch_3
-      - switch.avtopoliv_kontroler_switch_4
-      - switch.avtopoliv_kontroler_switch_5
+      - switch.avtopoliv_kontroler_avtopoliv_klapan_1
+      - switch.avtopoliv_kontroler_avtopoliv_klapan_2
+      - switch.avtopoliv_kontroler_avtopoliv_klapan_3
+      - switch.avtopoliv_kontroler_avtopoliv_klapan_4
+      - switch.avtopoliv_kontroler_avtopoliv_klapan_5
   mode: single
 - id: irrigation_fail_safe_on_ha_start
   alias: Полив - безпечний стан після запуску HA
@@ -76,8 +76,8 @@
   - trigger: template
     value_template: "{{ is_state('switch.mini_switch_k601_2_switch_1_2', 'on')\n   and not is_state('binary_sensor.irrigation_unlimited_c1_m', 'on')\n   and not is_state('script.poliv_zona_1', 'on')\n \
       \  and not is_state('script.poliv_zona_2', 'on')\n   and not is_state('script.poliv_zona_3', 'on')\n   and not is_state('script.poliv_zona_4', 'on')\n   and not is_state('script.poliv_zona_5', 'on')\n\
-      \   and not is_state('switch.avtopoliv_kontroler_switch_1', 'on')\n   and not is_state('switch.avtopoliv_kontroler_switch_2', 'on')\n   and not is_state('switch.avtopoliv_kontroler_switch_3', 'on')\n\
-      \   and not is_state('switch.avtopoliv_kontroler_switch_4', 'on')\n   and not is_state('switch.avtopoliv_kontroler_switch_5', 'on') }}\n"
+      \   and not is_state('switch.avtopoliv_kontroler_avtopoliv_klapan_1', 'on')\n   and not is_state('switch.avtopoliv_kontroler_avtopoliv_klapan_2', 'on')\n   and not is_state('switch.avtopoliv_kontroler_avtopoliv_klapan_3', 'on')\n\
+      \   and not is_state('switch.avtopoliv_kontroler_avtopoliv_klapan_4', 'on')\n   and not is_state('switch.avtopoliv_kontroler_avtopoliv_klapan_5', 'on') }}\n"
     for: 00:03:00
   conditions: []
   actions:
@@ -202,7 +202,7 @@
     - wait_template: '{{ is_state(''binary_sensor.irrigation_unlimited_c1_z1'', ''off'') }}'
       timeout: 01:02:00
       continue_on_timeout: false
-    - wait_template: "{{ is_state('binary_sensor.irrigation_unlimited_c1_m', 'off')\n   and is_state('switch.mini_switch_k601_2_switch_1_2', 'off')\n   and is_state('switch.avtopoliv_kontroler_switch_1',\
+    - wait_template: "{{ is_state('binary_sensor.irrigation_unlimited_c1_m', 'off')\n   and is_state('switch.mini_switch_k601_2_switch_1_2', 'off')\n   and is_state('switch.avtopoliv_kontroler_avtopoliv_klapan_1',\
         \ 'off') }}"
       timeout: 00:01:00
       continue_on_timeout: false
@@ -225,7 +225,7 @@
     - wait_template: '{{ is_state(''binary_sensor.irrigation_unlimited_c1_z2'', ''off'') }}'
       timeout: 01:02:00
       continue_on_timeout: false
-    - wait_template: "{{ is_state('binary_sensor.irrigation_unlimited_c1_m', 'off')\n   and is_state('switch.mini_switch_k601_2_switch_1_2', 'off')\n   and is_state('switch.avtopoliv_kontroler_switch_2',\
+    - wait_template: "{{ is_state('binary_sensor.irrigation_unlimited_c1_m', 'off')\n   and is_state('switch.mini_switch_k601_2_switch_1_2', 'off')\n   and is_state('switch.avtopoliv_kontroler_avtopoliv_klapan_2',\
         \ 'off') }}"
       timeout: 00:01:00
       continue_on_timeout: false
@@ -246,7 +246,7 @@
     - wait_template: '{{ is_state(''binary_sensor.irrigation_unlimited_c1_z4'', ''off'') }}'
       timeout: 01:02:00
       continue_on_timeout: false
-    - wait_template: "{{ is_state('binary_sensor.irrigation_unlimited_c1_m', 'off')\n   and is_state('switch.mini_switch_k601_2_switch_1_2', 'off')\n   and is_state('switch.avtopoliv_kontroler_switch_5',\
+    - wait_template: "{{ is_state('binary_sensor.irrigation_unlimited_c1_m', 'off')\n   and is_state('switch.mini_switch_k601_2_switch_1_2', 'off')\n   and is_state('switch.avtopoliv_kontroler_avtopoliv_klapan_5',\
         \ 'off') }}"
       timeout: 00:01:00
       continue_on_timeout: false
@@ -294,3 +294,44 @@
     target:
       entity_id: script.tv_idle_slideshow
   mode: restart
+- id: hikvision_motion_snapshot
+  alias: Камера - знімок при виявленні руху
+  description: При спрацюванні binary_sensor.cam1_motion зберігає кадр з camera.cam1, оновлює www/motion/latest.jpg для дашборда і лишає останні 30 знімків.
+  triggers:
+  - trigger: state
+    entity_id: binary_sensor.cam1_motion
+    to: 'on'
+  actions:
+  - action: camera.snapshot
+    target:
+      entity_id: camera.cam1
+    data:
+      filename: /userdata/hass/config/www/motion/motion_{{ now().strftime('%Y%m%d_%H%M%S') }}.jpg
+  - action: shell_command.update_motion_snapshot
+  mode: single
+- id: hikvision_motion_clip
+  alias: Камера - відеокліп при виявленні руху
+  description: 'Записує 10 секунд відео на NAS: 5 секунд ДО руху (з буфера потоку,
+    тому потрібен preload_stream на camera.cam1) і 5 секунд після.
+
+    Умова про змонтовану шару ОБОВ''ЯЗКОВА: без неї при недоступному NAS
+    кліпи писались би в звичайну теку на платі і заповнили б /userdata.'
+  triggers:
+  - trigger: state
+    entity_id: binary_sensor.cam1_motion
+    to: 'on'
+  conditions:
+  - condition: state
+    entity_id: binary_sensor.nas_videoarkhiv_zmontovanyi
+    state: 'on'
+  actions:
+  - action: camera.record
+    target:
+      entity_id: camera.cam1
+    data:
+      filename: /userdata/hass/config/media/video/ha-motion/ruh_{{ now().strftime('%Y%m%d_%H%M%S')
+        }}.mp4
+      duration: 10
+      lookback: 5
+  mode: single
+  max_exceeded: silent
