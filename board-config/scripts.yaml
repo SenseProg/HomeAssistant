@@ -6,7 +6,7 @@ poliv_zona_1:
   sequence:
   - action: switch.turn_on
     target:
-      entity_id: switch.avtopoliv_kontroler_switch_1
+      entity_id: switch.avtopoliv_kontroler_avtopoliv_klapan_1
   - action: timer.start
     target:
       entity_id: timer.poliv_zoni_1
@@ -26,7 +26,7 @@ poliv_zona_1:
       seconds: 3
   - action: switch.turn_off
     target:
-      entity_id: switch.avtopoliv_kontroler_switch_1
+      entity_id: switch.avtopoliv_kontroler_avtopoliv_klapan_1
   - action: timer.cancel
     target:
       entity_id: timer.poliv_zoni_1
@@ -38,7 +38,7 @@ poliv_zona_2:
   sequence:
   - action: switch.turn_on
     target:
-      entity_id: switch.avtopoliv_kontroler_switch_2
+      entity_id: switch.avtopoliv_kontroler_avtopoliv_klapan_2
   - action: timer.start
     target:
       entity_id: timer.poliv_zoni_2
@@ -58,7 +58,7 @@ poliv_zona_2:
       seconds: 3
   - action: switch.turn_off
     target:
-      entity_id: switch.avtopoliv_kontroler_switch_2
+      entity_id: switch.avtopoliv_kontroler_avtopoliv_klapan_2
   - action: timer.cancel
     target:
       entity_id: timer.poliv_zoni_2
@@ -70,7 +70,7 @@ poliv_zona_3:
   sequence:
   - action: switch.turn_on
     target:
-      entity_id: switch.avtopoliv_kontroler_switch_3
+      entity_id: switch.avtopoliv_kontroler_avtopoliv_klapan_3
   - action: timer.start
     target:
       entity_id: timer.poliv_zoni_3
@@ -90,7 +90,7 @@ poliv_zona_3:
       seconds: 3
   - action: switch.turn_off
     target:
-      entity_id: switch.avtopoliv_kontroler_switch_3
+      entity_id: switch.avtopoliv_kontroler_avtopoliv_klapan_3
   - action: timer.cancel
     target:
       entity_id: timer.poliv_zoni_3
@@ -115,6 +115,14 @@ poliv_stop_all:
   - action: switch.turn_off
     target:
       entity_id:
+      - switch.avtopoliv_kontroler_avtopoliv_klapan_1
+      - switch.avtopoliv_kontroler_avtopoliv_klapan_2
+      - switch.avtopoliv_kontroler_avtopoliv_klapan_3
+      - switch.avtopoliv_kontroler_avtopoliv_klapan_4
+      - switch.avtopoliv_kontroler_avtopoliv_klapan_5
+      - switch.avtopoliv_kontroler_avtopoliv_klapan_6
+      - switch.avtopoliv_kontroler_avtopoliv_klapan_7
+      - switch.avtopoliv_kontroler_avtopoliv_klapan_8
       - switch.avtopoliv_kontroler_switch_1
       - switch.avtopoliv_kontroler_switch_2
       - switch.avtopoliv_kontroler_switch_3
@@ -181,7 +189,7 @@ poliv_zona_4:
   sequence:
   - action: switch.turn_on
     target:
-      entity_id: switch.avtopoliv_kontroler_switch_4
+      entity_id: switch.avtopoliv_kontroler_avtopoliv_klapan_4
   - action: timer.start
     target:
       entity_id: timer.poliv_zoni_4
@@ -201,7 +209,7 @@ poliv_zona_4:
       seconds: 3
   - action: switch.turn_off
     target:
-      entity_id: switch.avtopoliv_kontroler_switch_4
+      entity_id: switch.avtopoliv_kontroler_avtopoliv_klapan_4
   - action: timer.cancel
     target:
       entity_id: timer.poliv_zoni_4
@@ -213,7 +221,7 @@ poliv_zona_5:
   sequence:
   - action: switch.turn_on
     target:
-      entity_id: switch.avtopoliv_kontroler_switch_5
+      entity_id: switch.avtopoliv_kontroler_avtopoliv_klapan_5
   - action: timer.start
     target:
       entity_id: timer.poliv_zoni_5
@@ -233,7 +241,7 @@ poliv_zona_5:
       seconds: 3
   - action: switch.turn_off
     target:
-      entity_id: switch.avtopoliv_kontroler_switch_5
+      entity_id: switch.avtopoliv_kontroler_avtopoliv_klapan_5
   - action: timer.cancel
     target:
       entity_id: timer.poliv_zoni_5
