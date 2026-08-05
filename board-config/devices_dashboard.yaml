@@ -85,6 +85,7 @@ views:
           'device_tracker.s24_koristuvaca_kateryna': 'Samsung S24 — Катерина',
           'device_tracker.s20_fe_koristuvaca_kateryna': 'Samsung S20 FE — Олеся',
           'device_tracker.s21_pol_zovatela_kateryna': 'Samsung Galaxy S21 — бабуся Сіма',
+          'device_tracker.a24_koristuvaca_vasilij': 'Samsung Galaxy A24 — Василь',
           'device_tracker.galaxy_j8': 'Samsung Galaxy J8',
           'device_tracker.laptop_u1i8pnmk': 'Ноутбук LAPTOP-U1I8PNMK',
           'device_tracker.esp_eea5c5': 'Blauberg №1 — кімната хлопців',
@@ -102,7 +103,8 @@ views:
           '192.168.50.219': 'Трифазний лічильник електроенергії будинку'
         } %}
         {% set mac_names = {
-          'DC:6A:E7:A1:09:F2': 'Xiaomi — модель не визначена'
+          'DC:6A:E7:A1:09:F2': 'Xiaomi — модель не визначена',
+          '62:1A:51:F4:B2:EE': 'Samsung Galaxy A24 — Василь'
         } %}
         {% set ns = namespace(found=false, seen=[]) %}
         {% for tracker in states.device_tracker if tracker.state == 'home' %}
@@ -272,7 +274,8 @@ views:
           '192.168.50.219': 'Трифазний лічильник електроенергії будинку'
         } %}
         {% set mac_names = {
-          'DC:6A:E7:A1:09:F2': 'Xiaomi — модель не визначена'
+          'DC:6A:E7:A1:09:F2': 'Xiaomi — модель не визначена',
+          '62:1A:51:F4:B2:EE': 'Samsung Galaxy A24 — Василь'
         } %}
         {% set ns = namespace(found=false) %}
         {% for client in clients if client.devIp is defined %}
