@@ -226,6 +226,37 @@ views:
     - type: energy-date-selection
       grid_options:
         columns: full
+    - type: markdown
+      title: Стан обліку Energy
+      grid_options:
+        columns: full
+      content: |
+        {% set source = 'sensor.inverter_total_energy_import' %}
+        {% set missing = ['unknown', 'unavailable', 'none', ''] %}
+        {% if states(source) in missing %}
+        ## ⚠️ Дані про енергію зараз не надходять
+
+        Основне джерело `{{ source }}` має стан **{{ states(source) }}**. Поки
+        лічильник недоступний, Home Assistant не може додати нові значення на
+        графік за сьогодні.
+        {% else %}
+        ## ✅ Облік працює
+
+        **З мережі сьогодні:** {{ states('sensor.inverter_today_energy_import') }} кВт·год  
+        **Навантаження будинку сьогодні:** {{ states('sensor.inverter_today_load_consumption') }} кВт·год
+
+        Офіційна панель «Енергія» бере імпорт із
+        `sensor.inverter_total_energy_import`. Графік будується з погодинної
+        довгострокової статистики, тому остання неповна година може з'явитися із
+        затримкою до однієї години. Імпорт із мережі та навантаження будинку
+        можуть відрізнятися через заряджання або розряджання акумулятора.
+        {% endif %}
+
+        {% if states('sensor.energy_meter_total_energy') in missing %}
+        > Хмарний лічильник Tuya зараз **{{ states('sensor.energy_meter_total_energy') }}**.
+        > Саме він був причиною порожнього графіка 5 серпня; тепер це резервне
+        > джерело й на основний облік не впливає.
+        {% endif %}
     - type: statistics-graph
       title: Загальна потужність за вибраний період
       period: hour
@@ -430,10 +461,10 @@ views:
       grid_options:
         columns: full
       entities:
-      - entity: sensor.energy_meter_total_energy_cost
+      - entity: sensor.inverter_total_energy_import_cost
         name: Вартість спожитого (наростаюча)
-      - entity: sensor.energy_meter_total_energy
-        name: Лічильник будинку
+      - entity: sensor.inverter_total_energy_import
+        name: Імпорт із мережі (лічильник інвертора)
     - type: history-graph
       title: Перемикання тарифу за добу
       hours_to_show: 24
