@@ -86,6 +86,7 @@ views:
           'device_tracker.s20_fe_koristuvaca_kateryna': 'Samsung S20 FE — Олеся',
           'device_tracker.s21_pol_zovatela_kateryna': 'Samsung Galaxy S21 — бабуся Сіма',
           'device_tracker.galaxy_j8': 'Samsung Galaxy J8',
+          'device_tracker.laptop_u1i8pnmk': 'Ноутбук LAPTOP-U1I8PNMK',
           'device_tracker.esp_eea5c5': 'Blauberg №1 — кімната хлопців',
           'device_tracker.esp_eea84e': 'Blauberg №2 — кімната Олесі'
         } %}
@@ -202,7 +203,8 @@ views:
         {% set clients = state_attr('sensor.tenda_ap_clients', 'onlineList') or [] %}
         {% set wifi = clients | selectattr('qosListConnectType', 'equalto', 'wifi') | list %}
         {% set names = {
-          '1E:C0:D2:73:2C:C9': 'Samsung Galaxy S21 — бабуся Сіма'
+          '1E:C0:D2:73:2C:C9': 'Samsung Galaxy S21 — бабуся Сіма',
+          'C0:35:32:C4:8A:4B': 'Ноутбук LAPTOP-U1I8PNMK'
         } %}
         {% if wifi | count == 0 %}
         Немає активних прямих Wi-Fi-клієнтів.
