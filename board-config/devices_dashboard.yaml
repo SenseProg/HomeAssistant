@@ -369,6 +369,279 @@ views:
         {% set motion = states('binary_sensor.sonoff_a48001bcc7') %}
         {% set b = states('sensor.sonoff_a48001bcc7_battery') %}
         - **Датчик руху** — {% if motion == 'on' %}🟠 виявлено рух · батарея {{ b }}%{% elif motion == 'off' %}🟢 руху немає · батарея {{ b }}%{% else %}🔴 недоступний{% endif %}
+- title: Інвертор Deye
+  path: deye-inverter
+  icon: mdi:solar-power-variant
+  type: sections
+  max_columns: 4
+  dense_section_placement: true
+  sections:
+  - type: grid
+    cards:
+    - type: heading
+      heading: Deye · трифазний гібридний інвертор
+      icon: mdi:solar-power-variant
+      grid_options:
+        columns: full
+    - type: markdown
+      grid_options:
+        columns: full
+      content: |
+        {% set missing = ['unknown', 'unavailable', 'none', ''] %}
+        {% set connected = is_state('binary_sensor.inverter_connection', 'on') %}
+        {% set state = states('sensor.inverter_device_state') %}
+        {% set alarm = states('sensor.inverter_device_alarm') %}
+        {% set fault = states('sensor.inverter_device_fault') %}
+        {% if not connected or state in missing %}
+        # 🔴 ІНВЕРТОР НЕ ВІДПОВІДАЄ
+
+        Перевірте мережеве підключення Deye `192.168.50.179` та живлення пристрою.
+        {% elif alarm != 'OK' or fault != 'OK'
+              or is_state('binary_sensor.inverter_battery_alarm', 'on')
+              or is_state('binary_sensor.inverter_battery_fault', 'on') %}
+        # 🔴 ПОТРІБНА УВАГА
+
+        **Стан:** {{ state }} · **аварія:** {{ alarm }} · **несправність:** {{ fault }}
+        {% else %}
+        # 🟢 DEYE ПРАЦЮЄ НОРМАЛЬНО
+
+        **Навантаження:** {{ (states('sensor.inverter_load_power') | float(0) / 1000) | round(2) }} кВт ·
+        **мережа:** {{ (states('sensor.inverter_grid_power') | float(0) / 1000) | round(2) }} кВт ·
+        **акумулятор:** {{ states('sensor.inverter_battery') }}%
+        {% endif %}
+
+        Зв'язок: **{{ 'є' if connected else 'немає' }}** · оновлення кожні
+        {{ states('sensor.inverter_update_interval') | float(0) | round(1) }} с ·
+        температура {{ states('sensor.inverter_temperature') }} °C.
+
+        [Відкрити детальну панель «Потужність»](/power-dashboard/inverter)
+    - type: custom:sunsynk-power-flow-card
+      cardstyle: lite
+      panel_mode: false
+      large_font: true
+      show_solar: false
+      inverter:
+        modern: true
+        three_phase: true
+        model: deye
+        autarky: power
+      battery:
+        energy: 10000
+        shutdown_soc: 15
+        show_daily: true
+        invert_power: false
+        animation_speed: 6
+        max_power: 5000
+      load:
+        show_daily: true
+        animation_speed: 8
+        max_power: 15000
+        show_absolute: false
+      grid:
+        show_daily_buy: true
+        show_daily_sell: true
+        animation_speed: 8
+        max_power: 15000
+        invert_grid: false
+      entities:
+        inverter_status_59: sensor.inverter_device_state
+        inverter_power_175: sensor.inverter_power
+        inverter_voltage_154: sensor.inverter_output_l2_voltage
+        load_frequency_192: sensor.inverter_load_frequency
+        dc_transformer_temp_90: sensor.inverter_dc_temperature
+        battery_soc_184: sensor.inverter_battery
+        battery_power_190: sensor.inverter_battery_power
+        battery_voltage_183: sensor.inverter_battery_voltage
+        battery_current_191: sensor.inverter_battery_current
+        battery_temp_182: sensor.inverter_battery_temperature
+        day_battery_charge_70: sensor.inverter_today_battery_charge
+        day_battery_discharge_71: sensor.inverter_today_battery_discharge
+        grid_ct_power_172: sensor.inverter_grid_power
+        grid_power_169: sensor.inverter_grid_power
+        grid_ct_power_l2: sensor.inverter_grid_l2_power
+        grid_ct_power_l3: sensor.inverter_grid_l3_power
+        grid_voltage: sensor.inverter_grid_l1_voltage
+        grid_connected_status_194: sensor.inverter_device_relay
+        day_grid_import_76: sensor.inverter_today_energy_import
+        day_grid_export_77: sensor.inverter_today_energy_export
+        essential_power: sensor.inverter_load_power
+        load_power_l1: sensor.inverter_load_l1_power
+        load_power_l2: sensor.inverter_load_l2_power
+        load_power_l3: sensor.inverter_load_l3_power
+        day_load_energy_84: sensor.inverter_today_load_consumption
+      grid_options:
+        columns: full
+  - type: grid
+    cards:
+    - type: heading
+      heading: Стан і потужність
+      icon: mdi:flash
+      grid_options:
+        columns: full
+    - type: tile
+      entity: binary_sensor.inverter_connection
+      name: Зв'язок з Deye
+      grid_options:
+        columns: 6
+    - type: tile
+      entity: sensor.inverter_device_state
+      name: Стан інвертора
+      grid_options:
+        columns: 6
+    - type: tile
+      entity: sensor.inverter_load_power
+      name: Навантаження зараз
+      color: amber
+      grid_options:
+        columns: 6
+    - type: tile
+      entity: sensor.inverter_grid_power
+      name: Потужність мережі
+      color: blue
+      grid_options:
+        columns: 6
+    - type: tile
+      entity: sensor.inverter_battery
+      name: Заряд акумулятора
+      color: green
+      grid_options:
+        columns: 6
+    - type: tile
+      entity: sensor.inverter_battery_power
+      name: Потужність акумулятора
+      grid_options:
+        columns: 6
+    - type: entities
+      title: Безпека і температура
+      show_header_toggle: false
+      grid_options:
+        columns: full
+      entities:
+      - entity: sensor.inverter_device_alarm
+        name: Аварія
+      - entity: sensor.inverter_device_fault
+        name: Несправність
+      - entity: binary_sensor.inverter_battery_alarm
+        name: Аварія акумулятора
+      - entity: binary_sensor.inverter_battery_fault
+        name: Несправність акумулятора
+      - entity: sensor.inverter_temperature
+        name: Температура інвертора
+      - entity: sensor.inverter_dc_temperature
+        name: Температура DC
+      - entity: sensor.inverter_battery_temperature
+        name: Температура акумулятора
+  - type: grid
+    cards:
+    - type: heading
+      heading: Енергія за сьогодні
+      icon: mdi:lightning-bolt-circle
+      grid_options:
+        columns: full
+    - type: entities
+      show_header_toggle: false
+      grid_options:
+        columns: full
+      entities:
+      - entity: sensor.inverter_today_load_consumption
+        name: Споживання будинку
+      - entity: sensor.inverter_today_energy_import
+        name: Імпорт із мережі
+      - entity: sensor.inverter_today_energy_export
+        name: Віддано в мережу
+      - entity: sensor.inverter_today_battery_charge
+        name: Заряджено в акумулятор
+      - entity: sensor.inverter_today_battery_discharge
+        name: Віддано з акумулятора
+      - entity: sensor.inverter_today_losses
+        name: Втрати системи
+    - type: history-graph
+      title: Потоки енергії за 24 години
+      hours_to_show: 24
+      grid_options:
+        columns: full
+      entities:
+      - entity: sensor.inverter_today_load_consumption
+        name: Навантаження
+      - entity: sensor.inverter_today_energy_import
+        name: Імпорт
+      - entity: sensor.inverter_today_battery_charge
+        name: Заряд акумулятора
+      - entity: sensor.inverter_today_battery_discharge
+        name: Розряд акумулятора
+  - type: grid
+    cards:
+    - type: heading
+      heading: Фази та акумулятор
+      icon: mdi:sine-wave
+      grid_options:
+        columns: full
+    - type: statistics-graph
+      title: Навантаження фаз за 24 години
+      days_to_show: 1
+      period: 5minute
+      stat_types:
+      - mean
+      - max
+      chart_type: line
+      grid_options:
+        columns: full
+      entities:
+      - entity: sensor.inverter_load_l1_power
+        name: Фаза L1
+      - entity: sensor.inverter_load_l2_power
+        name: Фаза L2
+      - entity: sensor.inverter_load_l3_power
+        name: Фаза L3
+    - type: statistics-graph
+      title: Напруга мережі за 24 години
+      days_to_show: 1
+      period: 5minute
+      stat_types:
+      - min
+      - mean
+      - max
+      chart_type: line
+      grid_options:
+        columns: full
+      entities:
+      - entity: sensor.inverter_grid_l1_voltage
+        name: Фаза L1
+      - entity: sensor.inverter_grid_l2_voltage
+        name: Фаза L2
+      - entity: sensor.inverter_grid_l3_voltage
+        name: Фаза L3
+    - type: entities
+      title: Акумулятор
+      show_header_toggle: false
+      grid_options:
+        columns: full
+      entities:
+      - entity: sensor.inverter_battery
+        name: Заряд (SOC)
+      - entity: sensor.inverter_battery_state
+        name: Стан
+      - entity: sensor.inverter_battery_soh
+        name: Здоров'я (SOH)
+      - entity: sensor.inverter_battery_voltage
+        name: Напруга
+      - entity: sensor.inverter_battery_current
+        name: Струм
+      - entity: sensor.inverter_total_battery_life_cycles
+        name: Еквівалентних циклів
+    - type: markdown
+      title: Поточні режими
+      grid_options:
+        columns: full
+      content: |
+        **Режим роботи:** {{ states('select.inverter_work_mode') }}<br>
+        **Пріоритет енергії:** {{ states('select.inverter_energy_pattern') }}<br>
+        **Розклад Time of Use:** {{ states('select.inverter_time_of_use') }}<br>
+        **Заряджання від мережі:** {{ 'увімкнене' if is_state('switch.inverter_battery_grid_charging', 'on') else 'вимкнене' }}
+
+        Ця вкладка призначена для безпечного спостереження. Кнопки вимкнення,
+        перезапуску та параметри електричних захистів навмисно не винесені на
+        дашборд, щоб випадкове натискання не знеструмило будинок.
 - title: Бойлер
   path: midea
   icon: mdi:water-boiler
