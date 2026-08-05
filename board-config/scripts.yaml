@@ -4,48 +4,162 @@ poliv_zona_1:
   mode: single
   max_exceeded: warning
   sequence:
+  - variables:
+      minutes: '{{ states(''input_number.poliv_zona_1_hvylyn'') | int(25) }}'
+      seconds: '{{ minutes * 60 }}'
+      duration: '{{ ''%02d:%02d:00'' | format(minutes // 60, minutes % 60) }}'
+  - action: localtuya.set_dp
+    data:
+      device_id: bf9f1d7fc7c912452cndy4
+      value:
+        '1': true
+        '13': '{{ seconds }}'
+  - wait_template: '{{ is_state(''switch.avtopoliv_kontroler_avtopoliv_klapan_1'', ''on'') }}'
+    timeout: 00:00:08
+    continue_on_timeout: true
+  - choose:
+    - conditions: '{{ is_state(''switch.avtopoliv_kontroler_avtopoliv_klapan_1'', ''on'') }}'
+      sequence:
+      - action: persistent_notification.dismiss
+        data:
+          notification_id: poliv_zona_1_fault
+    default:
+    - action: localtuya.set_dp
+      data:
+        device_id: bf9f1d7fc7c912452cndy4
+        value:
+          '1': false
+          '13': 0
+    - action: persistent_notification.create
+      data:
+        notification_id: poliv_zona_1_fault
+        title: Полив зони 1 не запущено
+        message: Контролер не підтвердив відкриття клапана за 8 секунд. Насос не вмикався. Перевірте 24 В живлення контролера, спільний провід і котушку/проводку клапана зони 1.
+    - stop: Клапан зони 1 не відкрився; запуск насоса заблоковано
+      error: false
   - action: irrigation_unlimited.manual_run
     data:
       entity_id: binary_sensor.irrigation_unlimited_c1_z1
-      time: '{% set m = states(''input_number.poliv_zona_1_hvylyn'') | int(25) %}{{ ''%02d:%02d:00'' | format(m // 60, m % 60) }}'
-      queue: true
+      time: '{{ duration }}'
+      queue: false
+  - action: localtuya.set_dp
+    data:
+      device_id: bf9f1d7fc7c912452cndy4
+      dp: 13
+      value: '{{ seconds }}'
   - action: timer.start
     target:
       entity_id: timer.poliv_zoni_1
     data:
-      duration: '{% set m = states(''input_number.poliv_zona_1_hvylyn'') | int(25) %}{{ ''%02d:%02d:00'' | format(m // 60, m % 60) }}'
+      duration: '{{ duration }}'
 poliv_zona_2:
   alias: Полити зону 2
   icon: mdi:sprinkler-variant
   mode: single
   max_exceeded: warning
   sequence:
+  - variables:
+      minutes: '{{ states(''input_number.poliv_zona_2_hvylyn'') | int(25) }}'
+      seconds: '{{ minutes * 60 }}'
+      duration: '{{ ''%02d:%02d:00'' | format(minutes // 60, minutes % 60) }}'
+  - action: localtuya.set_dp
+    data:
+      device_id: bf9f1d7fc7c912452cndy4
+      value:
+        '2': true
+        '14': '{{ seconds }}'
+  - wait_template: '{{ is_state(''switch.avtopoliv_kontroler_avtopoliv_klapan_2'', ''on'') }}'
+    timeout: 00:00:08
+    continue_on_timeout: true
+  - choose:
+    - conditions: '{{ is_state(''switch.avtopoliv_kontroler_avtopoliv_klapan_2'', ''on'') }}'
+      sequence:
+      - action: persistent_notification.dismiss
+        data:
+          notification_id: poliv_zona_2_fault
+    default:
+    - action: localtuya.set_dp
+      data:
+        device_id: bf9f1d7fc7c912452cndy4
+        value:
+          '2': false
+          '14': 0
+    - action: persistent_notification.create
+      data:
+        notification_id: poliv_zona_2_fault
+        title: Полив зони 2 не запущено
+        message: Контролер не підтвердив відкриття клапана за 8 секунд. Насос не вмикався. Перевірте 24 В живлення контролера, спільний провід і котушку/проводку клапана зони 2.
+    - stop: Клапан зони 2 не відкрився; запуск насоса заблоковано
+      error: false
   - action: irrigation_unlimited.manual_run
     data:
       entity_id: binary_sensor.irrigation_unlimited_c1_z2
-      time: '{% set m = states(''input_number.poliv_zona_2_hvylyn'') | int(25) %}{{ ''%02d:%02d:00'' | format(m // 60, m % 60) }}'
-      queue: true
+      time: '{{ duration }}'
+      queue: false
+  - action: localtuya.set_dp
+    data:
+      device_id: bf9f1d7fc7c912452cndy4
+      dp: 14
+      value: '{{ seconds }}'
   - action: timer.start
     target:
       entity_id: timer.poliv_zoni_2
     data:
-      duration: '{% set m = states(''input_number.poliv_zona_2_hvylyn'') | int(25) %}{{ ''%02d:%02d:00'' | format(m // 60, m % 60) }}'
+      duration: '{{ duration }}'
 poliv_zona_3:
   alias: Полити зону 3
   icon: mdi:sprinkler-variant
   mode: single
   max_exceeded: warning
   sequence:
+  - variables:
+      minutes: '{{ states(''input_number.poliv_zona_3_hvylyn'') | int(10) }}'
+      seconds: '{{ minutes * 60 }}'
+      duration: '{{ ''%02d:%02d:00'' | format(minutes // 60, minutes % 60) }}'
+  - action: localtuya.set_dp
+    data:
+      device_id: bf9f1d7fc7c912452cndy4
+      value:
+        '3': true
+        '15': '{{ seconds }}'
+  - wait_template: '{{ is_state(''switch.avtopoliv_kontroler_avtopoliv_klapan_3'', ''on'') }}'
+    timeout: 00:00:08
+    continue_on_timeout: true
+  - choose:
+    - conditions: '{{ is_state(''switch.avtopoliv_kontroler_avtopoliv_klapan_3'', ''on'') }}'
+      sequence:
+      - action: persistent_notification.dismiss
+        data:
+          notification_id: poliv_zona_3_fault
+    default:
+    - action: localtuya.set_dp
+      data:
+        device_id: bf9f1d7fc7c912452cndy4
+        value:
+          '3': false
+          '15': 0
+    - action: persistent_notification.create
+      data:
+        notification_id: poliv_zona_3_fault
+        title: Полив зони 3 не запущено
+        message: Контролер не підтвердив відкриття клапана за 8 секунд. Насос не вмикався. Перевірте 24 В живлення контролера, спільний провід і котушку/проводку клапана зони 3.
+    - stop: Клапан зони 3 не відкрився; запуск насоса заблоковано
+      error: false
   - action: irrigation_unlimited.manual_run
     data:
       entity_id: binary_sensor.irrigation_unlimited_c1_z3
-      time: '{% set m = states(''input_number.poliv_zona_3_hvylyn'') | int(10) %}{{ ''%02d:%02d:00'' | format(m // 60, m % 60) }}'
-      queue: true
+      time: '{{ duration }}'
+      queue: false
+  - action: localtuya.set_dp
+    data:
+      device_id: bf9f1d7fc7c912452cndy4
+      dp: 15
+      value: '{{ seconds }}'
   - action: timer.start
     target:
       entity_id: timer.poliv_zoni_3
     data:
-      duration: '{% set m = states(''input_number.poliv_zona_3_hvylyn'') | int(10) %}{{ ''%02d:%02d:00'' | format(m // 60, m % 60) }}'
+      duration: '{{ duration }}'
 poliv_stop_all:
   alias: Аварійно зупинити полив
   icon: mdi:stop-circle
@@ -81,11 +195,6 @@ poliv_stop_all:
       - switch.avtopoliv_kontroler_avtopoliv_klapan_6
       - switch.avtopoliv_kontroler_avtopoliv_klapan_7
       - switch.avtopoliv_kontroler_avtopoliv_klapan_8
-      - switch.avtopoliv_kontroler_switch_1
-      - switch.avtopoliv_kontroler_switch_2
-      - switch.avtopoliv_kontroler_switch_3
-      - switch.avtopoliv_kontroler_switch_4
-      - switch.avtopoliv_kontroler_switch_5
   - action: timer.cancel
     target:
       entity_id:
@@ -145,21 +254,49 @@ poliv_zona_4:
   mode: single
   max_exceeded: warning
   sequence:
-  - action: switch.turn_on
-    target:
-      entity_id: switch.avtopoliv_kontroler_avtopoliv_klapan_4
+  - variables:
+      minutes: '{{ states(''input_number.poliv_zona_4_hvylyn'') | int(25) }}'
+      seconds: '{{ minutes * 60 }}'
+      duration: '{{ ''%02d:%02d:00'' | format(minutes // 60, minutes % 60) }}'
+  - action: localtuya.set_dp
+    data:
+      device_id: bf9f1d7fc7c912452cndy4
+      value:
+        '4': true
+        '16': '{{ seconds }}'
+  - wait_template: '{{ is_state(''switch.avtopoliv_kontroler_avtopoliv_klapan_4'', ''on'') }}'
+    timeout: 00:00:08
+    continue_on_timeout: true
+  - choose:
+    - conditions: '{{ is_state(''switch.avtopoliv_kontroler_avtopoliv_klapan_4'', ''on'') }}'
+      sequence:
+      - action: persistent_notification.dismiss
+        data:
+          notification_id: poliv_zona_4_fault
+    default:
+    - action: localtuya.set_dp
+      data:
+        device_id: bf9f1d7fc7c912452cndy4
+        value:
+          '4': false
+          '16': 0
+    - action: persistent_notification.create
+      data:
+        notification_id: poliv_zona_4_fault
+        title: Полив зони 4 не запущено
+        message: Контролер не підтвердив відкриття клапана за 8 секунд. Насос не вмикався. Перевірте 24 В живлення контролера, спільний провід і котушку/проводку клапана зони 4.
+    - stop: Клапан зони 4 не відкрився; запуск насоса заблоковано
+      error: false
   - action: timer.start
     target:
       entity_id: timer.poliv_zoni_4
     data:
-      duration: '{% set m = states(''input_number.poliv_zona_4_hvylyn'') | int(25) %}{{ ''%02d:%02d:00'' | format(m // 60, m % 60) }}'
-  - delay:
-      seconds: 3
+      duration: '{{ duration }}'
   - action: switch.turn_on
     target:
       entity_id: switch.mini_switch_k601_2_switch_1_2
   - delay:
-      minutes: '{{ states(''input_number.poliv_zona_4_hvylyn'') | int(25) }}'
+      minutes: '{{ minutes }}'
   - action: switch.turn_off
     target:
       entity_id: switch.mini_switch_k601_2_switch_1_2
@@ -177,13 +314,51 @@ poliv_zona_5:
   mode: single
   max_exceeded: warning
   sequence:
+  - variables:
+      minutes: '{{ states(''input_number.poliv_zona_5_hvylyn'') | int(25) }}'
+      seconds: '{{ minutes * 60 }}'
+      duration: '{{ ''%02d:%02d:00'' | format(minutes // 60, minutes % 60) }}'
+  - action: localtuya.set_dp
+    data:
+      device_id: bf9f1d7fc7c912452cndy4
+      value:
+        '5': true
+        '17': '{{ seconds }}'
+  - wait_template: '{{ is_state(''switch.avtopoliv_kontroler_avtopoliv_klapan_5'', ''on'') }}'
+    timeout: 00:00:08
+    continue_on_timeout: true
+  - choose:
+    - conditions: '{{ is_state(''switch.avtopoliv_kontroler_avtopoliv_klapan_5'', ''on'') }}'
+      sequence:
+      - action: persistent_notification.dismiss
+        data:
+          notification_id: poliv_zona_5_fault
+    default:
+    - action: localtuya.set_dp
+      data:
+        device_id: bf9f1d7fc7c912452cndy4
+        value:
+          '5': false
+          '17': 0
+    - action: persistent_notification.create
+      data:
+        notification_id: poliv_zona_5_fault
+        title: Полив зони 5 не запущено
+        message: Контролер не підтвердив відкриття клапана за 8 секунд. Насос не вмикався. Перевірте 24 В живлення контролера, спільний провід і котушку/проводку клапана зони 5.
+    - stop: Клапан зони 5 не відкрився; запуск насоса заблоковано
+      error: false
   - action: irrigation_unlimited.manual_run
     data:
       entity_id: binary_sensor.irrigation_unlimited_c1_z4
-      time: '{% set m = states(''input_number.poliv_zona_5_hvylyn'') | int(25) %}{{ ''%02d:%02d:00'' | format(m // 60, m % 60) }}'
-      queue: true
+      time: '{{ duration }}'
+      queue: false
+  - action: localtuya.set_dp
+    data:
+      device_id: bf9f1d7fc7c912452cndy4
+      dp: 17
+      value: '{{ seconds }}'
   - action: timer.start
     target:
       entity_id: timer.poliv_zoni_5
     data:
-      duration: '{% set m = states(''input_number.poliv_zona_5_hvylyn'') | int(25) %}{{ ''%02d:%02d:00'' | format(m // 60, m % 60) }}'
+      duration: '{{ duration }}'
