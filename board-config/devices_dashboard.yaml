@@ -68,6 +68,10 @@ views:
       grid_options:
         columns: full
       content: |
+        **Позначення:** 🔌 Ethernet · 📶 Wi-Fi · частота/покоління вказуються
+        лише тоді, коли їх повідомляє точка доступу. Сама частота 5 ГГц ще не
+        доводить, що клієнт працює саме у Wi-Fi 5 або Wi-Fi 6.
+
         {% set ap_clients = state_attr('sensor.tenda_ap_clients', 'onlineList') or [] %}
         {% set repeater_clients = state_attr('sensor.tenda_repeater_clients', 'onlineList') or [] %}
         {% set missing = ['unknown', 'unavailable', 'none', ''] %}
@@ -89,11 +93,13 @@ views:
           'device_tracker.a24_koristuvaca_vasilij': 'Samsung Galaxy A24 — Василь',
           'device_tracker.galaxy_j8': 'Samsung Galaxy J8',
           'device_tracker.laptop_u1i8pnmk': 'Ноутбук LAPTOP-U1I8PNMK',
+          'device_tracker.cloudmate': 'CloudMate — NAS QNAP',
           'device_tracker.esp_eea5c5': 'Blauberg №1 — кімната хлопців',
           'device_tracker.esp_eea84e': 'Blauberg №2 — кімната Олесі'
         } %}
         {% set ip_names = {
           '192.168.50.13': 'Термостат Terneo — контур 1',
+          '192.168.50.25': 'CloudMate — NAS QNAP',
           '192.168.50.27': 'Blauberg №1 — кімната хлопців',
           '192.168.50.36': 'Зарядна станція авто — 7,5 кВт',
           '192.168.50.118': 'Бойлер Midea',
@@ -105,11 +111,53 @@ views:
           '192.168.50.221': 'Контролер автополиву Tuya — 8 зон'
         } %}
         {% set mac_names = {
+          '00:08:9B:ED:62:EF': 'CloudMate — NAS QNAP',
+          '04:D6:F4:70:AD:B3': 'Бойлер Midea',
+          '08:3A:F2:2D:32:30': 'Контролер гаражних воріт — Sonoff/eWeLink',
+          '14:2B:2F:E1:54:60': 'Рекуператор PRANA — спальня батьків',
+          '30:83:98:C1:6E:AC': 'Термостат Terneo — контур 1',
+          '3C:0B:59:11:9A:13': 'Зарядна станція авто — 7,5 кВт',
+          '80:64:7C:46:E8:D1': 'Насос автополиву K601',
+          '84:CC:A8:96:28:A7': 'SONOFF ZBBridge — Zigbee-шлюз',
+          '98:F4:AB:EE:A5:C5': 'Blauberg №1 — кімната хлопців',
+          '98:F4:AB:EE:A8:4E': 'Blauberg №2 — кімната Олесі',
+          'D4:27:87:50:23:6C': 'Інвертор Deye',
+          'D8:D6:68:31:BA:49': 'Трифазний лічильник електроенергії будинку',
+          'E0:98:06:AF:B7:41': 'Термостат Terneo — контур 2',
           'DC:6A:E7:A1:09:F2': 'Xiaomi — модель не визначена',
           '62:1A:51:F4:B2:EE': 'Samsung Galaxy A24 — Василь',
           '38:2C:E5:2D:5B:32': 'Контролер автополиву Tuya — 8 зон'
         } %}
+        {% set connection_types = {
+          '00:08:9b:ed:62:ef': '🔌 Ethernet',
+          '66:55:7e:21:d0:ac': '🔌 Ethernet',
+          'b4:0f:3b:38:3f:50': '🔌 Ethernet',
+          '10:12:fb:f7:95:ad': '🔌 Ethernet',
+          '34:6f:24:b5:ad:4b': '📶 Wi-Fi · 5 ГГц',
+          '06:55:69:ba:91:6f': '📶 Wi-Fi · 5 ГГц',
+          '28:07:08:a8:10:66': '📶 Wi-Fi · 5 ГГц',
+          '5e:82:f5:51:3c:0d': '📶 Wi-Fi · 5 ГГц',
+          '70:09:71:a2:44:f4': '📶 Wi-Fi · 5 ГГц',
+          '04:d6:f4:70:ad:b3': '📶 Wi-Fi · 2,4 ГГц',
+          '08:3a:f2:2d:32:30': '📶 Wi-Fi · 2,4 ГГц',
+          '14:2b:2f:e1:54:60': '📶 Wi-Fi · 2,4 ГГц',
+          '30:83:98:c1:6e:ac': '📶 Wi-Fi · 2,4 ГГц',
+          '3c:0b:59:11:9a:13': '📶 Wi-Fi · 2,4 ГГц',
+          '38:2c:e5:2d:5b:32': '📶 Wi-Fi · 2,4 ГГц',
+          '80:64:7c:46:e8:d1': '📶 Wi-Fi · 2,4 ГГц',
+          '84:cc:a8:96:28:a7': '📶 Wi-Fi · 2,4 ГГц',
+          '98:f4:ab:ee:a5:c5': '📶 Wi-Fi · 2,4 ГГц',
+          '98:f4:ab:ee:a8:4e': '📶 Wi-Fi · 2,4 ГГц',
+          'd4:27:87:50:23:6c': '📶 Wi-Fi · 2,4 ГГц',
+          'd8:d6:68:31:ba:49': '📶 Wi-Fi · 2,4 ГГц',
+          'e0:98:06:af:b7:41': '📶 Wi-Fi · 2,4 ГГц'
+        } %}
         {% set ns = namespace(found=false, seen=[]) %}
+        {% set cloudmate_mac = '00:08:9b:ed:62:ef' %}
+        {% set ns.found = true %}
+        {% set ns.seen = ns.seen + [cloudmate_mac] %}
+        - **CloudMate — NAS QNAP** — `192.168.50.25` · `00:08:9B:ED:62:EF` ·
+          **🔌 Ethernet** · {{ '🟢 доступний' if is_state('binary_sensor.cloudmate_nas_online', 'on') else ('🔴 недоступний' if is_state('binary_sensor.cloudmate_nas_online', 'off') else '🟡 стан визначається') }}
         {% for tracker in states.device_tracker if tracker.state == 'home' %}
           {% set source = tracker.attributes.source_type | default('') %}
           {% set ip = tracker.attributes.ip | default('', true) %}
@@ -124,7 +172,25 @@ views:
             {% else %}
               {% set connection = 'ASUS RT-AX55 · «Отаке»' %}
             {% endif %}
-        - **{{ names.get(tracker.entity_id, tracker.name) }}** — `{{ ip }}` · `{{ mac | upper }}` · **{{ connection }}**
+            {% set link = namespace(type=connection_types.get(mac, '❔ тип з’єднання не повідомлено')) %}
+            {% set interface = tracker.attributes.interface | default('', true) | lower %}
+            {% if mac in ap.macs %}
+              {% for client in ap_clients if client.qosListMac | default('') | lower == mac %}
+                {% set access = client.qosListAccessType | default('') %}
+                {% set link.type = '📶 Wi-Fi 4 · 2,4 ГГц' if access == 'wifi_2G' else ('📶 Wi-Fi 5 · 5 ГГц' if access == 'wifi_5G' else '📶 Wi-Fi') %}
+              {% endfor %}
+            {% elif mac in repeater.macs %}
+              {% set link.type = '📶 Wi-Fi 4 · 2,4 ГГц' %}
+            {% elif interface in ['2.4g', '2.4ghz', 'wifi_2g'] %}
+              {% set link.type = '📶 Wi-Fi · 2,4 ГГц' %}
+            {% elif interface in ['5g', '5ghz', 'wifi_5g'] %}
+              {% set link.type = '📶 Wi-Fi · 5 ГГц' %}
+            {% elif interface in ['6g', '6ghz', 'wifi_6g'] %}
+              {% set link.type = '📶 Wi-Fi 6E · 6 ГГц' %}
+            {% else %}
+              {% set link.type = connection_types.get(mac, '❔ тип з’єднання не повідомлено') %}
+            {% endif %}
+        - **{{ names.get(tracker.entity_id, tracker.name) }}** — `{{ ip }}` · `{{ mac | upper }}` · **{{ link.type }}** · **{{ connection }}**
           {% endif %}
         {% endfor %}
         {% set irrigation_mac = '38:2c:e5:2d:5b:32' %}
@@ -132,7 +198,7 @@ views:
               and irrigation_mac not in ns.seen %}
           {% set ns.found = true %}
           {% set ns.seen = ns.seen + [irrigation_mac] %}
-        - **Контролер автополиву Tuya — 8 зон** — `192.168.50.221` · `38:2C:E5:2D:5B:32` · **ASUS RT-AX55 · «Отаке»**
+        - **Контролер автополиву Tuya — 8 зон** — `192.168.50.221` · `38:2C:E5:2D:5B:32` · **📶 Wi-Fi · 2,4 ГГц** · **ASUS RT-AX55 · «Отаке»**
         {% endif %}
         {% for client in ap_clients if client.qosListConnectType | default('') == 'wifi' and client.qosListMac is defined %}
           {% set mac = client.qosListMac | lower %}
@@ -141,7 +207,9 @@ views:
             {% set ns.seen = ns.seen + [mac] %}
             {% set ip = client.qosListIP | default('IP не отримано', true) %}
             {% set fallback = client.qosListHostname if client.qosListHostname | default('Unknown') not in ['', 'Unknown'] else 'Невідомий пристрій' %}
-        - **{{ ip_names.get(ip, mac_names.get(mac | upper, fallback)) }}** — `{{ ip }}` · `{{ mac | upper }}` · **Tenda AC10 · «Промінь»**
+            {% set access = client.qosListAccessType | default('') %}
+            {% set link_type = '📶 Wi-Fi 4 · 2,4 ГГц' if access == 'wifi_2G' else ('📶 Wi-Fi 5 · 5 ГГц' if access == 'wifi_5G' else '📶 Wi-Fi') %}
+        - **{{ ip_names.get(ip, mac_names.get(mac | upper, fallback)) }}** — `{{ ip }}` · `{{ mac | upper }}` · **{{ link_type }}** · **Tenda AC10 · «Промінь»**
           {% endif %}
         {% endfor %}
         {% for client in repeater_clients if client.devMac is defined %}
@@ -151,12 +219,28 @@ views:
             {% set ns.seen = ns.seen + [mac] %}
             {% set ip = client.devIp | default('IP не отримано', true) %}
             {% set fallback = client.devName if client.devName | default('UnKnown') not in ['', 'UnKnown'] else 'Невідомий пристрій' %}
-        - **{{ ip_names.get(ip, mac_names.get(mac | upper, fallback)) }}** — {% if ip != 'UnKnown' %}`{{ ip }}`{% else %}IP не отримано{% endif %} · `{{ mac | upper }}` · **Tenda A9 · повторювач «Отаке»**
+        - **{{ ip_names.get(ip, mac_names.get(mac | upper, fallback)) }}** — {% if ip != 'UnKnown' %}`{{ ip }}`{% else %}IP не отримано{% endif %} · `{{ mac | upper }}` · **📶 Wi-Fi 4 · 2,4 ГГц** · **Tenda A9 · повторювач «Отаке»**
           {% endif %}
         {% endfor %}
         {% if not ns.found %}
         Немає активних клієнтів або мережеві пристрої недоступні.
         {% endif %}
+    - type: markdown
+      title: CloudMate · NAS QNAP
+      grid_options:
+        columns: full
+      content: |
+        {% if is_state('binary_sensor.cloudmate_nas_online', 'on') %}
+        ## 🟢 CloudMate у мережі
+        {% elif is_state('binary_sensor.cloudmate_nas_online', 'off') %}
+        ## 🔴 CloudMate недоступний
+        {% else %}
+        ## 🟡 Перевіряється після перезапуску Home Assistant
+        {% endif %}
+
+        **IP:** `192.168.50.25` · **MAC:** `00:08:9B:ED:62:EF`<br>
+        **Тип підключення:** 🔌 **Ethernet**<br>
+        **DHCP:** адреса закріплена в ASUS RT-AX55
     - type: markdown
       title: Контролер автополиву · мережевий стан
       grid_options:
