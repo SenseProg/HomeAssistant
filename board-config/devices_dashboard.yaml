@@ -164,6 +164,11 @@ views:
         {% set ns.seen = ns.seen + [tcl_mac] %}
         - **Телевізор TCL** — `192.168.50.175` · `F0:35:75:B3:31:80` ·
           **📶 Wi-Fi** · {{ '🟢 увімкнений і в мережі' if is_state('binary_sensor.tcl_tv_online', 'on') else ('🔴 вимкнений або недоступний' if is_state('binary_sensor.tcl_tv_online', 'off') else '🟡 стан визначається') }}
+        {% set camera_mac = '10:12:fb:f7:95:ad' %}
+        {% set ns.found = true %}
+        {% set ns.seen = ns.seen + [camera_mac] %}
+        - **Камера Hikvision — двір** — `192.168.50.201` · `10:12:FB:F7:95:AD` ·
+          **🔌 Ethernet** · {{ '🟢 доступна' if is_state('binary_sensor.hikvision_camera_online', 'on') else ('🔴 недоступна' if is_state('binary_sensor.hikvision_camera_online', 'off') else '🟡 стан визначається') }}
         {% for tracker in states.device_tracker if tracker.state == 'home' %}
           {% set source = tracker.attributes.source_type | default('') %}
           {% set ip = tracker.attributes.ip | default('', true) %}
@@ -268,6 +273,26 @@ views:
         Коли телевізор вимкнений, його мережевий модуль також вимикається.
         Тому червоний стан у цей момент нормальний: пристрій більше не зникає
         з дашборда, але керувати ним або надсилати фото до ввімкнення неможливо.
+    - type: markdown
+      title: Камера Hikvision · двір
+      grid_options:
+        columns: full
+      content: |
+        {% if is_state('binary_sensor.hikvision_camera_online', 'on') %}
+        ## 🟢 Камера доступна
+        {% elif is_state('binary_sensor.hikvision_camera_online', 'off') %}
+        ## 🔴 Камера недоступна
+        {% else %}
+        ## 🟡 Стан визначається
+        {% endif %}
+
+        **IP:** `192.168.50.201` · **MAC:** `10:12:FB:F7:95:AD`<br>
+        **Тип підключення:** 🔌 **Ethernet**<br>
+        **DHCP:** адреса закріплена в ASUS RT-AX55<br>
+        **Сервіси:** HTTP `80` · RTSP `554` · Hikvision SDK `8000`
+
+        Ця картка показує мережеву доступність. Живе відео та датчики руху
+        залишаються на окремій вкладці «Камера».
     - type: markdown
       title: Контролер автополиву · мережевий стан
       grid_options:
