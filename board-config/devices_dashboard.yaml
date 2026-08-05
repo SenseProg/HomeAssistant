@@ -70,6 +70,7 @@ views:
       content: |
         {% set ap_clients = state_attr('sensor.tenda_ap_clients', 'onlineList') or [] %}
         {% set repeater_clients = state_attr('sensor.tenda_repeater_clients', 'onlineList') or [] %}
+        {% set missing = ['unknown', 'unavailable', 'none', ''] %}
         {% set ap = namespace(macs=[]) %}
         {% set repeater = namespace(macs=[]) %}
         {% for client in ap_clients if client.qosListConnectType | default('') == 'wifi' and client.qosListMac is defined %}
@@ -100,11 +101,13 @@ views:
           '192.168.50.164': 'SONOFF ZBBridge — Zigbee-шлюз',
           '192.168.50.176': 'Контролер гаражних воріт — Sonoff/eWeLink',
           '192.168.50.179': 'Інвертор Deye',
-          '192.168.50.219': 'Трифазний лічильник електроенергії будинку'
+          '192.168.50.219': 'Трифазний лічильник електроенергії будинку',
+          '192.168.50.221': 'Контролер автополиву Tuya — 8 зон'
         } %}
         {% set mac_names = {
           'DC:6A:E7:A1:09:F2': 'Xiaomi — модель не визначена',
-          '62:1A:51:F4:B2:EE': 'Samsung Galaxy A24 — Василь'
+          '62:1A:51:F4:B2:EE': 'Samsung Galaxy A24 — Василь',
+          '38:2C:E5:2D:5B:32': 'Контролер автополиву Tuya — 8 зон'
         } %}
         {% set ns = namespace(found=false, seen=[]) %}
         {% for tracker in states.device_tracker if tracker.state == 'home' %}
@@ -124,6 +127,13 @@ views:
         - **{{ names.get(tracker.entity_id, tracker.name) }}** — `{{ ip }}` · `{{ mac | upper }}` · **{{ connection }}**
           {% endif %}
         {% endfor %}
+        {% set irrigation_mac = '38:2c:e5:2d:5b:32' %}
+        {% if states('switch.avtopoliv_kontroler_avtopoliv_klapan_1') not in missing
+              and irrigation_mac not in ns.seen %}
+          {% set ns.found = true %}
+          {% set ns.seen = ns.seen + [irrigation_mac] %}
+        - **Контролер автополиву Tuya — 8 зон** — `192.168.50.221` · `38:2C:E5:2D:5B:32` · **ASUS RT-AX55 · «Отаке»**
+        {% endif %}
         {% for client in ap_clients if client.qosListConnectType | default('') == 'wifi' and client.qosListMac is defined %}
           {% set mac = client.qosListMac | lower %}
           {% if mac not in ns.seen %}
@@ -146,6 +156,30 @@ views:
         {% endfor %}
         {% if not ns.found %}
         Немає активних клієнтів або мережеві пристрої недоступні.
+        {% endif %}
+    - type: markdown
+      title: Контролер автополиву · мережевий стан
+      grid_options:
+        columns: full
+      content: |
+        {% set entity = 'switch.avtopoliv_kontroler_avtopoliv_klapan_1' %}
+        {% if states(entity) in ['on', 'off'] %}
+        ## 🟢 Підключений локально
+
+        **Пристрій:** Tuya Smart Sprinkler Controller · 8 зон<br>
+        **IP:** `192.168.50.221` · **MAC:** `38:2C:E5:2D:5B:32`<br>
+        **Підключення:** ASUS RT-AX55 · основна мережа «Отаке»<br>
+        **LocalTuya:** працює · протокол 3.4 · опитування кожні 5 с
+
+        Старий IP `192.168.50.223` більше не використовується. Контролер не
+        з'являвся в загальному списку, бо AsusWRT не створив для нього окремий
+        `device_tracker`, а до Tenda AC10/A9 він не підключений.
+        {% else %}
+        ## 🔴 Локальний зв'язок відсутній
+
+        Контролер очікується на `192.168.50.221` (`38:2C:E5:2D:5B:32`), але
+        LocalTuya зараз має стан **{{ states(entity) }}**. Клапани в такому стані
+        не слід запускати до відновлення зв'язку.
         {% endif %}
   - type: grid
     cards:
@@ -1042,7 +1076,7 @@ views:
       grid_options:
         columns: full
       entities:
-      - entity: switch.avtopoliv_kontroler_switch_1
+      - entity: switch.avtopoliv_kontroler_avtopoliv_klapan_1
         name: Клапан
       - entity: binary_sensor.irrigation_unlimited_c1_z1
         name: Стан поливу зони 1
@@ -1082,7 +1116,7 @@ views:
       grid_options:
         columns: full
       entities:
-      - entity: switch.avtopoliv_kontroler_switch_2
+      - entity: switch.avtopoliv_kontroler_avtopoliv_klapan_2
         name: Клапан
       - entity: binary_sensor.irrigation_unlimited_c1_z2
         name: Стан поливу зони 2
@@ -1122,7 +1156,7 @@ views:
       grid_options:
         columns: full
       entities:
-      - entity: switch.avtopoliv_kontroler_switch_3
+      - entity: switch.avtopoliv_kontroler_avtopoliv_klapan_3
         name: Клапан
       - entity: binary_sensor.irrigation_unlimited_c1_z3
         name: Стан поливу зони 3
@@ -1162,7 +1196,7 @@ views:
       grid_options:
         columns: full
       entities:
-      - entity: switch.avtopoliv_kontroler_switch_4
+      - entity: switch.avtopoliv_kontroler_avtopoliv_klapan_4
         name: Клапан
       - entity: script.poliv_zona_4
         name: Йде полив
@@ -1202,7 +1236,7 @@ views:
       grid_options:
         columns: full
       entities:
-      - entity: switch.avtopoliv_kontroler_switch_5
+      - entity: switch.avtopoliv_kontroler_avtopoliv_klapan_5
         name: Клапан
       - entity: script.poliv_zona_5
         name: Йде полив
