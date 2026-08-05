@@ -1,0 +1,259 @@
+"""Read-only operational helpers for the HomeAssistant project MCP server."""
+
+from __future__ import annotations
+
+import hashlib
+import json
+import os
+import re
+import shlex
+import subprocess
+from pathlib import Path
+from typing import Any, Iterable
+
+
+PROJECT_ROOT = Path(
+    os.environ.get("HA_PROJECT_ROOT", Path(__file__).resolve().parents[1])
+).resolve()
+BOARD_HOST = os.environ.get("HA_BOARD_HOST", "forlinx@192.168.50.141")
+SSH_KEY = Path(
+    os.environ.get("HA_SSH_KEY", r"C:\SPB_Data\.ssh\mb35x8_ed25519")
+).expanduser()
+
+SYNC_TARGETS: dict[str, str] = {
+    "board-config/configuration.yaml": "/userdata/hass/config/configuration.yaml",
+    "board-config/devices_dashboard.yaml": "/userdata/hass/config/devices_dashboard.yaml",
+    "board-config/power_dashboard.yaml": "/userdata/hass/config/power_dashboard.yaml",
+    "board-config/automations.yaml": "/userdata/hass/config/automations.yaml",
+    "board-config/scripts.yaml": "/userdata/hass/config/scripts.yaml",
+    "board-config/scenes.yaml": "/userdata/hass/config/scenes.yaml",
+    "board-config/network_monitoring.yaml": "/userdata/hass/config/network_monitoring.yaml",
+    "board-config/systemd/home-assistant.service": "/etc/systemd/system/home-assistant.service",
+    "board-config/systemd/zram-swap.service": "/etc/systemd/system/zram-swap.service",
+    "board-config/systemd/homemate-nas-sync.service": "/etc/systemd/system/homemate-nas-sync.service",
+    "board-config/systemd/homemate-nas-sync.timer": "/etc/systemd/system/homemate-nas-sync.timer",
+    "board-config/systemd/house-analyst.service": "/etc/systemd/system/house-analyst.service",
+    "board-config/systemd/house-analyst.timer": "/etc/systemd/system/house-analyst.timer",
+    "board-config/systemd/wyoming-vosk.service": "/etc/systemd/system/wyoming-vosk.service",
+}
+
+
+def _run(command: list[str], timeout: int = 30) -> dict[str, Any]:
+    """Run a fixed command and return structured, bounded output."""
+    try:
+        completed = subprocess.run(
+            command,
+            cwd=PROJECT_ROOT,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            timeout=timeout,
+            check=False,
+        )
+        return {
+            "ok": completed.returncode == 0,
+            "returncode": completed.returncode,
+            "stdout": completed.stdout[-100_000:],
+            "stderr": completed.stderr[-20_000:],
+        }
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        return {"ok": False, "returncode": None, "stdout": "", "stderr": str(exc)}
+
+
+def _ssh(remote_command: str, timeout: int = 30) -> dict[str, Any]:
+    executable = "ssh.exe" if os.name == "nt" else "ssh"
+    command = [
+        executable,
+        "-i",
+        str(SSH_KEY),
+        "-o",
+        "BatchMode=yes",
+        "-o",
+        "ConnectTimeout=5",
+        BOARD_HOST,
+        remote_command,
+    ]
+    return _run(command, timeout=timeout)
+
+
+def _sha256(path: Path) -> str | None:
+    if not path.is_file():
+        return None
+    digest = hashlib.sha256()
+    with path.open("rb") as stream:
+        for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def resolve_targets(files: Iterable[str] | None = None) -> dict[str, str]:
+    """Resolve only explicitly allow-listed repository paths."""
+    if files is None:
+        return dict(SYNC_TARGETS)
+    selected: dict[str, str] = {}
+    for raw in files:
+        normalized = raw.replace("\\", "/").lstrip("./")
+        if normalized not in SYNC_TARGETS:
+            raise ValueError(
+                f"Unsupported sync target {raw!r}; allowed: {', '.join(SYNC_TARGETS)}"
+            )
+        selected[normalized] = SYNC_TARGETS[normalized]
+    return selected
+
+
+def repo_board_sync(files: Iterable[str] | None = None) -> dict[str, Any]:
+    """Compare SHA-256 hashes without copying or changing either side."""
+    targets = resolve_targets(files)
+    remote_paths = list(targets.values())
+    script_parts = []
+    for remote_path in remote_paths:
+        quoted = shlex.quote(remote_path)
+        script_parts.append(
+            f"if [ -f {quoted} ]; then sha256sum {quoted}; "
+            f"else printf 'MISSING  %s\\n' {quoted}; fi"
+        )
+    remote = _ssh("; ".join(script_parts), timeout=45)
+    remote_hashes: dict[str, str | None] = {}
+    if remote["ok"]:
+        for line in remote["stdout"].splitlines():
+            if line.startswith("MISSING  "):
+                remote_hashes[line[9:].strip()] = None
+                continue
+            match = re.match(r"^([0-9a-fA-F]{64})\s+(.+)$", line)
+            if match:
+                remote_hashes[match.group(2).strip()] = match.group(1).lower()
+
+    results = []
+    for repo_path, remote_path in targets.items():
+        local_hash = _sha256(PROJECT_ROOT / repo_path)
+        remote_hash = remote_hashes.get(remote_path)
+        if not remote["ok"]:
+            status = "remote_error"
+        elif local_hash is None:
+            status = "local_missing"
+        elif remote_hash is None:
+            status = "remote_missing"
+        elif local_hash == remote_hash:
+            status = "match"
+        else:
+            status = "mismatch"
+        results.append(
+            {
+                "repo_path": repo_path,
+                "board_path": remote_path,
+                "local_sha256": local_hash,
+                "board_sha256": remote_hash,
+                "status": status,
+            }
+        )
+    return {
+        "safe_to_deploy": bool(results)
+        and remote["ok"]
+        and all(item["status"] == "match" for item in results),
+        "results": results,
+        "remote_error": remote["stderr"] if not remote["ok"] else "",
+    }
+
+
+def board_health() -> dict[str, Any]:
+    """Read the board, HA, storage, swap, journal cap, and timer health."""
+    command = """
+printf 'ha_version='; /home/forlinx/hass-venv-314/bin/hass --version 2>/dev/null || true
+printf 'ha_service='; systemctl is-active home-assistant 2>/dev/null || true
+printf 'ha_http='; curl -s -o /dev/null -w '%{http_code}' --max-time 5 http://localhost:8123/ || true; printf '\n'
+printf 'uptime='; uptime -p 2>/dev/null || true
+printf 'journal_cap='; grep -E '^SystemMaxUse=' /etc/systemd/journald.conf 2>/dev/null | tail -n1 | cut -d= -f2
+printf 'root='; df -P / 2>/dev/null | tail -n1
+printf 'userdata='; df -P /userdata 2>/dev/null | tail -n1
+printf 'swap='; swapon --show --noheadings 2>/dev/null | tr '\n' ';'; printf '\n'
+printf 'nas_timer='; systemctl is-enabled homemate-nas-sync.timer 2>/dev/null || true
+printf 'analyst_timer='; systemctl is-enabled house-analyst.timer 2>/dev/null || true
+""".strip()
+    result = _ssh(command, timeout=30)
+    values: dict[str, str] = {}
+    for line in result["stdout"].splitlines():
+        if "=" in line:
+            key, value = line.split("=", 1)
+            values[key.strip()] = value.strip()
+    healthy = (
+        result["ok"]
+        and values.get("ha_service") == "active"
+        and values.get("ha_http") == "200"
+    )
+    return {"healthy": healthy, "values": values, "transport": result}
+
+
+def validate_config() -> dict[str, Any]:
+    """Run the official HA config checker without restarting the service."""
+    command = (
+        "/home/forlinx/hass-venv-314/bin/hass --script check_config "
+        "-c /userdata/hass/config"
+    )
+    return _ssh(command, timeout=180)
+
+
+def recent_logs(lines: int = 100, pattern: str | None = None) -> dict[str, Any]:
+    """Read recent HA journald output and optionally filter it locally."""
+    lines = max(1, min(int(lines), 1000))
+    result = _ssh(
+        f"sudo journalctl -u home-assistant -n {lines} --no-pager",
+        timeout=30,
+    )
+    if pattern and result["ok"]:
+        if len(pattern) > 200:
+            raise ValueError("pattern is limited to 200 characters")
+        regex = re.compile(pattern, re.IGNORECASE)
+        result["stdout"] = "\n".join(
+            line for line in result["stdout"].splitlines() if regex.search(line)
+        )
+    return result
+
+
+def git_status() -> dict[str, Any]:
+    """Return repository status without fetching or modifying refs."""
+    status = _run(["git", "status", "--short", "--branch"])
+    branch = _run(["git", "branch", "--show-current"])
+    upstream = _run(["git", "rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}"])
+    divergence: dict[str, Any] | None = None
+    if upstream["ok"]:
+        counts = _run(["git", "rev-list", "--left-right", "--count", "HEAD...@{u}"])
+        if counts["ok"]:
+            parts = counts["stdout"].strip().split()
+            if len(parts) == 2:
+                divergence = {"ahead": int(parts[0]), "behind": int(parts[1])}
+    return {
+        "branch": branch["stdout"].strip(),
+        "upstream": upstream["stdout"].strip() if upstream["ok"] else None,
+        "divergence": divergence,
+        "status": status,
+    }
+
+
+def network_inventory(query: str | None = None) -> dict[str, Any]:
+    """Read the versioned fixed-device inventory; optionally match IP/MAC/name."""
+    path = Path(__file__).with_name("network_inventory.json")
+    devices = json.loads(path.read_text(encoding="utf-8"))["devices"]
+    if query:
+        needle = query.casefold().replace("-", ":")
+        devices = [
+            device
+            for device in devices
+            if needle
+            in " ".join(str(value) for value in device.values())
+            .casefold()
+            .replace("-", ":")
+        ]
+    return {"count": len(devices), "devices": devices}
+
+
+def project_summary() -> dict[str, Any]:
+    return {
+        "project_root": str(PROJECT_ROOT),
+        "board": BOARD_HOST,
+        "ssh_key": str(SSH_KEY),
+        "home_assistant_url": "http://192.168.50.141:8123/",
+        "config_root": "/userdata/hass/config",
+        "protected": [".storage", "secrets.yaml", "*.db", "tokens", "credentials"],
+        "sync_targets": SYNC_TARGETS,
+    }

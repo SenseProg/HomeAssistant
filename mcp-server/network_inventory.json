@@ -1,0 +1,28 @@
+{
+  "router": {
+    "model": "ASUS RT-AX55",
+    "ip": "192.168.50.1"
+  },
+  "devices": [
+    {"ip": "192.168.50.2", "mac": "B4:0F:3B:38:3F:50", "hostname": "Tenda-AP", "function": "Tenda access point"},
+    {"ip": "192.168.50.13", "mac": "30:83:98:C1:6E:AC", "hostname": null, "function": "Terneo thermostat 1"},
+    {"ip": "192.168.50.15", "mac": "34:6F:24:B5:AD:4B", "hostname": null, "function": "HomeMate PC"},
+    {"ip": "192.168.50.25", "mac": "00:08:9B:ED:62:EF", "hostname": null, "function": "CloudMate QNAP NAS"},
+    {"ip": "192.168.50.27", "mac": "98:F4:AB:EE:A5:C5", "hostname": "Blauberg-Boys", "function": "Blauberg recuperator, boys room"},
+    {"ip": "192.168.50.36", "mac": "3C:0B:59:11:9A:13", "hostname": "EV-Charger", "function": "Tuya EV charger"},
+    {"ip": "192.168.50.91", "mac": "80:64:7C:46:E8:D1", "hostname": "Irrigation-Pump", "function": "Irrigation pump relay"},
+    {"ip": "192.168.50.102", "mac": "50:0F:F5:99:04:E8", "hostname": "Tenda-Repeater", "function": "Tenda repeater"},
+    {"ip": "192.168.50.118", "mac": "04:D6:F4:70:AD:B3", "hostname": null, "function": "Midea water heater"},
+    {"ip": "192.168.50.123", "mac": "98:F4:AB:EE:A8:4E", "hostname": "Blauberg-Olesia", "function": "Blauberg recuperator, Olesia room"},
+    {"ip": "192.168.50.141", "mac": "66:55:7E:21:D0:AC", "hostname": null, "function": "MB35x8 Home Assistant board"},
+    {"ip": "192.168.50.157", "mac": "E0:98:06:AF:B7:41", "hostname": null, "function": "Terneo thermostat 2"},
+    {"ip": "192.168.50.164", "mac": "84:CC:A8:96:28:A7", "hostname": "SONOFF-ZBBridge", "function": "Sonoff Zigbee bridge"},
+    {"ip": "192.168.50.175", "mac": "F0:35:75:B3:31:80", "hostname": "TV-TCL", "function": "TCL television"},
+    {"ip": "192.168.50.176", "mac": "08:3A:F2:2D:32:30", "hostname": "Garage", "function": "Garage controller"},
+    {"ip": "192.168.50.179", "mac": "D4:27:87:50:23:6C", "hostname": "Deye-Inverter", "function": "Deye Solarman logger, TCP 8899"},
+    {"ip": "192.168.50.201", "mac": "10:12:FB:F7:95:AD", "hostname": "Hikvision-Cam1", "function": "Hikvision camera"},
+    {"ip": "192.168.50.219", "mac": "D8:D6:68:31:BA:49", "hostname": "Energy-Meter", "function": "Three-phase energy meter"},
+    {"ip": "192.168.50.221", "mac": "38:2C:E5:2D:5B:32", "hostname": "Irrigation", "function": "Eight-channel irrigation controller"},
+    {"ip": "192.168.50.246", "mac": "14:2B:2F:E1:54:60", "hostname": "PRANA-Parents-Bedroom", "function": "PRANA recuperator, parents bedroom"}
+  ]
+}

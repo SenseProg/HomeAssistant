@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "home-assistant-project": {
+      "command": "python",
+      "args": [
+        "mcp-server/server.py"
+      ],
+      "env": {
+        "HA_PROJECT_ROOT": "."
+      }
+    }
+  }
+}

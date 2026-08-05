@@ -1,0 +1,4 @@
+interface:
+  display_name: "MB35x8 Bench"
+  short_description: "Діагностика плати MB35x8 і Forlinx RK3568J"
+  default_prompt: "Use $mb35x8-bench to diagnose or service the MB35x8 hardware and operating system."

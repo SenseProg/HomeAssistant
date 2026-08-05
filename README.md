@@ -141,3 +141,34 @@ GitHub (жорсткий ліміт 100 МБ на файл). Лежить на N
 
 Скрипти, скіли та повний журнал робіт — у репозиторії
 [PCadmin](https://github.com/SenseProg/PCadmin), скіл `home-assistant`.
+
+## Проєктні скіли та MCP-сервер
+
+Операційні знання тепер зберігаються разом із конфігурацією Home Assistant:
+
+- `.claude/skills/home-assistant/` — безпечне розгортання, діагностика, полив,
+  енергія та інвентар мережі;
+- `.claude/skills/mb35x8-bench/` — діагностика плати/ОС і правила прошивання;
+- `.mcp.json` та `mcp-server/` — локальний read-only MCP-сервер
+  `home-assistant-project`.
+
+MCP-сервер показує стан плати, Git, останні журнали HA, запускає офіційний
+`check_config`, читає інвентар фіксованих пристроїв і порівнює SHA-256 файлів
+плати з `board-config/`. Він навмисно не вміє редагувати live-файли, `.storage`,
+БД recorder, реквізити або токени.
+
+CLI-режим із кореня репозиторію:
+
+```powershell
+python mcp-server/cli.py git
+python mcp-server/cli.py health
+python mcp-server/cli.py sync
+python mcp-server/cli.py inventory Deye
+python mcp-server/cli.py validate
+```
+
+Якщо Python MCP SDK ще відсутній:
+
+```powershell
+python -m pip install -r mcp-server/requirements.txt
+```
