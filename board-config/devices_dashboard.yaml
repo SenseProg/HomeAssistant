@@ -144,6 +144,7 @@ views:
           '30:83:98:c1:6e:ac': '📶 Wi-Fi · 2,4 ГГц',
           '3c:0b:59:11:9a:13': '📶 Wi-Fi · 2,4 ГГц',
           '38:2c:e5:2d:5b:32': '📶 Wi-Fi · 2,4 ГГц',
+          'f0:35:75:b3:31:80': '📶 Wi-Fi',
           '80:64:7c:46:e8:d1': '📶 Wi-Fi · 2,4 ГГц',
           '84:cc:a8:96:28:a7': '📶 Wi-Fi · 2,4 ГГц',
           '98:f4:ab:ee:a5:c5': '📶 Wi-Fi · 2,4 ГГц',
@@ -158,6 +159,11 @@ views:
         {% set ns.seen = ns.seen + [cloudmate_mac] %}
         - **CloudMate — NAS QNAP** — `192.168.50.25` · `00:08:9B:ED:62:EF` ·
           **🔌 Ethernet** · {{ '🟢 доступний' if is_state('binary_sensor.cloudmate_nas_online', 'on') else ('🔴 недоступний' if is_state('binary_sensor.cloudmate_nas_online', 'off') else '🟡 стан визначається') }}
+        {% set tcl_mac = 'f0:35:75:b3:31:80' %}
+        {% set ns.found = true %}
+        {% set ns.seen = ns.seen + [tcl_mac] %}
+        - **Телевізор TCL** — `192.168.50.175` · `F0:35:75:B3:31:80` ·
+          **📶 Wi-Fi** · {{ '🟢 увімкнений і в мережі' if is_state('binary_sensor.tcl_tv_online', 'on') else ('🔴 вимкнений або недоступний' if is_state('binary_sensor.tcl_tv_online', 'off') else '🟡 стан визначається') }}
         {% for tracker in states.device_tracker if tracker.state == 'home' %}
           {% set source = tracker.attributes.source_type | default('') %}
           {% set ip = tracker.attributes.ip | default('', true) %}
@@ -241,6 +247,27 @@ views:
         **IP:** `192.168.50.25` · **MAC:** `00:08:9B:ED:62:EF`<br>
         **Тип підключення:** 🔌 **Ethernet**<br>
         **DHCP:** адреса закріплена в ASUS RT-AX55
+    - type: markdown
+      title: Телевізор TCL · Google Cast
+      grid_options:
+        columns: full
+      content: |
+        {% if is_state('binary_sensor.tcl_tv_online', 'on') %}
+        ## 🟢 Телевізор увімкнений і в мережі
+        {% elif is_state('binary_sensor.tcl_tv_online', 'off') %}
+        ## 🔴 Телевізор вимкнений або недоступний
+        {% else %}
+        ## 🟡 Перевіряється після перезапуску Home Assistant
+        {% endif %}
+
+        **IP:** `192.168.50.175` · **MAC:** `F0:35:75:B3:31:80`<br>
+        **Тип підключення:** 📶 **Wi-Fi**<br>
+        **DHCP:** адреса закріплена в ASUS RT-AX55<br>
+        **Модель:** TCL BeyondTV · Google Cast
+
+        Коли телевізор вимкнений, його мережевий модуль також вимикається.
+        Тому червоний стан у цей момент нормальний: пристрій більше не зникає
+        з дашборда, але керувати ним або надсилати фото до ввімкнення неможливо.
     - type: markdown
       title: Контролер автополиву · мережевий стан
       grid_options:

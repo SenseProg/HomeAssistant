@@ -498,6 +498,15 @@ command_line:
       scan_interval: 30
       device_class: connectivity
       icon: mdi:nas
+  - binary_sensor:
+      name: TCL TV Online
+      unique_id: tcl_tv_online
+      command: 'ping -W 1 -c 1 192.168.50.175 > /dev/null 2>&1 && echo ON || echo OFF'
+      payload_on: "ON"
+      payload_off: "OFF"
+      scan_interval: 30
+      device_class: connectivity
+      icon: mdi:television
 
 shell_command:
   update_motion_snapshot: "cd /userdata/hass/config/www/motion && ls -t motion_*.jpg 2>/dev/null | head -1 | xargs -I{} cp {} latest.jpg && ls -t motion_*.jpg 2>/dev/null | tail -n +31 | xargs -r rm --"
