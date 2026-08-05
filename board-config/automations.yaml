@@ -38,8 +38,8 @@
   description: Прибирає забутий відкритий клапан після ручного пуску. Irrigation Unlimited закриває свої клапани за 3 секунди після зупинки насоса, тому 5-хвилинна витримка у його роботу не втручається.
   triggers:
   - trigger: template
-    value_template: "{{ is_state('switch.mini_switch_k601_2_switch_1_2', 'off')\n   and (is_state('switch.avtopoliv_kontroler_switch_1', 'on')\n        or is_state('switch.avtopoliv_kontroler_switch_2',\
-      \ 'on')\n        or is_state('switch.avtopoliv_kontroler_switch_3', 'on')\n        or is_state('switch.avtopoliv_kontroler_switch_4', 'on')\n        or is_state('switch.avtopoliv_kontroler_switch_5',\
+    value_template: "{{ is_state('switch.mini_switch_k601_2_switch_1_2', 'off')\n   and (is_state('switch.avtopoliv_kontroler_avtopoliv_klapan_1', 'on')\n        or is_state('switch.avtopoliv_kontroler_avtopoliv_klapan_2',\
+      \ 'on')\n        or is_state('switch.avtopoliv_kontroler_avtopoliv_klapan_3', 'on')\n        or is_state('switch.avtopoliv_kontroler_avtopoliv_klapan_4', 'on')\n        or is_state('switch.avtopoliv_kontroler_avtopoliv_klapan_5',\
       \ 'on')) }}\n"
     for: 00:05:00
   conditions: []
@@ -47,11 +47,11 @@
   - action: switch.turn_off
     target:
       entity_id:
-      - switch.avtopoliv_kontroler_switch_1
-      - switch.avtopoliv_kontroler_switch_2
-      - switch.avtopoliv_kontroler_switch_3
-      - switch.avtopoliv_kontroler_switch_4
-      - switch.avtopoliv_kontroler_switch_5
+      - switch.avtopoliv_kontroler_avtopoliv_klapan_1
+      - switch.avtopoliv_kontroler_avtopoliv_klapan_2
+      - switch.avtopoliv_kontroler_avtopoliv_klapan_3
+      - switch.avtopoliv_kontroler_avtopoliv_klapan_4
+      - switch.avtopoliv_kontroler_avtopoliv_klapan_5
   mode: single
 - id: irrigation_fail_safe_on_ha_start
   alias: Полив - безпечний стан після запуску HA
@@ -76,8 +76,8 @@
   - trigger: template
     value_template: "{{ is_state('switch.mini_switch_k601_2_switch_1_2', 'on')\n   and not is_state('binary_sensor.irrigation_unlimited_c1_m', 'on')\n   and not is_state('script.poliv_zona_1', 'on')\n \
       \  and not is_state('script.poliv_zona_2', 'on')\n   and not is_state('script.poliv_zona_3', 'on')\n   and not is_state('script.poliv_zona_4', 'on')\n   and not is_state('script.poliv_zona_5', 'on')\n\
-      \   and not is_state('switch.avtopoliv_kontroler_switch_1', 'on')\n   and not is_state('switch.avtopoliv_kontroler_switch_2', 'on')\n   and not is_state('switch.avtopoliv_kontroler_switch_3', 'on')\n\
-      \   and not is_state('switch.avtopoliv_kontroler_switch_4', 'on')\n   and not is_state('switch.avtopoliv_kontroler_switch_5', 'on') }}\n"
+      \   and not is_state('switch.avtopoliv_kontroler_avtopoliv_klapan_1', 'on')\n   and not is_state('switch.avtopoliv_kontroler_avtopoliv_klapan_2', 'on')\n   and not is_state('switch.avtopoliv_kontroler_avtopoliv_klapan_3', 'on')\n\
+      \   and not is_state('switch.avtopoliv_kontroler_avtopoliv_klapan_4', 'on')\n   and not is_state('switch.avtopoliv_kontroler_avtopoliv_klapan_5', 'on') }}\n"
     for: 00:03:00
   conditions: []
   actions:
