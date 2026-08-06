@@ -604,6 +604,11 @@ views:
         name: Вологість на дворі
       - entity: sensor.sonoff_a48005a66a_battery
         name: Батарея датчика
+      - type: divider
+      - entity: sensor.2_floor_outside_temperature
+        name: PRANA · зовнішня температура 1
+      - entity: sensor.2_floor_outside_temperature_2
+        name: PRANA · зовнішня температура 2
     - type: markdown
       title: Порівняння показників
       grid_options:
