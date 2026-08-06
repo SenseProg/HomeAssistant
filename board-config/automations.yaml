@@ -311,11 +311,10 @@
   mode: single
 - id: hikvision_motion_clip
   alias: Камера - відеокліп при виявленні руху
-  description: 'Записує 10 секунд відео на NAS: 5 секунд ДО руху (з буфера потоку,
-    тому потрібен preload_stream на camera.cam1) і 5 секунд після.
-
-    Умова про змонтовану шару ОБОВ''ЯЗКОВА: без неї при недоступному NAS
-    кліпи писались би в звичайну теку на платі і заповнили б /userdata.'
+  description: 'Пише 15 с відео на NAS від моменту руху. Пре-ролю немає
+    навмисно: він потребує preload_stream, тобто постійного потоку з камери,
+    а це розхитувало живлення плати. Умова про змонтовану шару обовʼязкова -
+    без неї кліпи писалися б на саму плату.'
   triggers:
   - trigger: state
     entity_id: binary_sensor.cam1_motion
@@ -331,7 +330,7 @@
     data:
       filename: /userdata/hass/config/media/video/ha-motion/ruh_{{ now().strftime('%Y%m%d_%H%M%S')
         }}.mp4
-      duration: 10
-      lookback: 5
+      duration: 15
+  - action: shell_command.prune_motion_clips
   mode: single
   max_exceeded: silent
