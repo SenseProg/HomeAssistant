@@ -8,6 +8,7 @@ import json
 from project_tools import (
     board_health,
     git_status,
+    irrigation_health,
     network_inventory,
     project_summary,
     recent_logs,
@@ -21,6 +22,7 @@ def main() -> int:
     sub = parser.add_subparsers(dest="command", required=True)
     sub.add_parser("summary")
     sub.add_parser("health")
+    sub.add_parser("irrigation-health")
     sync_parser = sub.add_parser("sync")
     sync_parser.add_argument("files", nargs="*")
     sub.add_parser("validate")
@@ -36,6 +38,8 @@ def main() -> int:
         result = project_summary()
     elif args.command == "health":
         result = board_health()
+    elif args.command == "irrigation-health":
+        result = irrigation_health()
     elif args.command == "sync":
         result = repo_board_sync(args.files or None)
     elif args.command == "validate":

@@ -163,6 +163,7 @@ CLI-режим із кореня репозиторію:
 ```powershell
 python mcp-server/cli.py git
 python mcp-server/cli.py health
+python mcp-server/cli.py irrigation-health
 python mcp-server/cli.py sync
 python mcp-server/cli.py inventory Deye
 python mcp-server/cli.py validate

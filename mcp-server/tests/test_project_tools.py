@@ -36,3 +36,62 @@ def test_mcp_config_contains_no_credentials() -> None:
     assert "password" not in raw.casefold()
     assert "token" not in raw.casefold()
     assert "home-assistant-project" in config["mcpServers"]
+
+
+def test_irrigation_health_requires_localtuya_and_expected_mac(monkeypatch) -> None:
+    stdout = """ha_service=active
+ha_http=200
+controller_ping=ok
+controller_neighbor=192.168.50.221 dev eth1 lladdr 38:2c:e5:2d:5b:32 REACHABLE
+controller_localtuya=established
+pump_ping=ok
+pump_neighbor=192.168.50.91 dev eth1 lladdr 80:64:7c:46:e8:d1 REACHABLE
+pump_localtuya=established
+controller_errors_10m=0
+pump_errors_10m=0
+"""
+    monkeypatch.setattr(
+        project_tools,
+        "_ssh",
+        lambda command, timeout=30: {
+            "ok": True,
+            "returncode": 0,
+            "stdout": stdout,
+            "stderr": "",
+        },
+    )
+
+    result = project_tools.irrigation_health()
+
+    assert result["controller_ready"] is True
+    assert result["irrigation_ready"] is True
+    assert result["control_path"].startswith("LocalTuya")
+
+
+def test_irrigation_health_rejects_ping_only_controller(monkeypatch) -> None:
+    stdout = """ha_service=active
+ha_http=200
+controller_ping=ok
+controller_neighbor=192.168.50.221 dev eth1 lladdr 38:2c:e5:2d:5b:32 REACHABLE
+controller_localtuya=disconnected
+pump_ping=ok
+pump_neighbor=192.168.50.91 dev eth1 lladdr 80:64:7c:46:e8:d1 REACHABLE
+pump_localtuya=established
+controller_errors_10m=1
+pump_errors_10m=0
+"""
+    monkeypatch.setattr(
+        project_tools,
+        "_ssh",
+        lambda command, timeout=30: {
+            "ok": True,
+            "returncode": 0,
+            "stdout": stdout,
+            "stderr": "",
+        },
+    )
+
+    result = project_tools.irrigation_health()
+
+    assert result["controller_ready"] is False
+    assert result["irrigation_ready"] is False

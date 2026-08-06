@@ -24,6 +24,42 @@ they are obsolete, nonexistent cloud-style entity IDs. The eight
 `switch.avtopoliv_kontroler_avtopoliv_klapan_N` LocalTuya entities are the
 physical source of truth.
 
+## Control path and readiness
+
+The irrigation execution path is **local**, not cloud Tuya:
+
+- HA's custom LocalTuya integration maintains a LAN TCP session to the DP-WBS01
+  controller at `192.168.50.221:6668`.
+- Valve preflight uses `localtuya.set_dp`; valve feedback comes from the eight
+  LocalTuya switch entities above.
+- Irrigation Unlimited sequences those local valve entities and the local pump
+  relay entity. A Tuya cloud integration may exist for other devices, but it is
+  not the irrigation safety or execution path.
+
+Run `ha_irrigation_health` through MCP or
+`python mcp-server/cli.py irrigation-health` before diagnosing or starting a
+test. Interpret the layers separately:
+
+1. `ping` plus ARP MAC `38:2C:E5:2D:5B:32` proves only that the controller is on
+   the LAN. It does **not** prove LocalTuya control works.
+2. `controller_localtuya=established` must show that the HA process owns an
+   established TCP session to `.221:6668`. Do not use an independent `nc` port
+   scan as the deciding signal; a Tuya device can reject a second connection
+   while HA's existing session is healthy.
+3. No controller handshake, connection, unavailable, or synchronisation errors
+   may appear in the last ten minutes.
+4. For full irrigation readiness, the pump relay at `.91:6668` must also have an
+   established HA LocalTuya session and no recent errors.
+5. Before physical operation, the selected valve entity and pump entity must be
+   `on` or `off`, never `unknown`/`unavailable`. The definitive actuator proof
+   is still a controlled command followed by the selected valve reporting `on`
+   within eight seconds.
+
+`controller_ready=true` means the controller transport is ready.
+`irrigation_ready=true` additionally means the pump transport is ready. Neither
+flag proves water flow, 24 V AC output, wiring, or solenoid movement; physical
+commissioning remains required for that.
+
 ## Two layers
 
 Irrigation Unlimited owns sequencing and physical execution. Smart Irrigation

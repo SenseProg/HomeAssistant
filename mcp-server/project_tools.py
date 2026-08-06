@@ -20,6 +20,11 @@ SSH_KEY = Path(
     os.environ.get("HA_SSH_KEY", r"C:\SPB_Data\.ssh\mb35x8_ed25519")
 ).expanduser()
 
+IRRIGATION_CONTROLLER_IP = "192.168.50.221"
+IRRIGATION_CONTROLLER_MAC = "38:2c:e5:2d:5b:32"
+IRRIGATION_PUMP_IP = "192.168.50.91"
+LOCALTUYA_PORT = 6668
+
 SYNC_TARGETS: dict[str, str] = {
     "board-config/configuration.yaml": "/userdata/hass/config/configuration.yaml",
     "board-config/devices_dashboard.yaml": "/userdata/hass/config/devices_dashboard.yaml",
@@ -188,6 +193,62 @@ printf 'analyst_timer='; systemctl is-enabled house-analyst.timer 2>/dev/null ||
         and values.get("ha_http") == "200"
     )
     return {"healthy": healthy, "values": values, "transport": result}
+
+
+def irrigation_health() -> dict[str, Any]:
+    """Check LocalTuya transport readiness without operating pump or valves."""
+    command = f"""
+printf 'ha_service='; systemctl is-active home-assistant 2>/dev/null || true
+printf 'ha_http='; curl -s -o /dev/null -w '%{{http_code}}' --max-time 5 http://localhost:8123/ || true; printf '\n'
+if ping -c 1 -W 1 {IRRIGATION_CONTROLLER_IP} >/dev/null 2>&1; then echo 'controller_ping=ok'; else echo 'controller_ping=failed'; fi
+printf 'controller_neighbor='; ip neigh show {IRRIGATION_CONTROLLER_IP} 2>/dev/null | head -n1
+if sudo ss -Hntp 2>/dev/null | grep -F '{IRRIGATION_CONTROLLER_IP}:{LOCALTUYA_PORT}' | grep -Fq 'hass'; then echo 'controller_localtuya=established'; else echo 'controller_localtuya=disconnected'; fi
+if ping -c 1 -W 1 {IRRIGATION_PUMP_IP} >/dev/null 2>&1; then echo 'pump_ping=ok'; else echo 'pump_ping=failed'; fi
+printf 'pump_neighbor='; ip neigh show {IRRIGATION_PUMP_IP} 2>/dev/null | head -n1
+if sudo ss -Hntp 2>/dev/null | grep -F '{IRRIGATION_PUMP_IP}:{LOCALTUYA_PORT}' | grep -Fq 'hass'; then echo 'pump_localtuya=established'; else echo 'pump_localtuya=disconnected'; fi
+printf 'controller_errors_10m='; sudo journalctl -u home-assistant --since '-10 min' --no-pager 2>/dev/null | grep -iE 'bf9.*dy4|192\\.168\\.50\\.221|avtopoliv_kontroler' | grep -ciE 'failed|not connected|unavailable|does not match' || true
+printf 'pump_errors_10m='; sudo journalctl -u home-assistant --since '-10 min' --no-pager 2>/dev/null | grep -iE '192\\.168\\.50\\.91|mini_switch_k601' | grep -ciE 'failed|not connected|unavailable|does not match' || true
+""".strip()
+    result = _ssh(command, timeout=30)
+    values: dict[str, str] = {}
+    for line in result["stdout"].splitlines():
+        if "=" in line:
+            key, value = line.split("=", 1)
+            values[key.strip()] = value.strip()
+
+    neighbor = values.get("controller_neighbor", "").casefold()
+    controller_mac_ok = (
+        IRRIGATION_CONTROLLER_MAC in neighbor
+        and "failed" not in neighbor
+        and "incomplete" not in neighbor
+    )
+    controller_ready = (
+        result["ok"]
+        and values.get("ha_service") == "active"
+        and values.get("ha_http") == "200"
+        and values.get("controller_ping") == "ok"
+        and controller_mac_ok
+        and values.get("controller_localtuya") == "established"
+        and values.get("controller_errors_10m") == "0"
+    )
+    irrigation_ready = (
+        controller_ready
+        and values.get("pump_ping") == "ok"
+        and values.get("pump_localtuya") == "established"
+        and values.get("pump_errors_10m") == "0"
+    )
+    return {
+        "controller_ready": controller_ready,
+        "irrigation_ready": irrigation_ready,
+        "control_path": "LocalTuya over LAN TCP/6668; cloud Tuya is not the execution path",
+        "values": values,
+        "criteria": {
+            "controller": "HA active/HTTP 200, expected IP/MAC reachable, hass TCP/6668 established, no matching errors for 10 minutes",
+            "full_irrigation": "controller ready plus pump relay reachable with hass TCP/6668 established and no matching errors for 10 minutes",
+            "physical_proof": "A controlled valve command must still report the selected LocalTuya switch on within 8 seconds; this read-only check never moves hardware",
+        },
+        "transport": result,
+    }
 
 
 def validate_config() -> dict[str, Any]:

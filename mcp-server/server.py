@@ -9,6 +9,7 @@ from mcp.server.fastmcp import FastMCP
 from project_tools import (
     board_health,
     git_status,
+    irrigation_health,
     network_inventory,
     project_summary,
     recent_logs,
@@ -30,6 +31,12 @@ def ha_project_summary() -> dict:
 def ha_board_health() -> dict:
     """Read HA service/HTTP, uptime, disk, zram, journal cap, and timer state."""
     return board_health()
+
+
+@mcp.tool()
+def ha_irrigation_health() -> dict:
+    """Check controller and pump LocalTuya readiness without moving hardware."""
+    return irrigation_health()
 
 
 @mcp.tool()

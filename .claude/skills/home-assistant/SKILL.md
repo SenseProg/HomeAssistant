@@ -8,13 +8,14 @@ description: Safely inspect, operate, diagnose, and update the Home Assistant Co
 ## Start with the project MCP
 
 Use the project-local `home-assistant-project` MCP server when it is available.
-Prefer its read-only tools for health, Git status, router inventory, logs, config
-validation, and board/repository hash comparison. It intentionally has no tool
-that edits `.storage`, the recorder database, or live configuration.
+Prefer its read-only tools for health, irrigation LocalTuya readiness, Git
+status, router inventory, logs, config validation, and board/repository hash
+comparison. It intentionally has no tool that edits `.storage`, the recorder
+database, or live configuration.
 
 If the MCP server is not registered, run the same checks with
 `python mcp-server/cli.py health`, `sync`, `git`, `inventory`, `logs`, or
-`validate` from the repository root.
+`validate`, or `irrigation-health` from the repository root.
 
 ## Read the relevant reference
 
