@@ -4,7 +4,6 @@ set -euo pipefail
 readonly NAS_SHARE="//192.168.50.25/HomeAssistant"
 readonly NAS_CREDENTIALS="/etc/samba/credentials/homeassistant-backup"
 readonly NAS_ROOT="MB35x8"
-readonly BACKUP_SOURCE="/userdata/hass/config/backups/"
 readonly STATE_DIR="/var/lib/homemate-nas-sync"
 readonly CURSOR_FILE="${STATE_DIR}/journal.cursor"
 
@@ -30,25 +29,13 @@ run_smb() {
 if ! run_smb "cd \"${NAS_ROOT}\"; ls" >/dev/null 2>&1; then
   run_smb "mkdir \"${NAS_ROOT}\"" >/dev/null
 fi
-for remote_dir in backups journals; do
-  if ! run_smb "cd \"${NAS_ROOT}/${remote_dir}\"; ls" >/dev/null 2>&1; then
-    run_smb "cd \"${NAS_ROOT}\"; mkdir \"${remote_dir}\"" >/dev/null
-  fi
-done
+if ! run_smb "cd \"${NAS_ROOT}/journals\"; ls" >/dev/null 2>&1; then
+  run_smb "cd \"${NAS_ROOT}\"; mkdir \"journals\"" >/dev/null
+fi
 
-# Home Assistant automatic backups are encrypted before they leave the board.
-for backup_path in "${BACKUP_SOURCE}"*.tar; do
-  [[ -f "${backup_path}" ]] || continue
-  backup_name="$(/usr/bin/basename "${backup_path}")"
-  if [[ "${backup_name}" == *'"'* || "${backup_name}" == *'\\'* ]]; then
-    echo "Unsafe backup filename: ${backup_name}" >&2
-    exit 1
-  fi
-  remote_backup="${NAS_ROOT}/backups/${backup_name}"
-  if ! run_smb "allinfo \"${remote_backup}\"" >/dev/null 2>&1; then
-    run_smb "put \"${backup_path}\" \"${remote_backup}\""
-  fi
-done
+# Backups are deliberately not handled here. Home Assistant must write them
+# directly to a remote backup location; staging archives under /userdata made
+# the small eMMC partition fill up and recursively enlarged later backups.
 
 # Export new journal entries since the last successful NAS upload. The cursor
 # advances only after the compressed log reaches the NAS, so a network failure

@@ -1,5 +1,5 @@
 [Unit]
-Description=Copy Home Assistant backups and incremental journal to CloudMate NAS
+Description=Export incremental system journal to CloudMate NAS
 After=network-online.target
 Wants=network-online.target
 

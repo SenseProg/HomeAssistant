@@ -1,5 +1,5 @@
 [Unit]
-Description=Hourly Home Assistant backup and journal synchronization to NAS
+Description=Hourly system journal export to CloudMate NAS
 
 [Timer]
 OnCalendar=hourly
