@@ -84,7 +84,9 @@ silently replace the other.
 1. Fetch and compare the live target immediately before editing.
 2. Edit the repository file.
 3. Validate YAML locally when possible.
-4. Create a timestamped backup on the board.
+4. Create a timestamped rollback copy according to the backup rules in
+   `references/platform.md`. Never leave it under `/userdata` or the HA
+   `backups/` directory.
 5. Upload to `<target>.new`, verify ownership and content, then atomically rename.
 6. Apply the smallest scope from the table below.
 7. Re-run `sync`, check the HA service and HTTP 200, then commit only intended

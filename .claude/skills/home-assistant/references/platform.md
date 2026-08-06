@@ -22,9 +22,42 @@
   the durable log/config path; do not silently raise the cap without checking
   free root space.
 
+## Backup meaning and location
+
+In this project, **backup** means a copy stored outside the MB35x8 board on the
+CloudMate QNAP NAS. The canonical destination is:
+
+- SMB share: `//192.168.50.25/HomeAssistant`
+- NAS folder: `MB35x8/backups`
+- Windows view: `\\CloudMate\HomeAssistant\MB35x8\backups`
+
+It does **not** mean a persistent archive under
+`/userdata/hass/config/backups`, `/userdata`, `/home/forlinx`, or any other
+board filesystem. Do not stage full HA `.tar`/`.tar.gz` archives on eMMC and
+then upload them: the 2.5 GiB `/userdata` partition cannot safely hold them.
+
+Before reporting a backup as successful, verify the remote file exists on the
+NAS and that its byte size matches the source/result. A local file may be
+deleted only after that verification. Never read or expose the archive
+contents, `.storage`, the recorder database, or credentials while verifying.
+
+Distinguish a **deployment rollback copy** from a Home Assistant backup. Before
+overwriting one small configuration or systemd file, prefer a timestamped copy
+on the NAS. If that is temporarily impossible, a short-lived copy under `/tmp`
+is acceptable only for the duration of the atomic deployment; remove it after
+validation. Never retain rollback copies in `/userdata`.
+
+Current state since 2026-08-06: HA automatic backups are set to `Never` and the
+local location `This system` is disabled. Existing encrypted backups and the
+older Smart Irrigation archives were verified and moved to
+`MB35x8/backups`; `/userdata/hass/config/backups` is empty. Re-enable automatic
+backups only after an NFS/SFTP remote backup location is configured and a test
+proves that the archive is written directly to NAS without consuming eMMC.
+
 ## Enabled supporting services
 
-- `homemate-nas-sync.timer`: hourly NAS synchronization.
+- `homemate-nas-sync.timer`: hourly incremental journal export to NAS. It does
+  not create, stage, or upload Home Assistant backup archives from the board.
 - `house-analyst.timer`: scheduled local analysis.
 - `zram-swap.service`: compressed swap.
 - `wyoming-vosk.service`: local speech-to-text when enabled/configured.
