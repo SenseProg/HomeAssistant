@@ -575,13 +575,13 @@ views:
   path: climate
   icon: mdi:home-thermometer-outline
   type: sections
-  max_columns: 4
-  dense_section_placement: true
+  max_columns: 2
+  dense_section_placement: false
   sections:
   - type: grid
     cards:
     - type: heading
-      heading: 1. Погода зараз · інтернет і наші показники
+      heading: Погода зараз · інтернет і наші показники
       icon: mdi:weather-partly-cloudy
       grid_options:
         columns: full
@@ -609,6 +609,21 @@ views:
         name: PRANA · зовнішня температура 1
       - entity: sensor.2_floor_outside_temperature_2
         name: PRANA · зовнішня температура 2
+  - type: grid
+    cards:
+    - type: heading
+      heading: Прогноз погоди з інтернету
+      icon: mdi:calendar-clock
+      grid_options:
+        columns: full
+    - type: weather-forecast
+      entity: weather.forecast_golovna
+      name: Щоденний прогноз · Met.no
+      show_current: false
+      show_forecast: true
+      forecast_type: daily
+      grid_options:
+        columns: full
     - type: markdown
       title: Порівняння показників
       grid_options:
@@ -626,22 +641,7 @@ views:
   - type: grid
     cards:
     - type: heading
-      heading: 2. Прогноз погоди з інтернету
-      icon: mdi:calendar-clock
-      grid_options:
-        columns: full
-    - type: weather-forecast
-      entity: weather.forecast_golovna
-      name: Щоденний прогноз · Met.no
-      show_current: false
-      show_forecast: true
-      forecast_type: daily
-      grid_options:
-        columns: full
-  - type: grid
-    cards:
-    - type: heading
-      heading: 3. Дім бабусі і дідуся
+      heading: Дім бабусі і дідуся · зараз
       icon: mdi:home-heart
       grid_options:
         columns: full
@@ -649,7 +649,7 @@ views:
       title: Wi-Fi датчик Tuya
       show_header_toggle: false
       grid_options:
-        columns: full
+        columns: 6
       entities:
       - entity: sensor.2i_poverkh_t_h_temperature
         name: Температура в будинку
@@ -657,8 +657,22 @@ views:
         name: Вологість у будинку
       - entity: sensor.2i_poverkh_t_h_battery_state
         name: Стан батареї
+    - type: markdown
+      grid_options:
+        columns: 6
+      content: >-
+        Це окремий **Wi-Fi Tuya-датчик у Домі бабусі і дідуся**. Зовнішній
+        SONOFF «Темп. Вулиця. Балкон.» фізично встановлений на дворі й
+        відображається у блоці «Погода зараз».
+  - type: grid
+    cards:
+    - type: heading
+      heading: Дім бабусі і дідуся · історія за 24 години
+      icon: mdi:chart-line
+      grid_options:
+        columns: full
     - type: custom:mini-graph-card
-      name: Температура і вологість · 24 години
+      name: Температура і вологість
       hours_to_show: 24
       points_per_hour: 2
       line_width: 3
@@ -669,6 +683,7 @@ views:
         points: false
       grid_options:
         columns: full
+        rows: 4
       entities:
       - entity: sensor.2i_poverkh_t_h_temperature
         name: Температура
@@ -677,23 +692,18 @@ views:
         name: Вологість
         color: '#039be5'
         y_axis: secondary
-    - type: markdown
-      grid_options:
-        columns: full
-      content: >-
-        Це окремий **Wi-Fi Tuya-датчик у Домі бабусі і дідуся**. Зовнішній
-        SONOFF «Темп. Вулиця. Балкон.» фізично встановлений на дворі й
-        відображається у першому блоці сторінки.
   - type: grid
     cards:
     - type: heading
-      heading: 4. Будинок середній · температури по кімнатах
+      heading: Будинок середній · основні приміщення
       icon: mdi:home-thermometer
       grid_options:
         columns: full
     - type: entities
       title: 2 поверх · датчик 1
       show_header_toggle: false
+      grid_options:
+        columns: 6
       entities:
       - entity: sensor.sonoff_a4800819f3_temperature
         name: Температура
@@ -704,6 +714,8 @@ views:
     - type: entities
       title: 2 поверх · датчик 2
       show_header_toggle: false
+      grid_options:
+        columns: 6
       entities:
       - entity: sensor.sonoff_a48005e8ed_temperature
         name: Температура
@@ -714,6 +726,8 @@ views:
     - type: entities
       title: Спальня батьків · PRANA
       show_header_toggle: false
+      grid_options:
+        columns: 6
       entities:
       - entity: sensor.2_floor_inside_temperature
         name: Температура в кімнаті
@@ -724,6 +738,8 @@ views:
     - type: entities
       title: Кухня · тепла підлога
       show_header_toggle: false
+      grid_options:
+        columns: 6
       entities:
       - entity: sensor.terneo_2_floor_temperature
         name: Температура підлоги
@@ -731,21 +747,34 @@ views:
         name: Температура повітря
       - entity: sensor.terneo_2_target_temperature
         name: Задана температура
+  - type: grid
+    cards:
+    - type: heading
+      heading: Будинок середній · інші кімнати
+      icon: mdi:home-account
+      grid_options:
+        columns: full
     - type: entities
       title: Кімната хлопців
       show_header_toggle: false
+      grid_options:
+        columns: 6
       entities:
       - entity: sensor.siku_blauberg_fan_192_168_50_27_humidity
         name: Вологість · Blauberg
     - type: entities
       title: Кімната Олесі
       show_header_toggle: false
+      grid_options:
+        columns: 6
       entities:
       - entity: sensor.siku_blauberg_fan_192_168_50_123_humidity
         name: Вологість · Blauberg
     - type: entities
       title: Гостьова
       show_header_toggle: false
+      grid_options:
+        columns: 6
       entities:
       - entity: sensor.sonoff_a48001c18f_temperature
         name: Температура
@@ -754,14 +783,20 @@ views:
       - entity: sensor.sonoff_a48001c18f_battery
         name: Батарея
     - type: markdown
-      title: Де ще немає температури
+      title: Датчики, яких ще немає
+      grid_options:
+        columns: 6
+      content: >-
+        У кімнатах хлопців та Олесі Blauberg передає лише вологість. У
+        **великому будинку** температурні датчики ще не встановлені. Відсутні
+        показники не підміняються даними з інших кімнат.
+  - type: grid
+    cards:
+    - type: heading
+      heading: Будинок середній · температури за 24 години
+      icon: mdi:chart-line
       grid_options:
         columns: full
-      content: >-
-        У кімнатах хлопців та Олесі рекуператори Blauberg зараз передають
-        вологість, але не мають окремого сенсора температури. Тут показано лише
-        реальні доступні параметри — відсутні температури не підміняються
-        іншими кімнатами.
     - type: custom:mini-graph-card
       name: Температури · останні 24 години
       hours_to_show: 24
@@ -773,32 +808,52 @@ views:
         points: false
       grid_options:
         columns: full
+        rows: 4
       entities:
       - entity: sensor.sonoff_a4800819f3_temperature
         name: 2 поверх · датчик 1
+        color: '#43a047'
       - entity: sensor.sonoff_a48005e8ed_temperature
         name: 2 поверх · датчик 2
+        color: '#1e88e5'
       - entity: sensor.2_floor_inside_temperature
         name: Спальня батьків
+        color: '#fb8c00'
       - entity: sensor.terneo_2_air_temperature
         name: Кухня · повітря
+        color: '#8e24aa'
       - entity: sensor.sonoff_a48001c18f_temperature
         name: Гостьова
+        color: '#607d8b'
   - type: grid
     cards:
     - type: heading
-      heading: 5. Будинок великий
-      icon: mdi:home-plus-outline
+      heading: Двір · температури за 24 години
+      icon: mdi:thermometer-lines
       grid_options:
         columns: full
-    - type: markdown
+    - type: custom:mini-graph-card
+      name: SONOFF і зовнішні датчики PRANA
+      hours_to_show: 24
+      points_per_hour: 2
+      line_width: 3
+      animate: true
+      show:
+        labels: true
+        points: false
       grid_options:
         columns: full
-      content: |
-        ## Температурні датчики ще не встановлені
-
-        Після встановлення кожну кімнату буде додано окремою карткою з
-        поточними значеннями та графіком за 24 години.
+        rows: 4
+      entities:
+      - entity: sensor.sonoff_a48005a66a_temperature
+        name: Двір · SONOFF
+        color: '#43a047'
+      - entity: sensor.2_floor_outside_temperature
+        name: PRANA · зовні 1
+        color: '#1e88e5'
+      - entity: sensor.2_floor_outside_temperature_2
+        name: PRANA · зовні 2
+        color: '#fb8c00'
 - title: Інвертор Deye
   path: deye-inverter
   icon: mdi:solar-power-variant
