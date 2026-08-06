@@ -34,28 +34,26 @@ storage person `person.babusia_sima` uses
 
 ## NAS backup and journal archive
 
-The NAS is `CloudMate` (`192.168.50.25`), share `HomeAssistant`. The dedicated
-account `homeassistant-backup` has read/write permission only to that share and
-only the Microsoft Networking application privilege.
-Credentials are stored only on the board in `/etc/samba/credentials/homeassistant-backup`
-with mode `600`; they must never be committed.
+The NAS is `CloudMate` (`192.168.50.25`), share `HomeAssistant`. QNAP exports
+`/HomeAssistant/MB35x8/backups` over NFS read/write only to the board address
+`192.168.50.141`. `userdata-hass-config-backups.mount` mounts that exact folder
+at `/userdata/hass/config/backups`; therefore HA's UI label `This system` is a
+direct NAS target and no archive is staged on eMMC. The retry timer is
+`homemate-ha-backups-mount.timer`.
 
-The Forlinx 4.19 kernel lacks both CIFS and autofs support. NAS transfer therefore
-uses `/usr/bin/smbclient` in userspace with the root-only credential file
-`/etc/samba/credentials/homeassistant-backup`; no NAS filesystem is mounted.
-
-`homemate-nas-sync.timer` runs hourly. It uploads any new encrypted HA backup
-archives and journal entries since the last successful transfer. The journal
-cursor advances only after the compressed log reaches the NAS. NAS retention
-and off-site synchronization are configured on CloudMate; the board never
-deletes NAS data automatically.
+`homemate-nas-sync.timer` now exports only incremental journald data. It does
+not create, stage, or upload HA backup archives. The journal cursor advances
+only after the compressed log reaches the NAS. NAS credentials and backup
+encryption material must never be committed.
 
 ## Recovery layers
 
 1. Git contains declarative YAML, systemd units, and operational scripts.
-2. Home Assistant creates a full encrypted backup every day and keeps three on
-   the board.
-3. The NAS receives those encrypted archives plus incremental system journals.
+2. Home Assistant creates an encrypted settings-only backup every day directly
+   on the NAS and retains seven copies; recorder history and NAS media are
+   excluded.
+3. The NAS receives those encrypted archives plus incremental system journals;
+   no persistent backup archive is stored on the board.
 4. CloudMate must replicate `HomeAssistant/MB35x8` off-site to complete 3-2-1.
 
 Keep the Home Assistant emergency kit separately from both the board and NAS.
@@ -71,17 +69,20 @@ CloudMate exports `/Фотоальбом` over NFSv4 only to the board address
 read-only export permission remains the write-protection boundary while keeping
 the existing NAS file ownership readable by the Home Assistant process.
 
-The board mounts the export at `/userdata/hass/config/media/foto` with
-`userdata-hass-config-media-foto.mount`. The unit uses `ro,soft,timeo=100`, so a
-NAS outage cannot leave Home Assistant indefinitely blocked on a hard NFS
-mount. Do not add a duplicate entry to `/etc/fstab`.
+The board mounts the export outside the HA configuration tree at
+`/mnt/homemate_media/foto` with `mnt-homemate_media-foto.mount`.
+`/userdata/hass/config/media/foto` is only a symbolic link to that mount. This
+keeps the media visible in HA while preventing Core backups from recursively
+archiving the NAS photo library. The unit uses `ro,soft,timeo=100`; do not add a
+duplicate entry to `/etc/fstab` and do not mount NAS media directly under the
+configuration tree.
 
 Verify the path and mount with:
 
 ```sh
 showmount -e 192.168.50.25
-findmnt -T /userdata/hass/config/media/foto
-systemctl is-active userdata-hass-config-media-foto.mount
+findmnt -T /mnt/homemate_media/foto
+systemctl is-active mnt-homemate_media-foto.mount
 ```
 
 Home Assistant exposes the mounted tree automatically as

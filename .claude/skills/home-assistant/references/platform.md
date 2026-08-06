@@ -17,7 +17,9 @@
 - `/userdata` contains HA config and recorder data.
 - Active swap is `/dev/zram0`, 1 GiB compressed RAM swap. The old 4 GiB eMMC
   swapfile was removed.
-- Use `du -x` on `/userdata`; `media/foto` and `media/video` may be NAS mounts.
+- Use `du -x` on `/userdata`. The photo library is mounted outside the HA
+  configuration tree at `/mnt/homemate_media/foto`; `config/media/foto` is a
+  symlink to it so backups do not traverse NAS media.
 - Journald is currently capped by `SystemMaxUse=50M`. NAS synchronization is
   the durable log/config path; do not silently raise the cap without checking
   free root space.
@@ -47,21 +49,34 @@ on the NAS. If that is temporarily impossible, a short-lived copy under `/tmp`
 is acceptable only for the duration of the atomic deployment; remove it after
 validation. Never retain rollback copies in `/userdata`.
 
-Current state since 2026-08-06: HA automatic backups are set to `Never` and the
-local location `This system` is disabled. Existing encrypted backups and the
-older Smart Irrigation archives were verified and moved to
-`MB35x8/backups`; `/userdata/hass/config/backups` is empty. Re-enable automatic
-backups only after an NFS/SFTP remote backup location is configured and a test
-proves that the archive is written directly to NAS without consuming eMMC.
+Current state since 2026-08-06: QNAP exports
+`/HomeAssistant/MB35x8/backups` over NFS only to `192.168.50.141`. The board
+mounts it directly at `/userdata/hass/config/backups` with
+`userdata-hass-config-backups.mount`; `homemate-ha-backups-mount.timer` retries
+the mount every five minutes. The underlying local directory is root-owned and
+mode `0555`, so HA fails closed instead of writing backup archives to eMMC when
+NAS is unavailable. In the HA UI, `This system` therefore means this NAS mount,
+not board storage.
+
+Automatic backups run daily at HA's system-optimal time (currently about 04:46),
+retain seven copies, include HA settings, exclude recorder history, and write
+directly to NAS. The 2026-08-06 acceptance backup was 49,960,960 bytes; `/userdata`
+stayed at 54% used and HA held no photo-album files open. Never move the photo
+mount back under the configuration tree as a real mount: Core backups archive
+the whole config tree and would recursively include the NAS photo library.
 
 ## Enabled supporting services
 
 - `homemate-nas-sync.timer`: hourly incremental journal export to NAS. It does
   not create, stage, or upload Home Assistant backup archives from the board.
+- `userdata-hass-config-backups.mount` plus
+  `homemate-ha-backups-mount.timer`: direct NAS-only HA backup destination.
 - `house-analyst.timer`: scheduled local analysis.
 - `zram-swap.service`: compressed swap.
 - `wyoming-vosk.service`: local speech-to-text when enabled/configured.
-- NFS mount units for photo and video media.
+- `mnt-homemate_media-foto.mount`: read-only photo library outside the backup
+  tree. The video NFS unit remains disabled until the QNAP video share is
+  explicitly exported read/write to the board.
 
 ## Architecture limits
 

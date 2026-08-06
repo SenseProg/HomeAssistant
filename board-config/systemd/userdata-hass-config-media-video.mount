@@ -5,7 +5,7 @@ Wants=network-online.target
 
 [Mount]
 # Confirm this exact path with showmount -e after enabling the QNAP NFS ACL.
-What=192.168.50.25:/Відєоспостереження
+What=192.168.50.25:/Відеоспостереження
 Where=/userdata/hass/config/media/video
 Type=nfs
 Options=rw,soft,timeo=100,retrans=3,noatime,nolock,_netdev

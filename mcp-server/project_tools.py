@@ -32,6 +32,9 @@ SYNC_TARGETS: dict[str, str] = {
     "board-config/systemd/zram-swap.service": "/etc/systemd/system/zram-swap.service",
     "board-config/systemd/homemate-nas-sync.service": "/etc/systemd/system/homemate-nas-sync.service",
     "board-config/systemd/homemate-nas-sync.timer": "/etc/systemd/system/homemate-nas-sync.timer",
+    "board-config/systemd/userdata-hass-config-backups.mount": "/etc/systemd/system/userdata-hass-config-backups.mount",
+    "board-config/systemd/homemate-ha-backups-mount.timer": "/etc/systemd/system/homemate-ha-backups-mount.timer",
+    "board-config/systemd/mnt-homemate_media-foto.mount": "/etc/systemd/system/mnt-homemate_media-foto.mount",
     "board-config/systemd/house-analyst.service": "/etc/systemd/system/house-analyst.service",
     "board-config/systemd/house-analyst.timer": "/etc/systemd/system/house-analyst.timer",
     "board-config/systemd/wyoming-vosk.service": "/etc/systemd/system/wyoming-vosk.service",
@@ -168,6 +171,9 @@ printf 'root='; df -P / 2>/dev/null | tail -n1
 printf 'userdata='; df -P /userdata 2>/dev/null | tail -n1
 printf 'swap='; swapon --show --noheadings 2>/dev/null | tr '\n' ';'; printf '\n'
 printf 'nas_timer='; systemctl is-enabled homemate-nas-sync.timer 2>/dev/null || true
+printf 'ha_backup_timer='; systemctl is-enabled homemate-ha-backups-mount.timer 2>/dev/null || true
+printf 'ha_backup_mount='; systemctl is-active userdata-hass-config-backups.mount 2>/dev/null || true
+printf 'photo_mount='; systemctl is-active mnt-homemate_media-foto.mount 2>/dev/null || true
 printf 'analyst_timer='; systemctl is-enabled house-analyst.timer 2>/dev/null || true
 """.strip()
     result = _ssh(command, timeout=30)

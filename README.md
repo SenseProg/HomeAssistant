@@ -65,8 +65,9 @@ RAM і не створює постійних записів на eMMC. Стар
 4 ГіБ видалено.
 
 Операційний план віддаленого доступу, NAS-копій, журналів і міграції платформи
-описаний у `OPERATIONS.md`. Погодинний NAS-sync реалізований unit/timer-файлами
-`homemate-nas-sync.*`; секрети NAS у репозиторій не потрапляють.
+описаний у `OPERATIONS.md`. Home Assistant пише backup безпосередньо в NFS-папку
+NAS через `userdata-hass-config-backups.mount`, а `homemate-nas-sync.*` погодинно
+експортує лише journald; секрети NAS у репозиторій не потрапляють.
 
 Контур поливу побудований у два шари: Irrigation Unlimited керує насосом,
 клапанами й чергою зон, а Smart Irrigation розраховує потребу у воді за

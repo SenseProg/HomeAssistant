@@ -1,0 +1,11 @@
+[Unit]
+Description=Retry CloudMate Home Assistant backup mount
+
+[Timer]
+OnBootSec=30s
+OnUnitInactiveSec=5min
+Unit=userdata-hass-config-backups.mount
+AccuracySec=30s
+
+[Install]
+WantedBy=timers.target
