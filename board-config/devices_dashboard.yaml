@@ -657,16 +657,26 @@ views:
         name: Вологість у будинку
       - entity: sensor.2i_poverkh_t_h_battery_state
         name: Стан батареї
-    - type: history-graph
-      title: Температура і вологість · 24 години
+    - type: custom:mini-graph-card
+      name: Температура і вологість · 24 години
       hours_to_show: 24
+      points_per_hour: 2
+      line_width: 3
+      animate: true
+      show:
+        labels: true
+        labels_secondary: true
+        points: false
       grid_options:
         columns: full
       entities:
       - entity: sensor.2i_poverkh_t_h_temperature
         name: Температура
+        color: '#ef6c00'
       - entity: sensor.2i_poverkh_t_h_humidity
         name: Вологість
+        color: '#039be5'
+        y_axis: secondary
     - type: markdown
       grid_options:
         columns: full
@@ -752,9 +762,15 @@ views:
         вологість, але не мають окремого сенсора температури. Тут показано лише
         реальні доступні параметри — відсутні температури не підміняються
         іншими кімнатами.
-    - type: history-graph
-      title: Температури · останні 24 години
+    - type: custom:mini-graph-card
+      name: Температури · останні 24 години
       hours_to_show: 24
+      points_per_hour: 2
+      line_width: 3
+      animate: true
+      show:
+        labels: true
+        points: false
       grid_options:
         columns: full
       entities:
@@ -969,9 +985,15 @@ views:
         name: Віддано з акумулятора
       - entity: sensor.inverter_today_losses
         name: Втрати системи
-    - type: history-graph
-      title: Потоки енергії за 24 години
+    - type: custom:mini-graph-card
+      name: Потоки енергії за 24 години
       hours_to_show: 24
+      points_per_hour: 4
+      line_width: 3
+      animate: true
+      show:
+        labels: true
+        points: false
       grid_options:
         columns: full
       entities:
@@ -1111,9 +1133,22 @@ views:
       entities:
       - entity: sensor.boiler_spozhito
         name: Бойлер
-    - type: history-graph
-      title: Потужність за 24 години
+    - type: custom:mini-graph-card
+      name: Потужність бойлера · 24 години
       hours_to_show: 24
+      points_per_hour: 4
+      line_width: 3
+      animate: true
+      show:
+        labels: true
+        points: false
+      color_thresholds:
+      - value: 0
+        color: '#43a047'
+      - value: 1000
+        color: '#fb8c00'
+      - value: 2200
+        color: '#e53935'
       grid_options:
         columns: full
       entities:
@@ -1428,9 +1463,15 @@ views:
       heading: Тривалість роботи сьогодні
       grid_options:
         columns: full
-    - type: history-graph
-      title: Насос і клапани - години роботи сьогодні
+    - type: custom:mini-graph-card
+      name: Насос і клапани · години роботи сьогодні
       hours_to_show: 24
+      points_per_hour: 4
+      line_width: 3
+      animate: true
+      show:
+        labels: true
+        points: false
       grid_options:
         columns: full
       entities:
@@ -1702,9 +1743,22 @@ views:
       entities:
       - entity: sensor.nasos_polivu_spozhito
         name: Насос
-    - type: history-graph
-      title: Потужність за 24 години
+    - type: custom:mini-graph-card
+      name: Потужність насоса · 24 години
       hours_to_show: 24
+      points_per_hour: 4
+      line_width: 3
+      animate: true
+      show:
+        labels: true
+        points: false
+      color_thresholds:
+      - value: 0
+        color: '#43a047'
+      - value: 900
+        color: '#1e88e5'
+      - value: 1300
+        color: '#e53935'
       grid_options:
         columns: full
       entities:
@@ -1825,9 +1879,22 @@ views:
       icon: mdi:chart-areaspline
       grid_options:
         columns: full
-    - type: history-graph
-      title: Потужність за 24 години
+    - type: custom:mini-graph-card
+      name: Потужність зарядної станції · 24 години
       hours_to_show: 24
+      points_per_hour: 4
+      line_width: 3
+      animate: true
+      show:
+        labels: true
+        points: false
+      color_thresholds:
+      - value: 0
+        color: '#43a047'
+      - value: 3
+        color: '#1e88e5'
+      - value: 7
+        color: '#e53935'
       grid_options:
         columns: full
       entities:
@@ -2026,9 +2093,15 @@ views:
         name: Температура зовні · датчик 1
       - entity: sensor.2_floor_outside_temperature_2
         name: Температура зовні · датчик 2
-    - type: history-graph
-      title: Температури · 24 години
+    - type: custom:mini-graph-card
+      name: Температури PRANA · 24 години
       hours_to_show: 24
+      points_per_hour: 2
+      line_width: 3
+      animate: true
+      show:
+        labels: true
+        points: false
       grid_options:
         columns: full
       entities:

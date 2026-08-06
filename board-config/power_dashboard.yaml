@@ -55,9 +55,16 @@ views:
       name: Фаза B - напруга
     - entity: sensor.energy_meter_phase_c_voltage_2
       name: Фаза C - напруга
-  - type: history-graph
-    title: Потужність за останню годину (сирі дані)
+  - type: custom:mini-graph-card
+    name: Потужність за останню годину
     hours_to_show: 1
+    points_per_hour: 60
+    update_interval: 10
+    line_width: 3
+    animate: true
+    show:
+      labels: true
+      points: false
     entities:
     - entity: sensor.zagalne_navantazhennia
       name: Разом
@@ -75,15 +82,29 @@ views:
   path: last-3h
   icon: mdi:clock-time-three-outline
   cards:
-  - type: history-graph
-    title: Загальна потужність за 3 години (сирі дані)
+  - type: custom:mini-graph-card
+    name: Загальна потужність за 3 години
     hours_to_show: 3
+    points_per_hour: 20
+    update_interval: 10
+    line_width: 3
+    animate: true
+    show:
+      labels: true
+      points: false
     entities:
     - entity: sensor.zagalne_navantazhennia
       name: Разом
-  - type: history-graph
-    title: Потужність фаз за 3 години
+  - type: custom:mini-graph-card
+    name: Потужність фаз за 3 години
     hours_to_show: 3
+    points_per_hour: 20
+    update_interval: 10
+    line_width: 3
+    animate: true
+    show:
+      labels: true
+      points: false
     entities:
     - entity: sensor.energy_meter_phase_a_power_2
       name: Фаза A
@@ -91,9 +112,16 @@ views:
       name: Фаза B
     - entity: sensor.energy_meter_phase_c_power_2
       name: Фаза C
-  - type: history-graph
-    title: Струм за 3 години
+  - type: custom:mini-graph-card
+    name: Струм за 3 години
     hours_to_show: 3
+    points_per_hour: 20
+    update_interval: 10
+    line_width: 3
+    animate: true
+    show:
+      labels: true
+      points: false
     entities:
     - entity: sensor.zagalnii_strum
       name: Разом
@@ -103,9 +131,16 @@ views:
       name: Фаза B
     - entity: sensor.energy_meter_phase_c_current_2
       name: Фаза C
-  - type: history-graph
-    title: Напруга за 3 години
+  - type: custom:mini-graph-card
+    name: Напруга за 3 години
     hours_to_show: 3
+    points_per_hour: 20
+    update_interval: 10
+    line_width: 3
+    animate: true
+    show:
+      labels: true
+      points: false
     entities:
     - entity: sensor.energy_meter_phase_a_voltage_2
       name: Фаза A
@@ -465,9 +500,15 @@ views:
         name: Вартість спожитого (наростаюча)
       - entity: sensor.inverter_total_energy_import
         name: Імпорт із мережі (лічильник інвертора)
-    - type: history-graph
-      title: Перемикання тарифу за добу
+    - type: custom:mini-graph-card
+      name: Перемикання тарифу за добу
       hours_to_show: 24
+      points_per_hour: 4
+      line_width: 3
+      animate: true
+      show:
+        labels: true
+        points: false
       grid_options:
         columns: full
       entities:
