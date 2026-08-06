@@ -571,6 +571,213 @@ views:
         {% set motion = states('binary_sensor.sonoff_a48001bcc7') %}
         {% set b = states('sensor.sonoff_a48001bcc7_battery') %}
         - **Датчик руху** — {% if motion == 'on' %}🟠 виявлено рух · батарея {{ b }}%{% elif motion == 'off' %}🟢 руху немає · батарея {{ b }}%{% else %}🔴 недоступний{% endif %}
+- title: Клімат
+  path: climate
+  icon: mdi:home-thermometer-outline
+  type: sections
+  max_columns: 4
+  dense_section_placement: true
+  sections:
+  - type: grid
+    cards:
+    - type: heading
+      heading: 1. Погода зараз · інтернет і наші показники
+      icon: mdi:weather-partly-cloudy
+      grid_options:
+        columns: full
+    - type: weather-forecast
+      entity: weather.forecast_golovna
+      name: Погода з інтернету · Met.no
+      show_current: true
+      show_forecast: false
+      grid_options:
+        columns: 6
+    - type: entities
+      title: Двір біля Дому бабусі і дідуся
+      show_header_toggle: false
+      grid_options:
+        columns: 6
+      entities:
+      - entity: sensor.sonoff_a48005a66a_temperature
+        name: Температура на дворі
+      - entity: sensor.sonoff_a48005a66a_humidity
+        name: Вологість на дворі
+      - entity: sensor.sonoff_a48005a66a_battery
+        name: Батарея датчика
+    - type: markdown
+      title: Порівняння показників
+      grid_options:
+        columns: full
+      content: |
+        {% set online = states('weather.forecast_golovna') %}
+        {% set local_t = states('sensor.sonoff_a48005a66a_temperature') %}
+        {% set local_h = states('sensor.sonoff_a48005a66a_humidity') %}
+        {% set bad = ['unknown', 'unavailable', 'none', ''] %}
+        **Інтернет:** {{ state_attr('weather.forecast_golovna', 'temperature') | default('немає даних', true) }} °C ·
+        {{ state_attr('weather.forecast_golovna', 'humidity') | default('немає даних', true) }}% · {{ online }}
+
+        **Наш датчик на дворі (SONOFF через Zigbee):**
+        {% if local_t in bad %}🔴 немає свіжих даних{% else %}🟢 {{ local_t }} °C · {{ local_h }}%{% endif %}
+  - type: grid
+    cards:
+    - type: heading
+      heading: 2. Прогноз погоди з інтернету
+      icon: mdi:calendar-clock
+      grid_options:
+        columns: full
+    - type: weather-forecast
+      entity: weather.forecast_golovna
+      name: Щоденний прогноз · Met.no
+      show_current: false
+      show_forecast: true
+      forecast_type: daily
+      grid_options:
+        columns: full
+  - type: grid
+    cards:
+    - type: heading
+      heading: 3. Дім бабусі і дідуся
+      icon: mdi:home-heart
+      grid_options:
+        columns: full
+    - type: entities
+      title: Wi-Fi датчик Tuya
+      show_header_toggle: false
+      grid_options:
+        columns: full
+      entities:
+      - entity: sensor.2i_poverkh_t_h_temperature
+        name: Температура в будинку
+      - entity: sensor.2i_poverkh_t_h_humidity
+        name: Вологість у будинку
+      - entity: sensor.2i_poverkh_t_h_battery_state
+        name: Стан батареї
+    - type: history-graph
+      title: Температура і вологість · 24 години
+      hours_to_show: 24
+      grid_options:
+        columns: full
+      entities:
+      - entity: sensor.2i_poverkh_t_h_temperature
+        name: Температура
+      - entity: sensor.2i_poverkh_t_h_humidity
+        name: Вологість
+    - type: markdown
+      grid_options:
+        columns: full
+      content: >-
+        Це окремий **Wi-Fi Tuya-датчик у Домі бабусі і дідуся**. Зовнішній
+        SONOFF «Темп. Вулиця. Балкон.» фізично встановлений на дворі й
+        відображається у першому блоці сторінки.
+  - type: grid
+    cards:
+    - type: heading
+      heading: 4. Будинок середній · температури по кімнатах
+      icon: mdi:home-thermometer
+      grid_options:
+        columns: full
+    - type: entities
+      title: 2 поверх · датчик 1
+      show_header_toggle: false
+      entities:
+      - entity: sensor.sonoff_a4800819f3_temperature
+        name: Температура
+      - entity: sensor.sonoff_a4800819f3_humidity
+        name: Вологість
+      - entity: sensor.sonoff_a4800819f3_battery
+        name: Батарея
+    - type: entities
+      title: 2 поверх · датчик 2
+      show_header_toggle: false
+      entities:
+      - entity: sensor.sonoff_a48005e8ed_temperature
+        name: Температура
+      - entity: sensor.sonoff_a48005e8ed_humidity
+        name: Вологість
+      - entity: sensor.sonoff_a48005e8ed_battery
+        name: Батарея
+    - type: entities
+      title: Спальня батьків · PRANA
+      show_header_toggle: false
+      entities:
+      - entity: sensor.2_floor_inside_temperature
+        name: Температура в кімнаті
+      - entity: sensor.2_floor_humidity
+        name: Вологість
+      - entity: sensor.2_floor_carbon_dioxide
+        name: Вуглекислий газ (CO₂)
+    - type: entities
+      title: Кухня · тепла підлога
+      show_header_toggle: false
+      entities:
+      - entity: sensor.terneo_2_floor_temperature
+        name: Температура підлоги
+      - entity: sensor.terneo_2_air_temperature
+        name: Температура повітря
+      - entity: sensor.terneo_2_target_temperature
+        name: Задана температура
+    - type: entities
+      title: Кімната хлопців
+      show_header_toggle: false
+      entities:
+      - entity: sensor.siku_blauberg_fan_192_168_50_27_humidity
+        name: Вологість · Blauberg
+    - type: entities
+      title: Кімната Олесі
+      show_header_toggle: false
+      entities:
+      - entity: sensor.siku_blauberg_fan_192_168_50_123_humidity
+        name: Вологість · Blauberg
+    - type: entities
+      title: Гостьова
+      show_header_toggle: false
+      entities:
+      - entity: sensor.sonoff_a48001c18f_temperature
+        name: Температура
+      - entity: sensor.sonoff_a48001c18f_humidity
+        name: Вологість
+      - entity: sensor.sonoff_a48001c18f_battery
+        name: Батарея
+    - type: markdown
+      title: Де ще немає температури
+      grid_options:
+        columns: full
+      content: >-
+        У кімнатах хлопців та Олесі рекуператори Blauberg зараз передають
+        вологість, але не мають окремого сенсора температури. Тут показано лише
+        реальні доступні параметри — відсутні температури не підміняються
+        іншими кімнатами.
+    - type: history-graph
+      title: Температури · останні 24 години
+      hours_to_show: 24
+      grid_options:
+        columns: full
+      entities:
+      - entity: sensor.sonoff_a4800819f3_temperature
+        name: 2 поверх · датчик 1
+      - entity: sensor.sonoff_a48005e8ed_temperature
+        name: 2 поверх · датчик 2
+      - entity: sensor.2_floor_inside_temperature
+        name: Спальня батьків
+      - entity: sensor.terneo_2_air_temperature
+        name: Кухня · повітря
+      - entity: sensor.sonoff_a48001c18f_temperature
+        name: Гостьова
+  - type: grid
+    cards:
+    - type: heading
+      heading: 5. Будинок великий
+      icon: mdi:home-plus-outline
+      grid_options:
+        columns: full
+    - type: markdown
+      grid_options:
+        columns: full
+      content: |
+        ## Температурні датчики ще не встановлені
+
+        Після встановлення кожну кімнату буде додано окремою карткою з
+        поточними значеннями та графіком за 24 години.
 - title: Інвертор Deye
   path: deye-inverter
   icon: mdi:solar-power-variant
@@ -1089,6 +1296,10 @@ views:
     cards:
     - type: markdown
       content: '![Останній рух](/local/motion/latest.jpg)'
+      grid_options:
+        columns: full
+    - type: markdown
+      content: '[▶ Відеоролики руху на NAS](/media-browser/browser/app%2Cmedia-source%3A%2F%2Fmedia_source/%2Cmedia-source%3A%2F%2Fmedia_source%2Flocal%2Fvideo/%2Cmedia-source%3A%2F%2Fmedia_source%2Flocal%2Fvideo%2Fha-motion)'
       grid_options:
         columns: full
 - title: Автополив
