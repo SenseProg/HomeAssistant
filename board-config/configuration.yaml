@@ -421,6 +421,34 @@ template:
           {{ has_value('sensor.nasos_za_tarifom_den')
              and has_value('sensor.nasos_za_tarifom_nich') }}
 
+      # Різниця між усім, що куплено з мережі, і сумою п'яти пристроїв із
+      # власними лічильниками. Це світло, розетки, побутова техніка, насоси
+      # опалення, сама плата - усе, що ніхто окремо не міряє. Без цього рядка
+      # графік по пристроях створює хибне враження, ніби вони вичерпують увесь
+      # рахунок.
+      #
+      # Може ненадовго піти в мінус: пристрої частину часу живляться від
+      # батареї інвертора, а ця гілка рахує тільки куплені з мережі кіловати.
+      - name: "Витрати - інше без лічильника"
+        unique_id: cost_device_other
+        unit_of_measurement: "UAH"
+        device_class: monetary
+        state_class: total
+        state: >
+          {{ ((states('sensor.vitrati_na_merezhu_razom') | float(0))
+            - (states('sensor.vitrati_boiler') | float(0))
+            - (states('sensor.vitrati_zariadka_avto') | float(0))
+            - (states('sensor.vitrati_tepla_pidloga_1') | float(0))
+            - (states('sensor.vitrati_tepla_pidloga_2') | float(0))
+            - (states('sensor.vitrati_nasos_polivu') | float(0))) | round(2) }}
+        availability: >
+          {{ has_value('sensor.vitrati_na_merezhu_razom')
+             and has_value('sensor.vitrati_boiler')
+             and has_value('sensor.vitrati_zariadka_avto')
+             and has_value('sensor.vitrati_tepla_pidloga_1')
+             and has_value('sensor.vitrati_tepla_pidloga_2')
+             and has_value('sensor.vitrati_nasos_polivu') }}
+
       - name: "Загальне навантаження"
         unique_id: total_load_power
         unit_of_measurement: "kW"
@@ -514,7 +542,9 @@ template:
 
 # --- Recorder: keep detailed history longer for analysis (added 2026-08-02) ---
 recorder:
-  purge_keep_days: 30
+  # 30 days of 5-second inverter polling is what pushed the DB past 800 MB
+  # on a 2.5 GB partition. 14 still covers a fortnight of history.
+  purge_keep_days: 14
   # Reduce SQLite/eMMC write frequency while keeping adequate history resolution.
   commit_interval: 30
   auto_purge: true
@@ -532,6 +562,51 @@ recorder:
       - sensor.tenda_ap_security
       - sensor.tenda_repeater_status
       - sensor.tenda_repeater_clients
+      # STOP-RECORDER-BLOAT (2026-08-08): the Deye reports 203 entities every
+      # 5 s. These per-phase voltages and currents are referenced by no
+      # dashboard, template or automation - they were simply filling the disk.
+      # The ones the Інвертор tab and Energy dashboard do use are NOT here.
+      - number.inverter_battery_generator_charging_current
+      - number.inverter_battery_generator_charging_start_voltage
+      - number.inverter_battery_grid_charging_current
+      - number.inverter_battery_grid_charging_start_voltage
+      - number.inverter_battery_low_voltage
+      - number.inverter_battery_max_charging_current
+      - number.inverter_battery_max_discharging_current
+      - number.inverter_battery_restart_voltage
+      - number.inverter_battery_shutdown_voltage
+      - number.inverter_grid_voltage_protection_high
+      - number.inverter_grid_voltage_protection_low
+      - number.inverter_program_1_voltage
+      - number.inverter_program_2_voltage
+      - number.inverter_program_3_voltage
+      - number.inverter_program_4_voltage
+      - number.inverter_program_5_voltage
+      - number.inverter_program_6_voltage
+      - number.inverter_smartload_off_voltage
+      - number.inverter_smartload_on_voltage
+      - select.inverter_grid_voltage
+      - sensor.inverter_external_ct1_current
+      - sensor.inverter_external_ct2_current
+      - sensor.inverter_external_ct3_current
+      - sensor.inverter_generator_l1_voltage
+      - sensor.inverter_generator_l2_voltage
+      - sensor.inverter_generator_l3_voltage
+      - sensor.inverter_internal_ct1_current
+      - sensor.inverter_internal_ct2_current
+      - sensor.inverter_internal_ct3_current
+      - sensor.inverter_load_l1_voltage
+      - sensor.inverter_load_l2_voltage
+      - sensor.inverter_load_l3_voltage
+      - sensor.inverter_output_l1_current
+      - sensor.inverter_output_l1_voltage
+      - sensor.inverter_output_l2_current
+      - sensor.inverter_output_l3_current
+      - sensor.inverter_output_l3_voltage
+      - sensor.inverter_pv1_current
+      - sensor.inverter_pv1_voltage
+      - sensor.inverter_pv2_current
+      - sensor.inverter_pv2_voltage
 
 # --- Separate YAML dashboard with instantaneous power graphs ---
 lovelace:
@@ -717,6 +792,21 @@ logger:
 # is just an ordinary empty directory, and writing clips into it would fill
 # /userdata - exactly the failure that took the whole system down earlier today.
 command_line:
+  # Newest motion clips as JSON, for the gallery card on the Останній рух
+  # tab. Path is the www bind mount, so the links need no auth token.
+  - sensor:
+      name: Motion clips list
+      unique_id: motion_clips_list
+      command: >-
+        cd /userdata/hass/config/www/motion-clips 2>/dev/null &&
+        ls -t */ruh_*.mp4 2>/dev/null | head -40 |
+        awk -F/ '{split($2,a,"_"); t=substr(a[2],1,2)":"substr(a[2],3,2)":"substr(a[2],5,2);
+        printf "%s{\"d\":\"%s\",\"t\":\"%s\",\"f\":\"%s\"}", (NR>1?",":""), $1, t, $2}'
+        | awk 'BEGIN{printf "{\"clips\":["} {printf "%s", $0} END{printf "]}"}'
+      value_template: "ok"
+      json_attributes:
+        - clips
+      scan_interval: 120
   - binary_sensor:
       name: NAS videoarkhiv zmontovanyi
       unique_id: nas_video_mount_ok
@@ -756,5 +846,6 @@ shell_command:
   # Keep the clip folder bounded. It lives on the NAS, but an unbounded
   # folder is still bad manners - and if the mount ever silently fell away
   # this would be running against the board's own disk.
-  prune_motion_clips: "cd /userdata/hass/config/media/video/ha-motion && ls -t ruh_*.mp4 2>/dev/null | tail -n +201 | xargs -r rm --"
+  prepare_motion_dir: "d=/userdata/hass/config/media/video/ha-motion; mkdir -p $d/$(date +%Y-%m-%d); find $d -mindepth 1 -maxdepth 1 -type d -mtime +14 -exec rm -rf {} +"
+  rebuild_clip_gallery: "/home/forlinx/hass-venv-314/bin/python /userdata/hass/config/scripts-gen-gallery.py"
   update_motion_snapshot: "cd /userdata/hass/config/www/motion && ls -t motion_*.jpg 2>/dev/null | head -1 | xargs -I{} cp {} latest.jpg && ls -t motion_*.jpg 2>/dev/null | tail -n +31 | xargs -r rm --"

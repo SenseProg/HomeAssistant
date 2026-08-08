@@ -330,13 +330,15 @@
     entity_id: binary_sensor.nas_videoarkhiv_zmontovanyi
     state: 'on'
   actions:
+  - action: shell_command.prepare_motion_dir
   - action: camera.record
     target:
       entity_id: camera.cam1
     data:
-      filename: /userdata/hass/config/media/video/ha-motion/ruh_{{ now().strftime('%Y%m%d_%H%M%S')
-        }}.mp4
+      filename: /userdata/hass/config/media/video/ha-motion/{{ now().strftime('%Y-%m-%d')
+        }}/ruh_{{ now().strftime('%H%M%S') }}.mp4
       duration: 15
+  - action: shell_command.rebuild_clip_gallery
   - action: shell_command.prune_motion_clips
   mode: single
   max_exceeded: silent
@@ -360,7 +362,7 @@
     event: start
   actions:
   - delay: 00:00:30
-  - action: utility_meter.select_tariff
+  - action: select.select_option
     target:
       entity_id:
       - select.merezha_za_tarifom
@@ -372,7 +374,7 @@
       - select.pidloha_2_za_tarifom
       - select.nasos_za_tarifom
     data:
-      tariff: "{{ 'den' if 7 <= now().hour < 23 else 'nich' }}"
+      option: "{{ 'den' if 7 <= now().hour < 23 else 'nich' }}"
   mode: single
 - id: irrigation_evening_rain_ask
   alias: Полив - вечірнє питання про дощ
