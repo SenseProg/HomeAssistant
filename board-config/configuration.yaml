@@ -421,6 +421,34 @@ template:
           {{ has_value('sensor.nasos_za_tarifom_den')
              and has_value('sensor.nasos_za_tarifom_nich') }}
 
+      # Різниця між усім, що куплено з мережі, і сумою п'яти пристроїв із
+      # власними лічильниками. Це світло, розетки, побутова техніка, насоси
+      # опалення, сама плата - усе, що ніхто окремо не міряє. Без цього рядка
+      # графік по пристроях створює хибне враження, ніби вони вичерпують увесь
+      # рахунок.
+      #
+      # Може ненадовго піти в мінус: пристрої частину часу живляться від
+      # батареї інвертора, а ця гілка рахує тільки куплені з мережі кіловати.
+      - name: "Витрати - інше без лічильника"
+        unique_id: cost_device_other
+        unit_of_measurement: "UAH"
+        device_class: monetary
+        state_class: total
+        state: >
+          {{ ((states('sensor.vitrati_na_merezhu_razom') | float(0))
+            - (states('sensor.vitrati_boiler') | float(0))
+            - (states('sensor.vitrati_zariadka_avto') | float(0))
+            - (states('sensor.vitrati_tepla_pidloga_1') | float(0))
+            - (states('sensor.vitrati_tepla_pidloga_2') | float(0))
+            - (states('sensor.vitrati_nasos_polivu') | float(0))) | round(2) }}
+        availability: >
+          {{ has_value('sensor.vitrati_na_merezhu_razom')
+             and has_value('sensor.vitrati_boiler')
+             and has_value('sensor.vitrati_zariadka_avto')
+             and has_value('sensor.vitrati_tepla_pidloga_1')
+             and has_value('sensor.vitrati_tepla_pidloga_2')
+             and has_value('sensor.vitrati_nasos_polivu') }}
+
       - name: "Загальне навантаження"
         unique_id: total_load_power
         unit_of_measurement: "kW"
