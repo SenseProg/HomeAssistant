@@ -1,8 +1,16 @@
-const AGENT_ID = "conversation.domashnii_asistent_claude";
-const PIPELINE_ID = "01kz4r9qs1qzp5hsvg9vc7c0m0";
+// v0.5.0: оптимістичний рендер, ватчдог очікування, «Не чекати», динамічний
+// пошук агента й пайплайна замість зашитих ідентифікаторів.
+const AGENT_ID_FALLBACK = "conversation.domashnii_asistent_claude";
+const PIPELINE_ID_FALLBACK = "01kz4r9qs1qzp5hsvg9vc7c0m0";
 const PANEL_CONVERSATION_ID = "claude-homemate-persistent-panel";
 const TARGET_SAMPLE_RATE = 16000;
 const MAX_RECORDING_SECONDS = 120;
+// Бекенд обриває виклик Claude через 120 с (CONF_TIMEOUT). Даємо запас на
+// чергу глобального лока і збір контексту, після чого перестаємо тримати
+// композер заблокованим: відповідь однаково доїде в історію.
+const REQUEST_SOFT_TIMEOUT_MS = 150000;
+const ANSWER_POLL_INTERVAL_MS = 20000;
+const ANSWER_POLL_MAX_MS = 600000;
 
 class ClaudeHistoryPanel extends HTMLElement {
   constructor() {
@@ -30,6 +38,16 @@ class ClaudeHistoryPanel extends HTMLElement {
     this._ttsUrl = "";
     this._archivedPcmBytes = null;
     this._recordings = [];
+    // Текстовий запит: локальне відлуння і контроль очікування.
+    this._lastRecords = [];
+    this._localEcho = null;
+    this._awaitingAnswer = false;
+    this._pendingRestoreText = "";
+    this._requestToken = 0;
+    this._sendStartedAt = 0;
+    this._pollTimer = null;
+    this._pollUntil = 0;
+    this._pipelineIdResolved = null;
   }
 
   set hass(value) {
@@ -58,6 +76,7 @@ class ClaudeHistoryPanel extends HTMLElement {
   disconnectedCallback() {
     this._stopCaptureTracks();
     this._clearTimer();
+    this._stopAnswerPolling();
     void this._closeVoiceSubscription();
   }
 
@@ -128,6 +147,18 @@ class ClaudeHistoryPanel extends HTMLElement {
         button.danger { color: white; background: var(--error-color, #db4437); }
         button:disabled { opacity: .55; cursor: wait; }
         .status { min-height: 22px; padding: 7px 2px 0; color: var(--secondary-text-color); font-size: 13px; }
+        .message.pending { opacity: .85; }
+        .typing { display: inline-flex; gap: 5px; align-items: center; padding: 3px 0; }
+        .typing i {
+          width: 7px; height: 7px; border-radius: 50%;
+          background: var(--secondary-text-color); opacity: .3;
+          animation: typing-blink 1.2s infinite;
+        }
+        .typing i:nth-child(2) { animation-delay: .2s; }
+        .typing i:nth-child(3) { animation-delay: .4s; }
+        @keyframes typing-blink { 40% { opacity: 1; } }
+        #unwait { display: none; }
+        #unwait.visible { display: block; }
         .voice-card {
           display: none; margin-top: 14px; padding: 16px; border-radius: 16px;
           background: var(--card-background-color); border: 1px solid var(--divider-color);
@@ -203,6 +234,7 @@ class ClaudeHistoryPanel extends HTMLElement {
           <div class="composer-actions">
             <button id="send" type="button">Надіслати</button>
             <button id="record" class="secondary" type="button">🎙 Записати голосом</button>
+            <button id="unwait" class="secondary" type="button">Не чекати відповіді</button>
           </div>
         </div>
         <div id="status" class="status"></div>
@@ -212,6 +244,9 @@ class ClaudeHistoryPanel extends HTMLElement {
     this.shadowRoot.getElementById("refresh-recordings").addEventListener("click", () => void this._loadVoiceRecordings());
     this.shadowRoot.getElementById("send").addEventListener("click", () => void this._sendMessage());
     this.shadowRoot.getElementById("record").addEventListener("click", () => void this._startRecording());
+    this.shadowRoot.getElementById("unwait").addEventListener("click", () => this._softRelease(
+      "Гаразд, не чекаємо. Відповідь з'явиться в історії — я перевірятиму її автоматично.",
+    ));
     this.shadowRoot.getElementById("message").addEventListener("keydown", (event) => {
       if (event.key === "Enter" && !event.shiftKey) {
         event.preventDefault();
@@ -221,15 +256,34 @@ class ClaudeHistoryPanel extends HTMLElement {
     this._renderVoiceState();
   }
 
-  async _loadHistory() {
+  async _loadHistory({ quiet = false } = {}) {
     if (!this._hass) return;
-    this._setStatus("Завантажую історію…");
+    if (!quiet) this._setStatus("Завантажую історію…");
     try {
       const result = await this._hass.callWS({ type: "claude_code_conversation/history", limit: 200 });
-      this._renderHistory(result.records || []);
-      this._setStatus(`Збережено повідомлень: ${(result.records || []).length}`);
+      this._lastRecords = result.records || [];
+      this._noteAnswerIfArrived();
+      this._renderHistory(this._lastRecords);
+      if (!quiet) this._setStatus(`Збережено повідомлень: ${this._lastRecords.length}`);
     } catch (error) {
-      this._setStatus(`Не вдалося завантажити історію: ${this._errorText(error)}`);
+      if (!quiet) this._setStatus(`Не вдалося завантажити історію: ${this._errorText(error)}`);
+    }
+  }
+
+  _noteAnswerIfArrived() {
+    if (!this._awaitingAnswer || !this._sendStartedAt) return;
+    const started = this._sendStartedAt;
+    const arrived = this._lastRecords.some((record) => {
+      if (record.role !== "assistant" || !record.timestamp) return false;
+      const stamp = new Date(record.timestamp).valueOf();
+      return !Number.isNaN(stamp) && stamp >= started - 5000;
+    });
+    if (arrived) {
+      this._localEcho = null;
+      this._awaitingAnswer = false;
+      this._pendingRestoreText = "";
+      this._stopAnswerPolling();
+      this._setStatus("Відповідь отримано.");
     }
   }
 
@@ -320,7 +374,7 @@ class ClaudeHistoryPanel extends HTMLElement {
   _renderHistory(records) {
     const container = this.shadowRoot.getElementById("history");
     container.replaceChildren();
-    if (!records.length) {
+    if (!records.length && !this._localEcho && !this._awaitingAnswer) {
       const empty = document.createElement("div");
       empty.className = "note";
       empty.textContent = "Історія поки порожня.";
@@ -340,7 +394,92 @@ class ClaudeHistoryPanel extends HTMLElement {
       message.append(content, meta);
       container.appendChild(message);
     }
+    // Історія на диску з'являється лише ПІСЛЯ повної відповіді, тому щойно
+    // надіслане повідомлення домальовуємо локально, щоб воно не «зникало».
+    if (this._localEcho) {
+      const echo = document.createElement("div");
+      echo.className = "message user pending";
+      const content = document.createElement("span");
+      content.textContent = this._localEcho.text;
+      const meta = document.createElement("span");
+      meta.className = "meta";
+      meta.textContent = `Ви · ${new Date(this._localEcho.sentAt).toLocaleString("uk-UA")} · надіслано`;
+      echo.append(content, meta);
+      container.appendChild(echo);
+    }
+    if (this._awaitingAnswer) {
+      const thinking = document.createElement("div");
+      thinking.className = "message assistant pending";
+      const dots = document.createElement("span");
+      dots.className = "typing";
+      dots.append(
+        document.createElement("i"),
+        document.createElement("i"),
+        document.createElement("i"),
+      );
+      const meta = document.createElement("span");
+      meta.className = "meta";
+      meta.textContent = "Claude готує відповідь — на цій платі це триває до двох хвилин";
+      thinking.append(dots, meta);
+      container.appendChild(thinking);
+    }
     container.scrollTop = container.scrollHeight;
+  }
+
+  _agentId() {
+    const states = this._hass?.states || {};
+    if (states[AGENT_ID_FALLBACK]) return AGENT_ID_FALLBACK;
+    const candidates = Object.keys(states).filter((id) => id.startsWith("conversation."));
+    const byId = candidates.find((id) => id.includes("claude"));
+    if (byId) return byId;
+    const byName = candidates.find((id) =>
+      String(states[id].attributes?.friendly_name || "").toLowerCase().includes("claude"));
+    return byName || AGENT_ID_FALLBACK;
+  }
+
+  async _resolvePipelineId() {
+    if (this._pipelineIdResolved) return this._pipelineIdResolved;
+    try {
+      const result = await this._hass.callWS({ type: "assist_pipeline/pipeline/list" });
+      const pipelines = result.pipelines || [];
+      const agentId = this._agentId();
+      const match = pipelines.find((item) => item.conversation_engine === agentId)
+        || pipelines.find((item) => String(item.name || "").toLowerCase().includes("claude"));
+      this._pipelineIdResolved = match ? match.id : PIPELINE_ID_FALLBACK;
+    } catch (_error) {
+      this._pipelineIdResolved = PIPELINE_ID_FALLBACK;
+    }
+    return this._pipelineIdResolved;
+  }
+
+  _softRelease(statusText) {
+    if (!this._busy) return;
+    this._busy = false;
+    this._setComposerDisabled(false);
+    this._setStatus(statusText);
+    this._startAnswerPolling();
+  }
+
+  _startAnswerPolling() {
+    this._stopAnswerPolling();
+    this._pollUntil = Date.now() + ANSWER_POLL_MAX_MS;
+    this._pollTimer = window.setInterval(() => {
+      if (!this._awaitingAnswer || Date.now() > this._pollUntil) {
+        this._stopAnswerPolling();
+        if (this._awaitingAnswer) {
+          this._awaitingAnswer = false;
+          this._renderHistory(this._lastRecords);
+          this._setStatus("Відповідь так і не з'явилася. Перевірте авторизацію: claude auth status на платі.");
+        }
+        return;
+      }
+      void this._loadHistory({ quiet: true });
+    }, ANSWER_POLL_INTERVAL_MS);
+  }
+
+  _stopAnswerPolling() {
+    if (this._pollTimer) window.clearInterval(this._pollTimer);
+    this._pollTimer = null;
   }
 
   async _sendMessage() {
@@ -348,22 +487,50 @@ class ClaudeHistoryPanel extends HTMLElement {
     const input = this.shadowRoot.getElementById("message");
     const text = input.value.trim();
     if (!text) return;
+    const token = ++this._requestToken;
     this._busy = true;
+    this._sendStartedAt = Date.now();
+    this._localEcho = { text, sentAt: this._sendStartedAt };
+    this._awaitingAnswer = true;
+    this._pendingRestoreText = text;
+    input.value = "";
     this._setComposerDisabled(true);
     this._setStatus("Claude готує відповідь…");
+    this._renderHistory(this._lastRecords);
+    const watchdog = window.setTimeout(() => {
+      if (token !== this._requestToken) return;
+      this._softRelease(
+        "Відповідь запізнюється (черга або повільна плата). Вона з'явиться в історії — перевірятиму автоматично.",
+      );
+    }, REQUEST_SOFT_TIMEOUT_MS);
     try {
       await this._hass.callWS({
         type: "conversation/process", text, language: "uk",
-        agent_id: AGENT_ID, conversation_id: PANEL_CONVERSATION_ID,
+        agent_id: this._agentId(), conversation_id: PANEL_CONVERSATION_ID,
       });
-      input.value = "";
-      await this._loadHistory();
+      if (token === this._requestToken) this._pendingRestoreText = "";
+      await this._loadHistory({ quiet: token !== this._requestToken });
+      if (token === this._requestToken && this._awaitingAnswer) {
+        // Відповідь завершилася, але в історії її ще не видно — дочитаємо.
+        this._startAnswerPolling();
+      }
     } catch (error) {
-      this._setStatus(`Помилка запиту: ${this._errorText(error)}`);
+      if (token === this._requestToken) {
+        this._localEcho = null;
+        this._awaitingAnswer = false;
+        this._stopAnswerPolling();
+        if (!input.value && this._pendingRestoreText) input.value = this._pendingRestoreText;
+        this._pendingRestoreText = "";
+        this._renderHistory(this._lastRecords);
+        this._setStatus(`Помилка запиту: ${this._errorText(error)}`);
+      }
     } finally {
-      this._busy = false;
-      this._setComposerDisabled(false);
-      input.focus();
+      window.clearTimeout(watchdog);
+      if (token === this._requestToken && this._busy) {
+        this._busy = false;
+        this._setComposerDisabled(false);
+        input.focus();
+      }
     }
   }
 
@@ -452,11 +619,12 @@ class ClaudeHistoryPanel extends HTMLElement {
         this._voiceReadyResolve = resolve;
         this._voiceReadyReject = reject;
       });
+      const pipelineId = await this._resolvePipelineId();
       this._unsubscribeVoice = await this._hass.connection.subscribeMessage(
         (event) => this._handlePipelineEvent(event),
         {
           type: "assist_pipeline/run", start_stage: "stt", end_stage: "tts",
-          pipeline: PIPELINE_ID, conversation_id: PANEL_CONVERSATION_ID,
+          pipeline: pipelineId, conversation_id: PANEL_CONVERSATION_ID,
           input: { sample_rate: TARGET_SAMPLE_RATE, no_vad: true }, timeout: 180,
         },
       );
@@ -730,6 +898,7 @@ class ClaudeHistoryPanel extends HTMLElement {
   _setComposerDisabled(disabled) {
     this.shadowRoot.getElementById("send").disabled = disabled;
     this.shadowRoot.getElementById("record").disabled = disabled;
+    this.shadowRoot.getElementById("unwait").classList.toggle("visible", disabled);
   }
 
   _formatTime(seconds) {
