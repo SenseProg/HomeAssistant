@@ -1441,49 +1441,44 @@ views:
         Контур 2 фізично не ввімкнений, тому всі його сутності показують `unavailable`. Ніяких дій для нього робити не треба - він уже доданий і в цей дашборд, і в Energy-дашборд, і почне рахувати сам, щойно на нього подадуть живлення.
 
         '
-- title: Камера
-  path: camera
-  icon: mdi:cctv
-  type: sections
-  max_columns: 4
-  dense_section_placement: true
-  sections:
-  - type: grid
-    cards:
-    - type: picture-entity
-      entity: camera.cam1
-      name: Двір (Cam1)
-      show_state: false
-      show_name: true
-      camera_view: live
-      grid_options:
-        columns: full
-    - type: entities
-      title: Сенсори
-      grid_options:
-        columns: full
-      entities:
-      - entity: binary_sensor.cam1_motion
-        name: Рух
-        secondary_info: last-changed
-      - entity: binary_sensor.cam1_illegal_access
-        name: Illegal access
-      - entity: binary_sensor.cam1_video_mismatch
-        name: Video mismatch (діагностика)
-    - type: history-graph
-      title: Активність руху за 24 години
-      hours_to_show: 24
-      entities:
-      - entity: binary_sensor.cam1_motion
-        name: Рух
-- title: Останній рух
+- title: Камера і рух
   path: motion
-  icon: mdi:motion-sensor
+  icon: mdi:cctv
+  # panel: true renders one card across the whole page, which is the only way
+  # to get the gallery wider than a masonry column. Everything therefore lives
+  # in one vertical-stack. Do not convert this to type: sections - that grid
+  # paints one card out of four on this frontend build.
   panel: true
   cards:
-  - type: iframe
-    url: /local/motion/gallery.html?v=2
-    aspect_ratio: 150%
+  - type: vertical-stack
+    cards:
+    - type: horizontal-stack
+      cards:
+      - type: picture-entity
+        entity: camera.cam1
+        name: Двір (Cam1)
+        show_state: false
+        show_name: true
+        camera_view: live
+      - type: entities
+        title: Сенсори
+        entities:
+        - entity: binary_sensor.cam1_motion
+          name: Рух
+          secondary_info: last-changed
+        - entity: binary_sensor.cam1_illegal_access
+          name: Illegal access
+        - entity: binary_sensor.cam1_video_mismatch
+          name: Video mismatch (діагностика)
+      - type: history-graph
+        title: Активність руху за 24 години
+        hours_to_show: 24
+        entities:
+        - entity: binary_sensor.cam1_motion
+          name: Рух
+    - type: iframe
+      url: /local/motion/gallery.html?v=11
+      aspect_ratio: 115%
 - title: Автополив
   path: poliv
   icon: mdi:sprinkler-variant

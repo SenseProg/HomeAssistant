@@ -63,10 +63,6 @@ page = """<!doctype html><html lang="uk"><head><meta charset="utf-8">
 *{box-sizing:border-box}
 body{margin:0;padding:16px;background:#111418;color:#e1e1e1;
      font:15px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
-h1{font-size:19px;margin:0 0 12px}
-.snap{margin:0 0 18px;max-width:520px}
-.snap img{width:100%;border-radius:10px;display:block}
-.snap figcaption{color:#8b949e;font-size:13px;padding-top:6px}
 .bar{position:sticky;top:0;z-index:5;background:#111418;padding:10px 0 12px;
      border-bottom:1px solid #2a2f36;margin-bottom:16px;
      display:flex;flex-wrap:wrap;gap:10px;align-items:center}
@@ -77,17 +73,12 @@ button{background:#1b2027;color:#e1e1e1;border:1px solid #2f3742;border-radius:7
        padding:6px 12px;font-size:14px;cursor:pointer}
 button:hover{background:#232a33}
 #count{color:#8b949e;font-size:13px;margin-left:auto}
-.grid{display:grid;gap:14px;grid-template-columns:repeat(auto-fill,minmax(260px,1fr))}
+.grid{display:grid;gap:14px;grid-template-columns:repeat(auto-fill,minmax(min(100%,520px),1fr))}
 figure{margin:0;background:#181c22;border-radius:10px;overflow:hidden}
 video{width:100%;display:block;background:#000}
 figcaption{padding:7px 10px;font-size:13px;color:#9fb0c0}
 .empty{color:#8b949e;padding:20px 0}
 </style></head><body>
-<h1>Рух — відеоролики</h1>
-<figure class="snap">
-<img src="/local/motion/latest.jpg" alt="Останній рух">
-<figcaption>Останній зафіксований рух</figcaption>
-</figure>
 <div class="bar">
   <label>День <select id="day">__DAYS__</select></label>
   <label>з <select id="from">__HOURS__</select></label>
@@ -105,6 +96,18 @@ const day = document.getElementById('day'),
       count = document.getElementById('count');
 from.value = 0; to.value = 23;
 
+// A black tile says nothing about what was recorded. Loading metadata gives a
+// first frame, but doing that for every clip would hit the board with a few
+// hundred requests at once - so it happens per tile, just before it scrolls
+// into view.
+const seenObserver = ('IntersectionObserver' in window)
+  ? new IntersectionObserver(function(entries, obs){
+      for(const e of entries){
+        if(e.isIntersecting){ e.target.preload = 'metadata'; obs.unobserve(e.target); }
+      }
+    }, {rootMargin: '400px'})
+  : null;
+
 function render(){
   const d = day.value, a = +from.value, b = +to.value;
   const sel = CLIPS.filter(c => c.d === d && c.h >= a && c.h <= b);
@@ -119,6 +122,7 @@ function render(){
     const fig = document.createElement('figure');
     const v = document.createElement('video');
     v.controls = true; v.preload = 'none'; v.src = c.u;
+    if(seenObserver){ seenObserver.observe(v); } else { v.preload = 'metadata'; }
     const cap = document.createElement('figcaption');
     cap.textContent = c.t;
     fig.append(v, cap); frag.append(fig);
@@ -128,6 +132,26 @@ function render(){
 day.onchange = from.onchange = to.onchange = render;
 document.getElementById('reset').onclick = () => { from.value = 0; to.value = 23; render(); };
 render();
+
+// The Lovelace view around this page sometimes aborts its own transition and
+// never paints - the cards sit in the DOM at the right size and no pixels
+// arrive. Same origin, so poking the parent into a relayout is enough to make
+// it paint. Harmless when the view rendered normally.
+function nudgeParent(){
+  try { window.parent.dispatchEvent(new Event('resize')); } catch(e) {}
+}
+function nudgeFor(ms){
+  const stop = performance.now() + ms;
+  nudgeParent();
+  const id = setInterval(function(){
+    nudgeParent();
+    if(performance.now() > stop) clearInterval(id);
+  }, 1200);
+}
+nudgeFor(60000);
+document.addEventListener('visibilitychange', function(){
+  if(!document.hidden) nudgeFor(8000);
+});
 </script>
 </body></html>"""
 
