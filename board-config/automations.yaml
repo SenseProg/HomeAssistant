@@ -314,7 +314,8 @@
     data:
       filename: /userdata/hass/config/www/motion/motion_{{ now().strftime('%Y%m%d_%H%M%S') }}.jpg
   - action: shell_command.update_motion_snapshot
-  mode: single
+  mode: queued
+  max: 10
 - id: hikvision_motion_clip
   alias: Камера - відеокліп при виявленні руху
   description: 'Пише 15 с відео на NAS від моменту руху. Пре-ролю немає
@@ -330,16 +331,23 @@
     entity_id: binary_sensor.nas_videoarkhiv_zmontovanyi
     state: 'on'
   actions:
+  - action: shell_command.prepare_motion_dir
   - action: camera.record
     target:
       entity_id: camera.cam1
     data:
-      filename: /userdata/hass/config/media/video/ha-motion/ruh_{{ now().strftime('%Y%m%d_%H%M%S')
-        }}.mp4
+      filename: /userdata/hass/config/media/video/ha-motion/{{ now().strftime('%Y-%m-%d')
+        }}/ruh_{{ now().strftime('%H%M%S') }}.mp4
       duration: 15
+  - action: shell_command.rebuild_clip_gallery
   - action: shell_command.prune_motion_clips
-  mode: single
-  max_exceeded: silent
+  # camera.record blocks for its whole duration, so mode: single silently threw
+  # away any motion that started while the previous clip was still being
+  # written - two events an hour on a busy afternoon. Queued keeps them; runs
+  # are still serialised, because two camera.record calls on one camera would
+  # fight over the same stream.
+  mode: queued
+  max: 10
 - id: tarif_peremknuty_lichylnyky
   alias: Тариф - перемкнути лічильники день/ніч
   description: 'Тримає всі utility_meter у тому самому тарифі, що й
