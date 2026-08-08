@@ -163,6 +163,22 @@
             title: Поливати
           - action: POLIV_NO
             title: Пропустити
+    - action: persistent_notification.create
+      data:
+        notification_id: poliv_dosh
+        title: Полив за розкладом · очікує рішення
+        message: "{{ 'Зараз іде дощ за даними Met.no.' if rain_now else 'Дощу зараз\
+          \ немає, але Met.no прогнозує опади в найближчі 6 годин.' }} Питання надіслано\
+          \ на телефон о {{ now().strftime('%H:%M') }}. Якщо ніхто не натисне «Поливати»\
+          \ протягом 30 хвилин, полив буде пропущено. Планувалося: зона 1 - {{ (zona_1_seconds\
+          \ | int(0) / 60) | round(0) }} хв, зона 2 - {{ (zona_2_seconds | int(0) /\
+          \ 60) | round(0) }} хв.\n"
+    - action: input_text.set_value
+      target:
+        entity_id: input_text.poliv_ostannie_rishennia
+      data:
+        value: "{{ now().strftime('%d.%m %H:%M') }} · чекаю відповіді · {{ 'дощ зараз'\
+          \ if rain_now else 'прогноз дощу на 6 год' }}\n"
     - wait_for_trigger:
       - trigger: event
         event_type: mobile_app_notification_action
@@ -183,7 +199,36 @@
           message: Полив пропущено через дощ.
           data:
             tag: poliv_dosh
+      - action: persistent_notification.create
+        data:
+          notification_id: poliv_dosh
+          title: Полив пропущено
+          message: "Полив за розкладом о {{ (now() - timedelta(minutes=30)).strftime('%H:%M')\
+            \ }} пропущено. Причина: {{ 'на момент старту йшов дощ' if rain_now else\
+            \ 'Met.no прогнозував опади в найближчі 6 годин' }}, а на питання «Поливати\
+            \ попри це?» {{ 'ніхто не відповів протягом 30 хвилин' if wait.trigger\
+            \ is none else 'була відповідь «Пропустити»' }}. Не полито: зона 1 - {{\
+            \ (zona_1_seconds | int(0) / 60) | round(0) }} хв, зона 2 - {{ (zona_2_seconds\
+            \ | int(0) / 60) | round(0) }} хв. Розумний полив про це рішення не знає\
+            \ і перерахує баланс води о 19:55 незалежно від нього.\n"
+      - action: input_text.set_value
+        target:
+          entity_id: input_text.poliv_ostannie_rishennia
+        data:
+          value: "{{ now().strftime('%d.%m %H:%M') }} · пропущено · {{ 'дощ' if rain_now\
+            \ else 'прогноз дощу' }} · {{ 'без відповіді 30 хв' if wait.trigger is\
+            \ none else 'обрано «Пропустити»' }}\n"
       - stop: Полив пропущено через дощ
+  - action: persistent_notification.dismiss
+    data:
+      notification_id: poliv_dosh
+  - action: input_text.set_value
+    target:
+      entity_id: input_text.poliv_ostannie_rishennia
+    data:
+      value: "{{ now().strftime('%d.%m %H:%M') }} · полив стартував · зона 1 - {{ (zona_1_seconds\
+        \ | int(0) / 60) | round(0) }} хв, зона 2 - {{ (zona_2_seconds | int(0) / 60)\
+        \ | round(0) }} хв\n"
   - if:
     - condition: state
       entity_id: input_boolean.poliv_zona_1_vkl
@@ -324,13 +369,13 @@
     entity_id: binary_sensor.nas_videoarkhiv_zmontovanyi
     state: 'on'
   actions:
+  - action: shell_command.prepare_motion_dir
   - action: camera.record
     target:
       entity_id: camera.cam1
     data:
-      filename: /userdata/hass/config/media/video/ha-motion/ruh_{{ now().strftime('%Y%m%d_%H%M%S')
-        }}.mp4
+      filename: /userdata/hass/config/media/video/ha-motion/{{ now().strftime('%Y-%m-%d')
+        }}/ruh_{{ now().strftime('%H%M%S') }}.mp4
       duration: 15
-  - action: shell_command.prune_motion_clips
   mode: single
   max_exceeded: silent

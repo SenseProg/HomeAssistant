@@ -1,5 +1,5 @@
 views:
-- title: Роутер
+- title: Мережа
   path: router
   icon: mdi:router-wireless
   type: sections
@@ -8,8 +8,13 @@ views:
   sections:
   - type: grid
     cards:
+    - type: heading
+      heading: ASUS RT-AX55 · основний роутер «Отаке»
+      icon: mdi:router-wireless
+      grid_options:
+        columns: full
     - type: entities
-      title: Стан пристрою
+      title: ASUS RT-AX55 · 192.168.50.1
       grid_options:
         columns: full
       entities:
@@ -58,35 +63,1348 @@ views:
         на цьому роутері нестабільні і завжди повертають
         unavailable/0.0.0.0 - це обмеження прошивки ASUS, не Home
         Assistant. Прибрано з дашборда свідомо.
+    - type: markdown
+      title: Усі активні клієнти та їхня точка підключення
+      grid_options:
+        columns: full
+      content: |
+        **Позначення:** 🔌 Ethernet · 📶 Wi-Fi · частота/покоління вказуються
+        лише тоді, коли їх повідомляє точка доступу. Сама частота 5 ГГц ще не
+        доводить, що клієнт працює саме у Wi-Fi 5 або Wi-Fi 6.
+
+        {% set ap_clients = state_attr('sensor.tenda_ap_clients', 'onlineList') or [] %}
+        {% set repeater_clients = state_attr('sensor.tenda_repeater_clients', 'onlineList') or [] %}
+        {% set missing = ['unknown', 'unavailable', 'none', ''] %}
+        {% set ap = namespace(macs=[]) %}
+        {% set repeater = namespace(macs=[]) %}
+        {% for client in ap_clients if client.qosListConnectType | default('') == 'wifi' and client.qosListMac is defined %}
+          {% set ap.macs = ap.macs + [client.qosListMac | lower] %}
+        {% endfor %}
+        {% for client in repeater_clients if client.devMac is defined %}
+          {% set repeater.macs = repeater.macs + [client.devMac | lower] %}
+        {% endfor %}
+        {% set names = {
+          'device_tracker.homemate': 'HomeMate (ПК)',
+          'device_tracker.ok3568': 'Плата Home Assistant MB35x8',
+          'device_tracker.s23_ultra_dvk': 'Samsung S23 Ultra — Дмитро',
+          'device_tracker.s24_koristuvaca_kateryna': 'Samsung S24 — Катерина',
+          'device_tracker.s20_fe_koristuvaca_kateryna': 'Samsung S20 FE — Олеся',
+          'device_tracker.s21_pol_zovatela_kateryna': 'Samsung Galaxy S21 — бабуся Сіма',
+          'device_tracker.a24_koristuvaca_vasilij': 'Samsung Galaxy A24 — Василь',
+          'device_tracker.galaxy_j8': 'Samsung Galaxy J8',
+          'device_tracker.laptop_u1i8pnmk': 'Ноутбук LAPTOP-U1I8PNMK',
+          'device_tracker.cloudmate': 'CloudMate — NAS QNAP',
+          'device_tracker.esp_eea5c5': 'Blauberg №1 — кімната хлопців',
+          'device_tracker.esp_eea84e': 'Blauberg №2 — кімната Олесі'
+        } %}
+        {% set ip_names = {
+          '192.168.50.13': 'Термостат Terneo — контур 1',
+          '192.168.50.25': 'CloudMate — NAS QNAP',
+          '192.168.50.27': 'Blauberg №1 — кімната хлопців',
+          '192.168.50.36': 'Зарядна станція авто — 7,5 кВт',
+          '192.168.50.91': 'Насос автополиву K601',
+          '192.168.50.118': 'Бойлер Midea',
+          '192.168.50.157': 'Термостат Terneo — контур 2',
+          '192.168.50.164': 'SONOFF ZBBridge — Zigbee-шлюз',
+          '192.168.50.176': 'Контролер гаражних воріт — Sonoff/eWeLink',
+          '192.168.50.179': 'Інвертор Deye',
+          '192.168.50.219': 'Трифазний лічильник електроенергії будинку',
+          '192.168.50.221': 'Контролер автополиву Tuya — 8 зон'
+        } %}
+        {% set mac_names = {
+          '00:08:9B:ED:62:EF': 'CloudMate — NAS QNAP',
+          '04:D6:F4:70:AD:B3': 'Бойлер Midea',
+          '08:3A:F2:2D:32:30': 'Контролер гаражних воріт — Sonoff/eWeLink',
+          '14:2B:2F:E1:54:60': 'Рекуператор PRANA — спальня батьків',
+          '30:83:98:C1:6E:AC': 'Термостат Terneo — контур 1',
+          '3C:0B:59:11:9A:13': 'Зарядна станція авто — 7,5 кВт',
+          '80:64:7C:46:E8:D1': 'Насос автополиву K601',
+          '84:CC:A8:96:28:A7': 'SONOFF ZBBridge — Zigbee-шлюз',
+          '98:F4:AB:EE:A5:C5': 'Blauberg №1 — кімната хлопців',
+          '98:F4:AB:EE:A8:4E': 'Blauberg №2 — кімната Олесі',
+          'D4:27:87:50:23:6C': 'Інвертор Deye',
+          'D8:D6:68:31:BA:49': 'Трифазний лічильник електроенергії будинку',
+          'E0:98:06:AF:B7:41': 'Термостат Terneo — контур 2',
+          'DC:6A:E7:A1:09:F2': 'Xiaomi — модель не визначена',
+          '62:1A:51:F4:B2:EE': 'Samsung Galaxy A24 — Василь',
+          '38:2C:E5:2D:5B:32': 'Контролер автополиву Tuya — 8 зон'
+        } %}
+        {% set connection_types = {
+          '00:08:9b:ed:62:ef': '🔌 Ethernet',
+          '66:55:7e:21:d0:ac': '🔌 Ethernet',
+          'b4:0f:3b:38:3f:50': '🔌 Ethernet',
+          '10:12:fb:f7:95:ad': '🔌 Ethernet',
+          '34:6f:24:b5:ad:4b': '📶 Wi-Fi · 5 ГГц',
+          '06:55:69:ba:91:6f': '📶 Wi-Fi · 5 ГГц',
+          '28:07:08:a8:10:66': '📶 Wi-Fi · 5 ГГц',
+          '5e:82:f5:51:3c:0d': '📶 Wi-Fi · 5 ГГц',
+          '70:09:71:a2:44:f4': '📶 Wi-Fi · 5 ГГц',
+          '04:d6:f4:70:ad:b3': '📶 Wi-Fi · 2,4 ГГц',
+          '08:3a:f2:2d:32:30': '📶 Wi-Fi · 2,4 ГГц',
+          '14:2b:2f:e1:54:60': '📶 Wi-Fi · 2,4 ГГц',
+          '30:83:98:c1:6e:ac': '📶 Wi-Fi · 2,4 ГГц',
+          '3c:0b:59:11:9a:13': '📶 Wi-Fi · 2,4 ГГц',
+          '38:2c:e5:2d:5b:32': '📶 Wi-Fi · 2,4 ГГц',
+          'f0:35:75:b3:31:80': '📶 Wi-Fi',
+          '80:64:7c:46:e8:d1': '📶 Wi-Fi · 2,4 ГГц',
+          '84:cc:a8:96:28:a7': '📶 Wi-Fi · 2,4 ГГц',
+          '98:f4:ab:ee:a5:c5': '📶 Wi-Fi · 2,4 ГГц',
+          '98:f4:ab:ee:a8:4e': '📶 Wi-Fi · 2,4 ГГц',
+          'd4:27:87:50:23:6c': '📶 Wi-Fi · 2,4 ГГц',
+          'd8:d6:68:31:ba:49': '📶 Wi-Fi · 2,4 ГГц',
+          'e0:98:06:af:b7:41': '📶 Wi-Fi · 2,4 ГГц'
+        } %}
+        {% set ns = namespace(found=false, seen=[]) %}
+        {% set cloudmate_mac = '00:08:9b:ed:62:ef' %}
+        {% set ns.found = true %}
+        {% set ns.seen = ns.seen + [cloudmate_mac] %}
+        - **CloudMate — NAS QNAP** — `192.168.50.25` · `00:08:9B:ED:62:EF` ·
+          **🔌 Ethernet** · {{ '🟢 доступний' if is_state('binary_sensor.cloudmate_nas_online', 'on') else ('🔴 недоступний' if is_state('binary_sensor.cloudmate_nas_online', 'off') else '🟡 стан визначається') }}
+        {% set tcl_mac = 'f0:35:75:b3:31:80' %}
+        {% set ns.found = true %}
+        {% set ns.seen = ns.seen + [tcl_mac] %}
+        - **Телевізор TCL** — `192.168.50.175` · `F0:35:75:B3:31:80` ·
+          **📶 Wi-Fi** · {{ '🟢 увімкнений і в мережі' if is_state('binary_sensor.tcl_tv_online', 'on') else ('🔴 вимкнений або недоступний' if is_state('binary_sensor.tcl_tv_online', 'off') else '🟡 стан визначається') }}
+        {% set camera_mac = '10:12:fb:f7:95:ad' %}
+        {% set ns.found = true %}
+        {% set ns.seen = ns.seen + [camera_mac] %}
+        - **Камера Hikvision — двір** — `192.168.50.201` · `10:12:FB:F7:95:AD` ·
+          **🔌 Ethernet** · {{ '🟢 доступна' if is_state('binary_sensor.hikvision_camera_online', 'on') else ('🔴 недоступна' if is_state('binary_sensor.hikvision_camera_online', 'off') else '🟡 стан визначається') }}
+        {% for tracker in states.device_tracker if tracker.state == 'home' %}
+          {% set source = tracker.attributes.source_type | default('') %}
+          {% set ip = tracker.attributes.ip | default('', true) %}
+          {% set mac = tracker.attributes.mac | default('', true) | lower %}
+          {% if source == 'router' and ip %}
+            {% set ns.found = true %}
+            {% set ns.seen = ns.seen + [mac] %}
+            {% if mac in ap.macs %}
+              {% set connection = 'Tenda AC10 · «Промінь»' %}
+            {% elif mac in repeater.macs %}
+              {% set connection = 'Tenda A9 · повторювач «Отаке»' %}
+            {% else %}
+              {% set connection = 'ASUS RT-AX55 · «Отаке»' %}
+            {% endif %}
+            {% set link = namespace(type=connection_types.get(mac, '❔ тип з’єднання не повідомлено')) %}
+            {% set interface = tracker.attributes.interface | default('', true) | lower %}
+            {% if mac in ap.macs %}
+              {% for client in ap_clients if client.qosListMac | default('') | lower == mac %}
+                {% set access = client.qosListAccessType | default('') %}
+                {% set link.type = '📶 Wi-Fi 4 · 2,4 ГГц' if access == 'wifi_2G' else ('📶 Wi-Fi 5 · 5 ГГц' if access == 'wifi_5G' else '📶 Wi-Fi') %}
+              {% endfor %}
+            {% elif mac in repeater.macs %}
+              {% set link.type = '📶 Wi-Fi 4 · 2,4 ГГц' %}
+            {% elif interface in ['2.4g', '2.4ghz', 'wifi_2g'] %}
+              {% set link.type = '📶 Wi-Fi · 2,4 ГГц' %}
+            {% elif interface in ['5g', '5ghz', 'wifi_5g'] %}
+              {% set link.type = '📶 Wi-Fi · 5 ГГц' %}
+            {% elif interface in ['6g', '6ghz', 'wifi_6g'] %}
+              {% set link.type = '📶 Wi-Fi 6E · 6 ГГц' %}
+            {% else %}
+              {% set link.type = connection_types.get(mac, '❔ тип з’єднання не повідомлено') %}
+            {% endif %}
+        - **{{ names.get(tracker.entity_id, tracker.name) }}** — `{{ ip }}` · `{{ mac | upper }}` · **{{ link.type }}** · **{{ connection }}**
+          {% endif %}
+        {% endfor %}
+        {% set irrigation_mac = '38:2c:e5:2d:5b:32' %}
+        {% if states('switch.avtopoliv_kontroler_avtopoliv_klapan_1') not in missing
+              and irrigation_mac not in ns.seen %}
+          {% set ns.found = true %}
+          {% set ns.seen = ns.seen + [irrigation_mac] %}
+        - **Контролер автополиву Tuya — 8 зон** — `192.168.50.221` · `38:2C:E5:2D:5B:32` · **📶 Wi-Fi · 2,4 ГГц** · **ASUS RT-AX55 · «Отаке»**
+        {% endif %}
+        {% set pump_mac = '80:64:7c:46:e8:d1' %}
+        {% set pump_entity = 'switch.mini_switch_k601_2_switch_1_2' %}
+        {% if states(pump_entity) not in missing and pump_mac not in ns.seen %}
+          {% set ns.found = true %}
+          {% set ns.seen = ns.seen + [pump_mac] %}
+        - **Насос автополиву K601** — `192.168.50.91` · `80:64:7C:46:E8:D1` · **📶 Wi-Fi · 2,4 ГГц** · **ASUS RT-AX55 · «Отаке»**
+        {% endif %}
+        {% for client in ap_clients if client.qosListConnectType | default('') == 'wifi' and client.qosListMac is defined %}
+          {% set mac = client.qosListMac | lower %}
+          {% if mac not in ns.seen %}
+            {% set ns.found = true %}
+            {% set ns.seen = ns.seen + [mac] %}
+            {% set ip = client.qosListIP | default('IP не отримано', true) %}
+            {% set fallback = client.qosListHostname if client.qosListHostname | default('Unknown') not in ['', 'Unknown'] else 'Невідомий пристрій' %}
+            {% set access = client.qosListAccessType | default('') %}
+            {% set link_type = '📶 Wi-Fi 4 · 2,4 ГГц' if access == 'wifi_2G' else ('📶 Wi-Fi 5 · 5 ГГц' if access == 'wifi_5G' else '📶 Wi-Fi') %}
+        - **{{ ip_names.get(ip, mac_names.get(mac | upper, fallback)) }}** — `{{ ip }}` · `{{ mac | upper }}` · **{{ link_type }}** · **Tenda AC10 · «Промінь»**
+          {% endif %}
+        {% endfor %}
+        {% for client in repeater_clients if client.devMac is defined %}
+          {% set mac = client.devMac | lower %}
+          {% if mac not in ns.seen %}
+            {% set ns.found = true %}
+            {% set ns.seen = ns.seen + [mac] %}
+            {% set ip = client.devIp | default('IP не отримано', true) %}
+            {% set fallback = client.devName if client.devName | default('UnKnown') not in ['', 'UnKnown'] else 'Невідомий пристрій' %}
+        - **{{ ip_names.get(ip, mac_names.get(mac | upper, fallback)) }}** — {% if ip != 'UnKnown' %}`{{ ip }}`{% else %}IP не отримано{% endif %} · `{{ mac | upper }}` · **📶 Wi-Fi 4 · 2,4 ГГц** · **Tenda A9 · повторювач «Отаке»**
+          {% endif %}
+        {% endfor %}
+        {% if not ns.found %}
+        Немає активних клієнтів або мережеві пристрої недоступні.
+        {% endif %}
+    - type: markdown
+      title: CloudMate · NAS QNAP
+      grid_options:
+        columns: full
+      content: |
+        {% if is_state('binary_sensor.cloudmate_nas_online', 'on') %}
+        ## 🟢 CloudMate у мережі
+        {% elif is_state('binary_sensor.cloudmate_nas_online', 'off') %}
+        ## 🔴 CloudMate недоступний
+        {% else %}
+        ## 🟡 Перевіряється після перезапуску Home Assistant
+        {% endif %}
+
+        **IP:** `192.168.50.25` · **MAC:** `00:08:9B:ED:62:EF`<br>
+        **Тип підключення:** 🔌 **Ethernet**<br>
+        **DHCP:** адреса закріплена в ASUS RT-AX55
+    - type: markdown
+      title: Телевізор TCL · Google Cast
+      grid_options:
+        columns: full
+      content: |
+        {% if is_state('binary_sensor.tcl_tv_online', 'on') %}
+        ## 🟢 Телевізор увімкнений і в мережі
+        {% elif is_state('binary_sensor.tcl_tv_online', 'off') %}
+        ## 🔴 Телевізор вимкнений або недоступний
+        {% else %}
+        ## 🟡 Перевіряється після перезапуску Home Assistant
+        {% endif %}
+
+        **IP:** `192.168.50.175` · **MAC:** `F0:35:75:B3:31:80`<br>
+        **Тип підключення:** 📶 **Wi-Fi**<br>
+        **DHCP:** адреса закріплена в ASUS RT-AX55<br>
+        **Модель:** TCL BeyondTV · Google Cast
+
+        Коли телевізор вимкнений, його мережевий модуль також вимикається.
+        Тому червоний стан у цей момент нормальний: пристрій більше не зникає
+        з дашборда, але керувати ним або надсилати фото до ввімкнення неможливо.
+    - type: markdown
+      title: Камера Hikvision · двір
+      grid_options:
+        columns: full
+      content: |
+        {% if is_state('binary_sensor.hikvision_camera_online', 'on') %}
+        ## 🟢 Камера доступна
+        {% elif is_state('binary_sensor.hikvision_camera_online', 'off') %}
+        ## 🔴 Камера недоступна
+        {% else %}
+        ## 🟡 Стан визначається
+        {% endif %}
+
+        **IP:** `192.168.50.201` · **MAC:** `10:12:FB:F7:95:AD`<br>
+        **Тип підключення:** 🔌 **Ethernet**<br>
+        **DHCP:** адреса закріплена в ASUS RT-AX55<br>
+        **Сервіси:** HTTP `80` · RTSP `554` · Hikvision SDK `8000`
+
+        Ця картка показує мережеву доступність. Живе відео та датчики руху
+        залишаються на окремій вкладці «Камера».
+    - type: markdown
+      title: Контролер автополиву · мережевий стан
+      grid_options:
+        columns: full
+      content: |
+        {% set entity = 'switch.avtopoliv_kontroler_avtopoliv_klapan_1' %}
+        {% if states(entity) in ['on', 'off'] %}
+        ## 🟢 Підключений локально
+
+        **Пристрій:** Tuya Smart Sprinkler Controller · 8 зон<br>
+        **IP:** `192.168.50.221` · **MAC:** `38:2C:E5:2D:5B:32`<br>
+        **Підключення:** ASUS RT-AX55 · основна мережа «Отаке»<br>
+        **LocalTuya:** працює · протокол 3.4 · опитування кожні 5 с
+
+        Старий IP `192.168.50.223` більше не використовується. Контролер не
+        з'являвся в загальному списку, бо AsusWRT не створив для нього окремий
+        `device_tracker`, а до Tenda AC10/A9 він не підключений.
+        {% else %}
+        ## 🔴 Локальний зв'язок відсутній
+
+        Контролер очікується на `192.168.50.221` (`38:2C:E5:2D:5B:32`), але
+        LocalTuya зараз має стан **{{ states(entity) }}**. Клапани в такому стані
+        не слід запускати до відновлення зв'язку.
+        {% endif %}
+    - type: markdown
+      title: Насос автополиву K601 · мережевий стан
+      grid_options:
+        columns: full
+      content: |
+        {% set entity = 'switch.mini_switch_k601_2_switch_1_2' %}
+        {% if states(entity) in ['on', 'off'] %}
+        ## 🟢 Підключений локально
+
+        **Стан насоса:** {{ 'увімкнений' if is_state(entity, 'on') else 'вимкнений' }}<br>
+        **IP:** `192.168.50.91` · **MAC:** `80:64:7C:46:E8:D1`<br>
+        **Підключення:** 📶 Wi-Fi · 2,4 ГГц · ASUS RT-AX55 · мережа «Отаке»<br>
+        **DHCP:** адреса закріплена в ASUS RT-AX55<br>
+        **LocalTuya:** локальний зв'язок працює · TCP `6668`
+
+        Картка залишається на вкладці «Мережа» незалежно від того, чи створив
+        ASUSWRT для насоса окремий `device_tracker`.
+        {% else %}
+        ## 🔴 Локальний зв'язок відсутній
+
+        Насос очікується на `192.168.50.91` (`80:64:7C:46:E8:D1`), але LocalTuya
+        зараз має стан **{{ states(entity) }}**. Не запускайте полив до відновлення
+        зв'язку з насосом.
+        {% endif %}
   - type: grid
     cards:
+    - type: heading
+      heading: Хто зараз удома
+      icon: mdi:home-account
+      grid_options:
+        columns: full
     - type: entities
-      title: Хто вдома (presence detection)
+      title: Люди
       grid_options:
         columns: full
       entities:
-      - entity: device_tracker.homemate
-        name: HomeMate (ПК)
-      - entity: device_tracker.ok3568
-        name: Плата ok3568
-      - entity: device_tracker.samsung
-        name: Samsung
-      - entity: device_tracker.s20_fe_koristuvaca_kateryna
-        name: S20 FE (Катерина)
-      - entity: device_tracker.s21_pol_zovatela_kateryna
-        name: S21 (Катерина)
-      - entity: device_tracker.s23_ultra_dvk
-        name: S23 Ultra
-      - entity: device_tracker.laptop_u1i8pnmk
-        name: Ноутбук
-      - entity: device_tracker.noteasus
-        name: NoteAsus
-      - entity: device_tracker.esp_eea5c5
-        name: ESP пристрій (EEA5C5)
-      - entity: device_tracker.esp_eea84e
-        name: ESP пристрій (EEA84E)
-      - entity: device_tracker.sm_s918b
-        name: Телефон (mobile app)
+      - entity: person.dim_kovtuni
+        name: Дмитро
+      - entity: person.katerina
+        name: Катерина
+      - entity: person.olesia
+        name: Олеся
+      - entity: person.babusia_sima
+        name: Бабуся Сіма
+    - type: markdown
+      grid_options:
+        columns: full
+      content: >-
+        Людина має стан **удома**, коли хоча б один прив'язаний телефон бачить
+        Home Assistant або основний роутер ASUS. Точка Wi-Fi не має значення:
+        клієнти ASUS, Tenda «Промінь» і Tenda-повторювача належать до однієї
+        домашньої мережі.
+  - type: grid
+    cards:
+    - type: heading
+      heading: Tenda AC10 · точка доступу «Промінь»
+      icon: mdi:access-point
+      grid_options:
+        columns: full
+    - type: entities
+      title: Tenda AC10 v3 · 192.168.50.2 · SSID «Промінь»
+      grid_options:
+        columns: full
+      entities:
+      - entity: sensor.tenda_ap_status
+        name: Прошивка
+      - entity: sensor.tenda_ap_clients
+        name: Прямих Wi-Fi клієнтів
+      - entity: sensor.tenda_ap_download_speed
+        name: Поточне завантаження клієнтів
+      - entity: sensor.tenda_ap_upload_speed
+        name: Поточне вивантаження клієнтів
+      - entity: sensor.tenda_ap_security
+        name: Пароль адміністратора
+    - type: markdown
+      title: Підключені безпосередньо до точки доступу
+      grid_options:
+        columns: full
+      content: |
+        {% set clients = state_attr('sensor.tenda_ap_clients', 'onlineList') or [] %}
+        {% set wifi = clients | selectattr('qosListConnectType', 'equalto', 'wifi') | list %}
+        {% set names = {
+          '1E:C0:D2:73:2C:C9': 'Samsung Galaxy S21 — бабуся Сіма',
+          'C0:35:32:C4:8A:4B': 'Ноутбук LAPTOP-U1I8PNMK'
+        } %}
+        {% if wifi | count == 0 %}
+        Немає активних прямих Wi-Fi-клієнтів.
+        {% else %}
+        {% for client in wifi %}
+        - **{{ names.get(client.qosListMac | upper, client.qosListHostname if client.qosListHostname not in ['', 'Unknown'] else 'Невідомий пристрій') }}**
+          — `{{ client.qosListIP }}` · `{{ client.qosListMac | upper }}` ·
+          {{ '2,4 ГГц' if client.qosListAccessType | default('') == 'wifi_2G' else ('5 ГГц' if client.qosListAccessType | default('') == 'wifi_5G' else 'Wi-Fi') }} ·
+          ↓ {{ client.qosListDownSpeed | float(0) | round(1) }} кБ/с ·
+          ↑ {{ client.qosListUpSpeed | float(0) | round(1) }} кБ/с
+        {% endfor %}
+        {% endif %}
+    - type: history-graph
+      title: Трафік точки доступу за 3 години
+      hours_to_show: 3
+      grid_options:
+        columns: full
+      entities:
+      - entity: sensor.tenda_ap_download_speed
+        name: Завантаження
+      - entity: sensor.tenda_ap_upload_speed
+        name: Вивантаження
+    - type: markdown
+      title: Можливості точки доступу
+      grid_options:
+        columns: full
+      content: >
+        **Tenda AC10 v3 / AC1200**, режим точки доступу. Паспортна швидкість:
+        до **300 Мбіт/с** на 2,4 ГГц і до **867 Мбіт/с** на 5 ГГц; Ethernet-порти
+        гігабітні. Значення вище — не швидкість Wi-Fi-з'єднання, а поточний
+        корисний трафік клієнтів, який повідомляє сама Tenda.
+  - type: grid
+    cards:
+    - type: heading
+      heading: Tenda A9 · повторювач «Отаке»
+      icon: mdi:wifi-sync
+      grid_options:
+        columns: full
+    - type: entities
+      title: Tenda A9 · 192.168.50.102 · повторювач «Отаке»
+      grid_options:
+        columns: full
+      entities:
+      - entity: sensor.tenda_repeater_status
+        name: Стан аплінка
+      - entity: sensor.tenda_repeater_signal
+        name: Сигнал до основної мережі
+      - entity: sensor.tenda_repeater_clients
+        name: Підключених клієнтів
+    - type: markdown
+      title: Підключені через повторювач
+      grid_options:
+        columns: full
+      content: |
+        {% set clients = state_attr('sensor.tenda_repeater_clients', 'onlineList') or [] %}
+        {% set names = {
+          '192.168.50.13': 'Термостат Terneo — контур 1',
+          '192.168.50.27': 'Рекуператор Blauberg',
+          '192.168.50.36': 'Зарядна станція авто — 7,5 кВт',
+          '192.168.50.118': 'Бойлер Midea',
+          '192.168.50.157': 'Термостат Terneo — контур 2',
+          '192.168.50.164': 'SONOFF ZBBridge — Zigbee-шлюз',
+          '192.168.50.176': 'Контролер гаражних воріт — Sonoff/eWeLink',
+          '192.168.50.179': 'Інвертор Deye',
+          '192.168.50.219': 'Трифазний лічильник електроенергії будинку'
+        } %}
+        {% set mac_names = {
+          'DC:6A:E7:A1:09:F2': 'Xiaomi — модель не визначена',
+          '62:1A:51:F4:B2:EE': 'Samsung Galaxy A24 — Василь'
+        } %}
+        {% set ns = namespace(found=false) %}
+        {% for client in clients if client.devIp is defined %}
+        {% set ns.found = true %}
+        - **{{ names.get(client.devIp, mac_names.get(client.devMac | upper, client.devName if client.devName not in ['', 'UnKnown'] else 'Невідомий пристрій')) }}**
+          — {% if client.devIp not in ['', 'UnKnown'] %}`{{ client.devIp }}`{% else %}IP не отримано{% endif %} · `{{ client.devMac | upper }}`
+        {% endfor %}
+        {% if not ns.found %}
+        Немає активних клієнтів або повторювач недоступний.
+        {% endif %}
+    - type: history-graph
+      title: Сигнал повторювача за 24 години
+      hours_to_show: 24
+      grid_options:
+        columns: full
+      entities:
+      - entity: sensor.tenda_repeater_signal
+        name: Сигнал аплінка
+    - type: markdown
+      title: Можливості повторювача
+      grid_options:
+        columns: full
+      content: >
+        **Tenda A9 / N300**, лише 2,4 ГГц, паспортна швидкість до
+        **300 Мбіт/с**. Прошивка не віддає фактичну швидкість з'єднання або
+        трафік окремих клієнтів, тому тут показується реальний рівень сигналу
+        аплінка в dBm. Значення ближче до 0 — краще; приблизно −60…−70 dBm
+        зазвичай придатне, але запас невеликий.
+
+        ⚠️ На повторювачі зараз не встановлено пароль адміністратора.
+  - type: grid
+    cards:
+    - type: heading
+      heading: SONOFF ZBBridge — Zigbee-мережа
+      icon: mdi:zigbee
+      grid_options:
+        columns: full
+    - type: markdown
+      title: Шлюз · 192.168.50.164
+      grid_options:
+        columns: full
+      content: |
+        {% set clients = state_attr('sensor.tenda_repeater_clients', 'onlineList') or [] %}
+        {% set bridge = clients | selectattr('devIp', 'equalto', '192.168.50.164') | list %}
+        {% if bridge | count > 0 %}
+        ## 🟢 Онлайн
+        **SONOFF ZBBridge** з'єднаний через повторювач Tenda A9.
+
+        IP: `192.168.50.164` · MAC: `{{ bridge[0].devMac | upper }}` ·
+        прошивка `1.7.0` · SONOFF ID `100124a572`
+        {% else %}
+        ## 🔴 Недоступний
+        Шлюз відсутній у поточному списку клієнтів Tenda A9. Дочірні
+        Zigbee-датчики можуть не оновлюватися.
+        {% endif %}
+
+        Шлюз передає у Home Assistant показники кліматичних датчиків,
+        датчиків гаражних воріт і руху.
+    - type: markdown
+      title: Підключені Zigbee-пристрої
+      grid_options:
+        columns: full
+      content: |
+        {% set bad = ['unknown', 'unavailable', 'none', ''] %}
+        {% set t = states('sensor.sonoff_a4800819f3_temperature') %}
+        {% set h = states('sensor.sonoff_a4800819f3_humidity') %}
+        {% set b = states('sensor.sonoff_a4800819f3_battery') %}
+        - **2 поверх — температура/вологість** — {% if t in bad %}🔴 недоступний{% else %}🟢 {{ t }} °C · {{ h }}% · батарея {{ b }}%{% endif %}
+
+        {% set t = states('sensor.sonoff_a48005e8ed_temperature') %}
+        {% set h = states('sensor.sonoff_a48005e8ed_humidity') %}
+        {% set b = states('sensor.sonoff_a48005e8ed_battery') %}
+        - **Температура будинку — 2 поверх** — {% if t in bad %}🔴 недоступний{% else %}🟢 {{ t }} °C · {{ h }}% · батарея {{ b }}%{% endif %}
+
+        {% set t = states('sensor.sonoff_a48005a66a_temperature') %}
+        {% set h = states('sensor.sonoff_a48005a66a_humidity') %}
+        {% set b = states('sensor.sonoff_a48005a66a_battery') %}
+        - **Вулиця — балкон** — {% if t in bad %}🔴 недоступний{% else %}🟢 {{ t }} °C · {{ h }}% · батарея {{ b }}%{% endif %}
+
+        {% set t = states('sensor.sonoff_a48001c18f_temperature') %}
+        {% set h = states('sensor.sonoff_a48001c18f_humidity') %}
+        {% set b = states('sensor.sonoff_a48001c18f_battery') %}
+        - **Гостьова — температура/вологість** — {% if t in bad %}🔴 недоступний{% else %}🟢 {{ t }} °C · {{ h }}% · батарея {{ b }}%{% endif %}
+
+        {% set b = states('sensor.sonoff_a48001bcf2_battery') %}
+        - **Гаражні ворота — датчик 1** — {% if b in bad %}🔴 недоступний{% else %}🟢 на зв'язку · батарея {{ b }}%{% endif %}
+
+        {% set b = states('sensor.sonoff_a48005b691_battery') %}
+        - **Гаражні ворота — датчик 2** — {% if b in bad %}🔴 недоступний{% else %}🟢 на зв'язку · батарея {{ b }}%{% endif %}
+
+        {% set motion = states('binary_sensor.sonoff_a48001bcc7') %}
+        {% set b = states('sensor.sonoff_a48001bcc7_battery') %}
+        - **Датчик руху** — {% if motion == 'on' %}🟠 виявлено рух · батарея {{ b }}%{% elif motion == 'off' %}🟢 руху немає · батарея {{ b }}%{% else %}🔴 недоступний{% endif %}
+- title: Клімат
+  path: climate
+  icon: mdi:home-thermometer-outline
+  type: sections
+  max_columns: 4
+  dense_section_placement: false
+  badges:
+  - type: entity
+    entity: sensor.sonoff_a48005a66a_temperature
+    name: Двір
+    color: green
+  - type: entity
+    entity: sensor.2i_poverkh_t_h_temperature
+    name: Дім бабусі
+    color: orange
+  - type: entity
+    entity: sensor.2_floor_inside_temperature
+    name: Спальня батьків
+    color: red
+  - type: entity
+    entity: sensor.2_floor_carbon_dioxide
+    name: CO₂
+    color: purple
+  sections:
+  - type: grid
+    column_span: 2
+    cards:
+    - type: heading
+      heading: Надворі зараз
+      icon: mdi:weather-partly-cloudy
+      grid_options:
+        columns: full
+    - type: weather-forecast
+      entity: weather.forecast_golovna
+      name: Met.no
+      show_current: true
+      show_forecast: false
+      grid_options:
+        columns: full
+    - type: tile
+      entity: sensor.sonoff_a48005a66a_temperature
+      name: Двір · температура
+      icon: mdi:home-thermometer-outline
+      color: orange
+      grid_options:
+        columns: 12
+        rows: 1
+    - type: tile
+      entity: sensor.sonoff_a48005a66a_humidity
+      name: Двір · вологість
+      icon: mdi:water-percent
+      color: blue
+      grid_options:
+        columns: 12
+        rows: 1
+    - type: tile
+      entity: sensor.2_floor_outside_temperature
+      name: PRANA · зовні 1
+      icon: mdi:thermometer
+      color: orange
+      grid_options:
+        columns: 12
+        rows: 1
+    - type: tile
+      entity: sensor.2_floor_outside_temperature_2
+      name: PRANA · зовні 2
+      icon: mdi:thermometer
+      color: orange
+      grid_options:
+        columns: 12
+        rows: 1
+  - type: grid
+    column_span: 2
+    cards:
+    - type: heading
+      heading: Прогноз на 5 днів
+      icon: mdi:calendar-clock
+      grid_options:
+        columns: full
+    - type: weather-forecast
+      entity: weather.forecast_golovna
+      name: Met.no · щоденний прогноз
+      show_current: false
+      show_forecast: true
+      forecast_type: daily
+      grid_options:
+        columns: full
+    - type: markdown
+      text_only: true
+      grid_options:
+        columns: full
+      content: >-
+        {% set ot = state_attr('weather.forecast_golovna', 'temperature') |
+        float(0) %} {% set lt = states('sensor.sonoff_a48005a66a_temperature') %}
+        **Інтернет проти нашого датчика.** Met.no показує {{ ot | round(1) }} °C.
+        {% if lt in ['unknown', 'unavailable'] %} Наш SONOFF на дворі зараз без
+        зв'язку, тому порівняти немає з чим. {% else %} SONOFF на дворі показує
+        {{ lt | float(0) | round(1) }} °C — це на {{ (lt | float(0) - ot) | abs |
+        round(1) }} °C {% if lt | float(0) > ot %}тепліше{% else %}холодніше{%
+        endif %}. {% endif %}
+  - type: grid
+    column_span: 2
+    cards:
+    - type: heading
+      heading: Двір · температури за 24 години
+      icon: mdi:thermometer-lines
+      grid_options:
+        columns: full
+    - type: custom:mini-graph-card
+      name: SONOFF і зовнішні датчики PRANA
+      hours_to_show: 24
+      points_per_hour: 4
+      line_width: 3
+      height: 180
+      animate: true
+      show:
+        labels: true
+        points: false
+        extrema: true
+        average: true
+      grid_options:
+        columns: full
+      entities:
+      - entity: sensor.sonoff_a48005a66a_temperature
+        name: Двір · SONOFF
+        color: '#43a047'
+      - entity: sensor.2_floor_outside_temperature
+        name: PRANA · зовні 1
+        color: '#1e88e5'
+      - entity: sensor.2_floor_outside_temperature_2
+        name: PRANA · зовні 2
+        color: '#fb8c00'
+  - type: grid
+    column_span: 2
+    cards:
+    - type: heading
+      heading: Двір · вологість за 24 години
+      icon: mdi:water-percent
+      grid_options:
+        columns: full
+    - type: custom:mini-graph-card
+      name: SONOFF на дворі
+      hours_to_show: 24
+      points_per_hour: 4
+      line_width: 3
+      height: 180
+      animate: true
+      show:
+        labels: true
+        points: false
+        extrema: true
+        average: true
+      grid_options:
+        columns: full
+      entities:
+      - entity: sensor.sonoff_a48005a66a_humidity
+        name: Двір · вологість
+        color: '#039be5'
+  - type: grid
+    column_span: 2
+    cards:
+    - type: heading
+      heading: Температура по кімнатах
+      icon: mdi:home-thermometer
+      grid_options:
+        columns: full
+    - type: tile
+      entity: sensor.sonoff_a4800819f3_temperature
+      name: 2 поверх · датчик 1
+      icon: mdi:thermometer
+      color: orange
+      grid_options:
+        columns: 12
+        rows: 1
+    - type: tile
+      entity: sensor.sonoff_a48005e8ed_temperature
+      name: 2 поверх · датчик 2
+      icon: mdi:thermometer
+      color: orange
+      grid_options:
+        columns: 12
+        rows: 1
+    - type: tile
+      entity: sensor.2_floor_inside_temperature
+      name: Спальня батьків
+      icon: mdi:bed-king-outline
+      color: orange
+      grid_options:
+        columns: 12
+        rows: 1
+    - type: tile
+      entity: sensor.sonoff_a48001c18f_temperature
+      name: Гостьова
+      icon: mdi:sofa-outline
+      color: orange
+      grid_options:
+        columns: 12
+        rows: 1
+    - type: tile
+      entity: sensor.terneo_2_floor_temperature
+      name: Кухня · підлога
+      icon: mdi:heating-coil
+      color: red
+      grid_options:
+        columns: 12
+        rows: 1
+    - type: tile
+      entity: sensor.terneo_2_air_temperature
+      name: Кухня · повітря
+      icon: mdi:thermometer
+      color: orange
+      grid_options:
+        columns: 12
+        rows: 1
+  - type: grid
+    column_span: 2
+    cards:
+    - type: heading
+      heading: Вологість по кімнатах
+      icon: mdi:water-percent
+      grid_options:
+        columns: full
+    - type: tile
+      entity: sensor.sonoff_a4800819f3_humidity
+      name: 2 поверх · датчик 1
+      icon: mdi:water-percent
+      color: blue
+      grid_options:
+        columns: 12
+        rows: 1
+    - type: tile
+      entity: sensor.sonoff_a48005e8ed_humidity
+      name: 2 поверх · датчик 2
+      icon: mdi:water-percent
+      color: blue
+      grid_options:
+        columns: 12
+        rows: 1
+    - type: tile
+      entity: sensor.2_floor_humidity
+      name: Спальня батьків
+      icon: mdi:water-percent
+      color: blue
+      grid_options:
+        columns: 12
+        rows: 1
+    - type: tile
+      entity: sensor.sonoff_a48001c18f_humidity
+      name: Гостьова
+      icon: mdi:water-percent
+      color: blue
+      grid_options:
+        columns: 12
+        rows: 1
+    - type: tile
+      entity: sensor.siku_blauberg_fan_192_168_50_27_humidity
+      name: Кімната хлопців
+      icon: mdi:water-percent
+      color: blue
+      grid_options:
+        columns: 12
+        rows: 1
+    - type: tile
+      entity: sensor.siku_blauberg_fan_192_168_50_123_humidity
+      name: Кімната Олесі
+      icon: mdi:water-percent
+      color: blue
+      grid_options:
+        columns: 12
+        rows: 1
+  - type: grid
+    column_span: 2
+    cards:
+    - type: heading
+      heading: Будинок середній · температури за 24 години
+      icon: mdi:chart-line
+      grid_options:
+        columns: full
+    - type: custom:mini-graph-card
+      name: Температури по кімнатах
+      hours_to_show: 24
+      points_per_hour: 4
+      line_width: 3
+      height: 180
+      animate: true
+      show:
+        labels: true
+        points: false
+        extrema: true
+        average: true
+      grid_options:
+        columns: full
+      entities:
+      - entity: sensor.sonoff_a4800819f3_temperature
+        name: 2 поверх · датчик 1
+        color: '#43a047'
+      - entity: sensor.sonoff_a48005e8ed_temperature
+        name: 2 поверх · датчик 2
+        color: '#1e88e5'
+      - entity: sensor.2_floor_inside_temperature
+        name: Спальня батьків
+        color: '#fb8c00'
+  - type: grid
+    column_span: 2
+    cards:
+    - type: heading
+      heading: Будинок середній · вологість за 24 години
+      icon: mdi:water-percent
+      grid_options:
+        columns: full
+    - type: custom:mini-graph-card
+      name: Вологість по кімнатах
+      hours_to_show: 24
+      points_per_hour: 4
+      line_width: 3
+      height: 180
+      animate: true
+      show:
+        labels: true
+        points: false
+        extrema: true
+        average: true
+      grid_options:
+        columns: full
+      entities:
+      - entity: sensor.sonoff_a4800819f3_humidity
+        name: 2 поверх · датчик 1
+        color: '#43a047'
+      - entity: sensor.sonoff_a48005e8ed_humidity
+        name: 2 поверх · датчик 2
+        color: '#1e88e5'
+      - entity: sensor.2_floor_humidity
+        name: Спальня батьків
+        color: '#fb8c00'
+      - entity: sensor.siku_blauberg_fan_192_168_50_27_humidity
+        name: Кімната хлопців
+        color: '#8e24aa'
+      - entity: sensor.siku_blauberg_fan_192_168_50_123_humidity
+        name: Кімната Олесі
+        color: '#00acc1'
+  - type: grid
+    column_span: 2
+    cards:
+    - type: heading
+      heading: Керування кліматом
+      icon: mdi:tune-vertical
+      grid_options:
+        columns: full
+    - type: tile
+      entity: climate.terneo_1
+      name: Тепла підлога · контур 1
+      icon: mdi:heating-coil
+      features:
+      - type: target-temperature
+      grid_options:
+        columns: 12
+    - type: tile
+      entity: climate.terneo_2
+      name: Кухня · тепла підлога
+      icon: mdi:heating-coil
+      features:
+      - type: target-temperature
+      grid_options:
+        columns: 12
+    - type: tile
+      entity: fan.2_floor_supply_fan
+      name: PRANA · притік
+      icon: mdi:fan
+      features:
+      - type: fan-speed
+      grid_options:
+        columns: 12
+    - type: tile
+      entity: fan.siku_blauberg_fan_192_168_50_27
+      name: Кімната хлопців · Blauberg
+      icon: mdi:fan
+      features:
+      - type: fan-speed
+      grid_options:
+        columns: 12
+    - type: tile
+      entity: fan.siku_blauberg_fan_192_168_50_123
+      name: Кімната Олесі · Blauberg
+      icon: mdi:fan
+      features:
+      - type: fan-speed
+      grid_options:
+        columns: 12
+    - type: tile
+      entity: fan.2_floor_extract_fan
+      name: PRANA · витяжка
+      icon: mdi:fan-off
+      features:
+      - type: fan-speed
+      grid_options:
+        columns: 12
+    - type: tile
+      entity: switch.2_floor_heater
+      name: PRANA · нагрівач
+      icon: mdi:radiator
+      grid_options:
+        columns: 12
+        rows: 1
+    - type: tile
+      entity: switch.2_floor_winter
+      name: PRANA · зимовий режим
+      icon: mdi:snowflake-thermometer
+      grid_options:
+        columns: 12
+        rows: 1
+    - type: markdown
+      text_only: true
+      grid_options:
+        columns: full
+      content: >-
+        Повне керування й облік споживання залишаються на вкладках **Тепла
+        підлога** та **Вентиляція**. Тут — тільки те, що потрібно змінити
+        одразу, коли побачив показник вище.
+  - type: grid
+    column_span: 2
+    cards:
+    - type: heading
+      heading: Дім бабусі і дідуся
+      icon: mdi:home-heart
+      grid_options:
+        columns: full
+    - type: tile
+      entity: sensor.2i_poverkh_t_h_temperature
+      name: Температура
+      icon: mdi:home-thermometer
+      color: orange
+      grid_options:
+        columns: 12
+        rows: 1
+    - type: tile
+      entity: sensor.2i_poverkh_t_h_humidity
+      name: Вологість
+      icon: mdi:water-percent
+      color: blue
+      grid_options:
+        columns: 12
+        rows: 1
+    - type: markdown
+      text_only: true
+      grid_options:
+        columns: full
+      content: >-
+        Це окремий **Wi-Fi Tuya-датчик** усередині Дому бабусі і дідуся.
+        Зовнішній SONOFF «Темп. Вулиця. Балкон.» фізично стоїть на дворі й
+        показаний у блоці «Надворі зараз».
+    - type: custom:mini-graph-card
+      name: Температура і вологість
+      hours_to_show: 24
+      points_per_hour: 4
+      line_width: 3
+      height: 180
+      animate: true
+      show:
+        labels: true
+        labels_secondary: true
+        points: false
+        extrema: true
+        average: true
+      grid_options:
+        columns: full
+      entities:
+      - entity: sensor.2i_poverkh_t_h_temperature
+        name: Температура
+        color: '#ef6c00'
+      - entity: sensor.2i_poverkh_t_h_humidity
+        name: Вологість
+        color: '#039be5'
+        y_axis: secondary
+  - type: grid
+    column_span: 2
+    cards:
+    - type: heading
+      heading: Якість повітря · спальня батьків
+      icon: mdi:molecule-co2
+      grid_options:
+        columns: full
+    - type: gauge
+      entity: sensor.2_floor_carbon_dioxide
+      name: CO₂
+      unit: ppm
+      min: 400
+      max: 2000
+      needle: true
+      severity:
+        green: 400
+        yellow: 800
+        red: 1200
+      grid_options:
+        columns: full
+    - type: markdown
+      text_only: true
+      grid_options:
+        columns: full
+      content: >-
+        Зелена зона до 800 ppm — повітря свіже. Жовта 800–1200 ppm — варто
+        провітрити. Червона понад 1200 ppm — задушливо, працездатність падає.
+        Датчик CO₂ є лише в PRANA у спальні батьків.
+  - type: grid
+    column_span: 2
+    cards:
+    - type: heading
+      heading: Стан датчиків
+      icon: mdi:battery-heart-variant
+      grid_options:
+        columns: full
+    - type: tile
+      entity: sensor.sonoff_a48005a66a_battery
+      name: Двір · SONOFF
+      color: state
+      grid_options:
+        columns: 12
+        rows: 1
+    - type: tile
+      entity: sensor.sonoff_a4800819f3_battery
+      name: 2 поверх · датчик 1
+      color: state
+      grid_options:
+        columns: 12
+        rows: 1
+    - type: tile
+      entity: sensor.sonoff_a48005e8ed_battery
+      name: 2 поверх · датчик 2
+      color: state
+      grid_options:
+        columns: 12
+        rows: 1
+    - type: tile
+      entity: sensor.sonoff_a48001c18f_battery
+      name: Гостьова
+      color: state
+      grid_options:
+        columns: 12
+        rows: 1
+    - type: tile
+      entity: sensor.2i_poverkh_t_h_battery_state
+      name: Дім бабусі · Tuya
+      color: state
+      grid_options:
+        columns: 12
+        rows: 1
+    - type: markdown
+      text_only: true
+      grid_options:
+        columns: full
+      content: >-
+        Приглушений сірий колір і напис «Недоступно» означають, що датчик не на
+        зв'язку — це не нуль і не нормальний показник. У кімнатах хлопців та
+        Олесі Blauberg передає лише вологість, у **великому будинку**
+        температурних датчиків ще немає. Відсутні показники не підміняються
+        даними з інших кімнат.
+- title: Інвертор Deye
+  path: deye-inverter
+  icon: mdi:solar-power-variant
+  type: sections
+  max_columns: 4
+  dense_section_placement: true
+  sections:
+  - type: grid
+    cards:
+    - type: heading
+      heading: Deye · трифазний гібридний інвертор
+      icon: mdi:solar-power-variant
+      grid_options:
+        columns: full
+    - type: markdown
+      grid_options:
+        columns: full
+      content: |
+        {% set missing = ['unknown', 'unavailable', 'none', ''] %}
+        {% set connected = is_state('binary_sensor.inverter_connection', 'on') %}
+        {% set state = states('sensor.inverter_device_state') %}
+        {% set alarm = states('sensor.inverter_device_alarm') %}
+        {% set fault = states('sensor.inverter_device_fault') %}
+        {% if not connected or state in missing %}
+        # 🔴 ІНВЕРТОР НЕ ВІДПОВІДАЄ
+
+        Перевірте мережеве підключення Deye `192.168.50.179` та живлення пристрою.
+        {% elif alarm != 'OK' or fault != 'OK'
+              or is_state('binary_sensor.inverter_battery_alarm', 'on')
+              or is_state('binary_sensor.inverter_battery_fault', 'on') %}
+        # 🔴 ПОТРІБНА УВАГА
+
+        **Стан:** {{ state }} · **аварія:** {{ alarm }} · **несправність:** {{ fault }}
+        {% else %}
+        # 🟢 DEYE ПРАЦЮЄ НОРМАЛЬНО
+
+        **Навантаження:** {{ (states('sensor.inverter_load_power') | float(0) / 1000) | round(2) }} кВт ·
+        **мережа:** {{ (states('sensor.inverter_grid_power') | float(0) / 1000) | round(2) }} кВт ·
+        **акумулятор:** {{ states('sensor.inverter_battery') }}%
+        {% endif %}
+
+        Зв'язок: **{{ 'є' if connected else 'немає' }}** · оновлення кожні
+        {{ states('sensor.inverter_update_interval') | float(0) | round(1) }} с ·
+        температура {{ states('sensor.inverter_temperature') }} °C.
+
+        [Відкрити детальну панель «Потужність»](/power-dashboard/inverter)
+    - type: custom:sunsynk-power-flow-card
+      cardstyle: lite
+      panel_mode: false
+      large_font: true
+      show_solar: false
+      inverter:
+        modern: true
+        three_phase: true
+        model: deye
+        autarky: power
+      battery:
+        energy: 10000
+        shutdown_soc: 15
+        show_daily: true
+        invert_power: false
+        animation_speed: 6
+        max_power: 5000
+      load:
+        show_daily: true
+        animation_speed: 8
+        max_power: 15000
+        show_absolute: false
+      grid:
+        show_daily_buy: true
+        show_daily_sell: true
+        animation_speed: 8
+        max_power: 15000
+        invert_grid: false
+      entities:
+        inverter_status_59: sensor.inverter_device_state
+        inverter_power_175: sensor.inverter_power
+        inverter_voltage_154: sensor.inverter_output_l2_voltage
+        load_frequency_192: sensor.inverter_load_frequency
+        dc_transformer_temp_90: sensor.inverter_dc_temperature
+        battery_soc_184: sensor.inverter_battery
+        battery_power_190: sensor.inverter_battery_power
+        battery_voltage_183: sensor.inverter_battery_voltage
+        battery_current_191: sensor.inverter_battery_current
+        battery_temp_182: sensor.inverter_battery_temperature
+        day_battery_charge_70: sensor.inverter_today_battery_charge
+        day_battery_discharge_71: sensor.inverter_today_battery_discharge
+        grid_ct_power_172: sensor.inverter_grid_power
+        grid_power_169: sensor.inverter_grid_power
+        grid_ct_power_l2: sensor.inverter_grid_l2_power
+        grid_ct_power_l3: sensor.inverter_grid_l3_power
+        grid_voltage: sensor.inverter_grid_l1_voltage
+        grid_connected_status_194: sensor.inverter_device_relay
+        day_grid_import_76: sensor.inverter_today_energy_import
+        day_grid_export_77: sensor.inverter_today_energy_export
+        essential_power: sensor.inverter_load_power
+        load_power_l1: sensor.inverter_load_l1_power
+        load_power_l2: sensor.inverter_load_l2_power
+        load_power_l3: sensor.inverter_load_l3_power
+        day_load_energy_84: sensor.inverter_today_load_consumption
+      grid_options:
+        columns: full
+  - type: grid
+    cards:
+    - type: heading
+      heading: Стан і потужність
+      icon: mdi:flash
+      grid_options:
+        columns: full
+    - type: tile
+      entity: binary_sensor.inverter_connection
+      name: Зв'язок з Deye
+      grid_options:
+        columns: 6
+    - type: tile
+      entity: sensor.inverter_device_state
+      name: Стан інвертора
+      grid_options:
+        columns: 6
+    - type: tile
+      entity: sensor.inverter_load_power
+      name: Навантаження зараз
+      color: amber
+      grid_options:
+        columns: 6
+    - type: tile
+      entity: sensor.inverter_grid_power
+      name: Потужність мережі
+      color: blue
+      grid_options:
+        columns: 6
+    - type: tile
+      entity: sensor.inverter_battery
+      name: Заряд акумулятора
+      color: green
+      grid_options:
+        columns: 6
+    - type: tile
+      entity: sensor.inverter_battery_power
+      name: Потужність акумулятора
+      grid_options:
+        columns: 6
+    - type: entities
+      title: Безпека і температура
+      show_header_toggle: false
+      grid_options:
+        columns: full
+      entities:
+      - entity: sensor.inverter_device_alarm
+        name: Аварія
+      - entity: sensor.inverter_device_fault
+        name: Несправність
+      - entity: binary_sensor.inverter_battery_alarm
+        name: Аварія акумулятора
+      - entity: binary_sensor.inverter_battery_fault
+        name: Несправність акумулятора
+      - entity: sensor.inverter_temperature
+        name: Температура інвертора
+      - entity: sensor.inverter_dc_temperature
+        name: Температура DC
+      - entity: sensor.inverter_battery_temperature
+        name: Температура акумулятора
+  - type: grid
+    cards:
+    - type: heading
+      heading: Енергія за сьогодні
+      icon: mdi:lightning-bolt-circle
+      grid_options:
+        columns: full
+    - type: entities
+      show_header_toggle: false
+      grid_options:
+        columns: full
+      entities:
+      - entity: sensor.inverter_today_load_consumption
+        name: Споживання будинку
+      - entity: sensor.inverter_today_energy_import
+        name: Імпорт із мережі
+      - entity: sensor.inverter_today_energy_export
+        name: Віддано в мережу
+      - entity: sensor.inverter_today_battery_charge
+        name: Заряджено в акумулятор
+      - entity: sensor.inverter_today_battery_discharge
+        name: Віддано з акумулятора
+      - entity: sensor.inverter_today_losses
+        name: Втрати системи
+    - type: custom:mini-graph-card
+      name: Потоки енергії за 24 години
+      hours_to_show: 24
+      points_per_hour: 4
+      line_width: 3
+      animate: true
+      show:
+        labels: true
+        points: false
+      grid_options:
+        columns: full
+      entities:
+      - entity: sensor.inverter_today_load_consumption
+        name: Навантаження
+      - entity: sensor.inverter_today_energy_import
+        name: Імпорт
+      - entity: sensor.inverter_today_battery_charge
+        name: Заряд акумулятора
+      - entity: sensor.inverter_today_battery_discharge
+        name: Розряд акумулятора
+  - type: grid
+    cards:
+    - type: heading
+      heading: Фази та акумулятор
+      icon: mdi:sine-wave
+      grid_options:
+        columns: full
+    - type: statistics-graph
+      title: Навантаження фаз за 24 години
+      days_to_show: 1
+      period: 5minute
+      stat_types:
+      - mean
+      - max
+      chart_type: line
+      grid_options:
+        columns: full
+      entities:
+      - entity: sensor.inverter_load_l1_power
+        name: Фаза L1
+      - entity: sensor.inverter_load_l2_power
+        name: Фаза L2
+      - entity: sensor.inverter_load_l3_power
+        name: Фаза L3
+    - type: statistics-graph
+      title: Напруга мережі за 24 години
+      days_to_show: 1
+      period: 5minute
+      stat_types:
+      - min
+      - mean
+      - max
+      chart_type: line
+      grid_options:
+        columns: full
+      entities:
+      - entity: sensor.inverter_grid_l1_voltage
+        name: Фаза L1
+      - entity: sensor.inverter_grid_l2_voltage
+        name: Фаза L2
+      - entity: sensor.inverter_grid_l3_voltage
+        name: Фаза L3
+    - type: entities
+      title: Акумулятор
+      show_header_toggle: false
+      grid_options:
+        columns: full
+      entities:
+      - entity: sensor.inverter_battery
+        name: Заряд (SOC)
+      - entity: sensor.inverter_battery_state
+        name: Стан
+      - entity: sensor.inverter_battery_soh
+        name: Здоров'я (SOH)
+      - entity: sensor.inverter_battery_voltage
+        name: Напруга
+      - entity: sensor.inverter_battery_current
+        name: Струм
+      - entity: sensor.inverter_total_battery_life_cycles
+        name: Еквівалентних циклів
+    - type: markdown
+      title: Поточні режими
+      grid_options:
+        columns: full
+      content: |
+        **Режим роботи:** {{ states('select.inverter_work_mode') }}<br>
+        **Пріоритет енергії:** {{ states('select.inverter_energy_pattern') }}<br>
+        **Розклад Time of Use:** {{ states('select.inverter_time_of_use') }}<br>
+        **Заряджання від мережі:** {{ 'увімкнене' if is_state('switch.inverter_battery_grid_charging', 'on') else 'вимкнене' }}
+
+        Ця вкладка призначена для безпечного спостереження. Кнопки вимкнення,
+        перезапуску та параметри електричних захистів навмисно не винесені на
+        дашборд, щоб випадкове натискання не знеструмило будинок.
 - title: Бойлер
   path: midea
   icon: mdi:water-boiler
@@ -142,9 +1460,22 @@ views:
       entities:
       - entity: sensor.boiler_spozhito
         name: Бойлер
-    - type: history-graph
-      title: Потужність за 24 години
+    - type: custom:mini-graph-card
+      name: Потужність бойлера · 24 години
       hours_to_show: 24
+      points_per_hour: 4
+      line_width: 3
+      animate: true
+      show:
+        labels: true
+        points: false
+      color_thresholds:
+      - value: 0
+        color: '#43a047'
+      - value: 1000
+        color: '#fb8c00'
+      - value: 2200
+        color: '#e53935'
       grid_options:
         columns: full
       entities:
@@ -334,6 +1665,10 @@ views:
       content: '![Останній рух](/local/motion/latest.jpg)'
       grid_options:
         columns: full
+    - type: markdown
+      content: '[▶ Відеоролики руху на NAS](/media-browser/browser/app%2Cmedia-source%3A%2F%2Fmedia_source/%2Cmedia-source%3A%2F%2Fmedia_source%2Flocal%2Fvideo/%2Cmedia-source%3A%2F%2Fmedia_source%2Flocal%2Fvideo%2Fha-motion)'
+      grid_options:
+        columns: full
 - title: Автополив
   path: poliv
   icon: mdi:sprinkler-variant
@@ -342,6 +1677,65 @@ views:
   dense_section_placement: true
   sections:
   - type: grid
+    column_span: 2
+    cards:
+    - type: heading
+      heading: Що система вирішила про полив
+      icon: mdi:clipboard-text-clock
+      grid_options:
+        columns: full
+    - type: markdown
+      grid_options:
+        columns: full
+      content: >-
+        ### {{ states('input_text.poliv_ostannie_rishennia') }}
+
+
+        {% set lt = state_attr('automation.poliv_rozklad_za_chasom_i_dniami_tizhnia',
+        'last_triggered') %}
+        Останній розгляд розкладу:
+        {{ (lt | as_datetime | as_local).strftime('%d.%m.%Y о %H:%M')
+        if lt else 'ще не було' }}.
+
+
+        Розумний полив зараз просить: зона 1 —
+        {{ (states('sensor.smart_irrigation_zona1') | float(0) / 60) | round(0) }} хв,
+        зона 2 —
+        {{ (states('sensor.smart_irrigation_zona2') | float(0) / 60) | round(0) }} хв.
+        Баланс води зони 1:
+        {{ states('sensor.smart_irrigation_zona1_bucket') }} мм
+        ({{ 'дефіцит, ґрунт сухий' if states('sensor.smart_irrigation_zona1_bucket')
+        | float(0) < 0 else 'запас після дощу або поливу' }}).
+    - type: markdown
+      grid_options:
+        columns: full
+      content: >-
+        ### Хто вирішує, чи поливати
+
+
+        Рішень **два, і вони незалежні одне від одного**.
+
+
+        **1. Скільки поливати — Розумний полив.** Щодня о 19:55 він перераховує
+        баланс води в ґрунті: скільки випарувалося мінус скільки випало дощу за
+        добу, і з цього виводить тривалість. Він **ніколи не скасовує** полив —
+        лише може видати тривалість нуль. Дощ, який іде просто зараз, він
+        побачить аж на наступному перерахунку о 19:55, а не одразу.
+
+
+        **2. Чи поливати взагалі — автоматизація розкладу.** За 1 годину 15
+        хвилин до сходу сонця вона запитує погодинний прогноз Met.no і перевіряє
+        дві речі: чи йде дощ у цю хвилину і чи прогнозують понад 0,2 мм опадів у
+        найближчі 6 годин. Якщо щось із цього справдилось, вона **не скасовує
+        полив сама** — надсилає на телефон питання «Поливати попри це?» і чекає
+        30 хвилин. Немає відповіді — полив пропускається.
+
+
+        **Дощ визначається за прогнозом Met.no з інтернету, а не за датчиком у
+        дворі.** Власного датчика дощу в системі немає, тому «дощу немає зараз,
+        але скасовано» — це нормальна і очікувана ситуація: скасовує прогноз.
+  - type: grid
+    column_span: 2
     cards:
     - type: heading
       heading: Розклад поливу
@@ -351,10 +1745,11 @@ views:
       grid_options:
         columns: full
       content: >-
-        **Автоматичний старт:** за 30 хвилин до сходу сонця.
+        **Автоматичний старт:** за 1 год 15 хв до сходу сонця, щоб полив
+        закінчився приблизно на схід.
 
         **Наступний запуск:**
-        {{ (as_timestamp(state_attr('sun.sun', 'next_rising')) - 1800)
+        {{ (as_timestamp(state_attr('sun.sun', 'next_rising')) - 4500)
            | timestamp_custom('%d.%m.%Y %H:%M', true) }}
     - type: entities
       grid_options:
@@ -455,9 +1850,15 @@ views:
       heading: Тривалість роботи сьогодні
       grid_options:
         columns: full
-    - type: history-graph
-      title: Насос і клапани - години роботи сьогодні
+    - type: custom:mini-graph-card
+      name: Насос і клапани · години роботи сьогодні
       hours_to_show: 24
+      points_per_hour: 4
+      line_width: 3
+      animate: true
+      show:
+        labels: true
+        points: false
       grid_options:
         columns: full
       entities:
@@ -487,14 +1888,20 @@ views:
       grid_options:
         columns: full
       entities:
-      - entity: switch.avtopoliv_kontroler_switch_1
-        name: Клапан
       - entity: binary_sensor.irrigation_unlimited_c1_z1
         name: Стан поливу зони 1
       - entity: timer.poliv_zoni_1
         name: Залишилось поливати
+    - type: markdown
+      grid_options:
+        columns: full
+      content: |
+        **Фізичний клапан:** {{ '🟢 відкритий' if is_state('switch.avtopoliv_kontroler_avtopoliv_klapan_1', 'on') else ('🔴 закритий' if is_state('switch.avtopoliv_kontroler_avtopoliv_klapan_1', 'off') else '🟡 зв’язок відсутній') }}
+
+        Для ручного поливу задайте тривалість вище та натисніть **«Ручний старт»**.
+        Клапаном і насосом безпечно керує Irrigation Unlimited.
     - type: button
-      name: Старт
+      name: Ручний старт
       icon: mdi:play
       grid_options:
         columns: 6
@@ -527,14 +1934,20 @@ views:
       grid_options:
         columns: full
       entities:
-      - entity: switch.avtopoliv_kontroler_switch_2
-        name: Клапан
       - entity: binary_sensor.irrigation_unlimited_c1_z2
         name: Стан поливу зони 2
       - entity: timer.poliv_zoni_2
         name: Залишилось поливати
+    - type: markdown
+      grid_options:
+        columns: full
+      content: |
+        **Фізичний клапан:** {{ '🟢 відкритий' if is_state('switch.avtopoliv_kontroler_avtopoliv_klapan_2', 'on') else ('🔴 закритий' if is_state('switch.avtopoliv_kontroler_avtopoliv_klapan_2', 'off') else '🟡 зв’язок відсутній') }}
+
+        Для ручного поливу задайте тривалість вище та натисніть **«Ручний старт»**.
+        Клапаном і насосом безпечно керує Irrigation Unlimited.
     - type: button
-      name: Старт
+      name: Ручний старт
       icon: mdi:play
       grid_options:
         columns: 6
@@ -567,7 +1980,7 @@ views:
       grid_options:
         columns: full
       entities:
-      - entity: switch.avtopoliv_kontroler_switch_3
+      - entity: switch.avtopoliv_kontroler_avtopoliv_klapan_3
         name: Клапан
       - entity: binary_sensor.irrigation_unlimited_c1_z3
         name: Стан поливу зони 3
@@ -607,7 +2020,7 @@ views:
       grid_options:
         columns: full
       entities:
-      - entity: switch.avtopoliv_kontroler_switch_4
+      - entity: switch.avtopoliv_kontroler_avtopoliv_klapan_4
         name: Клапан
       - entity: script.poliv_zona_4
         name: Йде полив
@@ -647,7 +2060,7 @@ views:
       grid_options:
         columns: full
       entities:
-      - entity: switch.avtopoliv_kontroler_switch_5
+      - entity: switch.avtopoliv_kontroler_avtopoliv_klapan_5
         name: Клапан
       - entity: script.poliv_zona_5
         name: Йде полив
@@ -717,9 +2130,22 @@ views:
       entities:
       - entity: sensor.nasos_polivu_spozhito
         name: Насос
-    - type: history-graph
-      title: Потужність за 24 години
+    - type: custom:mini-graph-card
+      name: Потужність насоса · 24 години
       hours_to_show: 24
+      points_per_hour: 4
+      line_width: 3
+      animate: true
+      show:
+        labels: true
+        points: false
+      color_thresholds:
+      - value: 0
+        color: '#43a047'
+      - value: 900
+        color: '#1e88e5'
+      - value: 1300
+        color: '#e53935'
       grid_options:
         columns: full
       entities:
@@ -840,9 +2266,22 @@ views:
       icon: mdi:chart-areaspline
       grid_options:
         columns: full
-    - type: history-graph
-      title: Потужність за 24 години
+    - type: custom:mini-graph-card
+      name: Потужність зарядної станції · 24 години
       hours_to_show: 24
+      points_per_hour: 4
+      line_width: 3
+      animate: true
+      show:
+        labels: true
+        points: false
+      color_thresholds:
+      - value: 0
+        color: '#43a047'
+      - value: 3
+        color: '#1e88e5'
+      - value: 7
+        color: '#e53935'
       grid_options:
         columns: full
       entities:
@@ -943,3 +2382,377 @@ views:
         Ця колонка свідомо названа «Станція 1». Кожну наступну зарядну станцію
         буде додано окремою колонкою з власними станом, лічильником, графіками та
         налаштуваннями — без змішування статистики між автомобілями або станціями.
+- title: Вентиляція
+  path: ventilation
+  icon: mdi:hvac
+  type: sections
+  max_columns: 4
+  dense_section_placement: true
+  sections:
+  - type: grid
+    cards:
+    - type: heading
+      heading: PRANA · спальня батьків
+      icon: mdi:air-filter
+      grid_options:
+        columns: full
+    - type: tile
+      entity: fan.2_floor_supply_fan
+      name: Приплив
+      icon: mdi:weather-windy
+      features_position: bottom
+      features:
+      - type: fan-speed
+      grid_options:
+        columns: 6
+    - type: tile
+      entity: fan.2_floor_extract_fan
+      name: Витяжка
+      icon: mdi:fan-chevron-down
+      features_position: bottom
+      features:
+      - type: fan-speed
+      grid_options:
+        columns: 6
+    - type: entities
+      title: Режими роботи
+      show_header_toggle: false
+      grid_options:
+        columns: full
+      entities:
+      - entity: switch.2_floor_auto
+        name: Автоматичний режим
+      - entity: switch.2_floor_auto_plus
+        name: Розширений автоматичний режим
+      - entity: switch.2_floor_bound
+        name: Синхронізувати приплив і витяжку
+      - entity: switch.2_floor_heater
+        name: Підігрів припливного повітря
+      - entity: switch.2_floor_winter
+        name: Зимовий режим
+      - entity: number.2_floor_display_brightness
+        name: Яскравість дисплея
+  - type: grid
+    cards:
+    - type: heading
+      heading: Якість повітря
+      icon: mdi:air-filter
+      grid_options:
+        columns: full
+    - type: entities
+      grid_options:
+        columns: full
+      entities:
+      - entity: sensor.2_floor_carbon_dioxide
+        name: Вуглекислий газ (CO₂)
+      - entity: sensor.2_floor_volatile_organic_compounds_parts
+        name: Леткі органічні сполуки (VOC)
+      - entity: sensor.2_floor_humidity
+        name: Вологість
+      - entity: sensor.2_floor_pressure
+        name: Атмосферний тиск
+    - type: history-graph
+      title: CO₂, VOC і вологість · 24 години
+      hours_to_show: 24
+      grid_options:
+        columns: full
+      entities:
+      - entity: sensor.2_floor_carbon_dioxide
+        name: CO₂
+      - entity: sensor.2_floor_volatile_organic_compounds_parts
+        name: VOC
+      - entity: sensor.2_floor_humidity
+        name: Вологість
+  - type: grid
+    cards:
+    - type: heading
+      heading: Температури
+      icon: mdi:thermometer-lines
+      grid_options:
+        columns: full
+    - type: entities
+      grid_options:
+        columns: full
+      entities:
+      - entity: sensor.2_floor_inside_temperature
+        name: Температура в приміщенні
+      - entity: sensor.2_floor_outside_temperature
+        name: Температура зовні · датчик 1
+      - entity: sensor.2_floor_outside_temperature_2
+        name: Температура зовні · датчик 2
+    - type: custom:mini-graph-card
+      name: Температури PRANA · 24 години
+      hours_to_show: 24
+      points_per_hour: 2
+      line_width: 3
+      animate: true
+      show:
+        labels: true
+        points: false
+      grid_options:
+        columns: full
+      entities:
+      - entity: sensor.2_floor_inside_temperature
+        name: Усередині
+      - entity: sensor.2_floor_outside_temperature
+        name: Зовні 1
+      - entity: sensor.2_floor_outside_temperature_2
+        name: Зовні 2
+  - type: grid
+    cards:
+    - type: heading
+      heading: Blauberg №1 · кімната хлопців
+      icon: mdi:fan
+      grid_options:
+        columns: full
+    - type: tile
+      entity: fan.siku_blauberg_fan_192_168_50_27
+      name: Blauberg №1 · кімната хлопців
+      icon: mdi:fan
+      features_position: bottom
+      features:
+      - type: fan-speed
+      - type: fan-preset-modes
+        style: dropdown
+        preset_modes:
+        - auto
+        - manual
+        - 'on'
+        - party
+        - sleep
+      - type: fan-direction
+      - type: fan-oscillate
+      grid_options:
+        columns: full
+    - type: entities
+      title: Стан і датчики
+      show_header_toggle: false
+      grid_options:
+        columns: full
+      entities:
+      - entity: sensor.siku_blauberg_fan_192_168_50_27_mode
+        name: Режим
+      - entity: sensor.siku_blauberg_fan_192_168_50_27_humidity
+        name: Вологість
+      - entity: sensor.siku_blauberg_fan_192_168_50_27_rpm
+        name: Оберти вентилятора
+      - entity: sensor.siku_blauberg_fan_192_168_50_27_alarm
+        name: Аварія
+      - entity: sensor.siku_blauberg_fan_192_168_50_27_filter_timer_countdown
+        name: Залишок ресурсу фільтра
+      - entity: sensor.siku_blauberg_fan_192_168_50_27_timer_countdown
+        name: Залишок таймера
+      - entity: sensor.siku_blauberg_fan_192_168_50_27_firmware_version
+        name: Прошивка
+    - type: horizontal-stack
+      cards:
+      - type: button
+        entity: button.siku_blauberg_fan_192_168_50_27_party_mode
+        name: Посилений режим
+        icon: mdi:weather-windy
+        show_state: false
+      - type: button
+        entity: button.siku_blauberg_fan_192_168_50_27_sleep_mode
+        name: Нічний режим
+        icon: mdi:weather-night
+        show_state: false
+      grid_options:
+        columns: full
+    - type: history-graph
+      title: Вологість і оберти · 24 години
+      hours_to_show: 24
+      grid_options:
+        columns: full
+      entities:
+      - entity: sensor.siku_blauberg_fan_192_168_50_27_humidity
+        name: Вологість
+      - entity: sensor.siku_blauberg_fan_192_168_50_27_rpm
+        name: Оберти
+    - type: markdown
+      grid_options:
+        columns: full
+      content: >-
+        Локальна адреса: `192.168.50.27`. Рекуператор встановлений у
+        **кімнаті хлопців**. Скидання попередження фільтра навмисно не винесене
+        на головну картку — його слід натискати лише після обслуговування фільтра.
+  - type: grid
+    cards:
+    - type: heading
+      heading: Blauberg №2 · кімната Олесі
+      icon: mdi:fan
+      grid_options:
+        columns: full
+    - type: tile
+      entity: fan.siku_blauberg_fan_192_168_50_123
+      name: Blauberg №2 · кімната Олесі
+      icon: mdi:fan
+      features_position: bottom
+      features:
+      - type: fan-speed
+      - type: fan-preset-modes
+        style: dropdown
+        preset_modes:
+        - auto
+        - manual
+        - 'on'
+        - party
+        - sleep
+      - type: fan-direction
+      - type: fan-oscillate
+      grid_options:
+        columns: full
+    - type: entities
+      title: Стан і датчики
+      show_header_toggle: false
+      grid_options:
+        columns: full
+      entities:
+      - entity: sensor.siku_blauberg_fan_192_168_50_123_mode
+        name: Режим
+      - entity: sensor.siku_blauberg_fan_192_168_50_123_humidity
+        name: Вологість
+      - entity: sensor.siku_blauberg_fan_192_168_50_123_rpm
+        name: Оберти вентилятора
+      - entity: sensor.siku_blauberg_fan_192_168_50_123_alarm
+        name: Аварія
+      - entity: sensor.siku_blauberg_fan_192_168_50_123_filter_timer_countdown
+        name: Залишок ресурсу фільтра
+      - entity: sensor.siku_blauberg_fan_192_168_50_123_timer_countdown
+        name: Залишок таймера
+      - entity: sensor.siku_blauberg_fan_192_168_50_123_firmware_version
+        name: Прошивка
+    - type: horizontal-stack
+      cards:
+      - type: button
+        entity: button.siku_blauberg_fan_192_168_50_123_party_mode
+        name: Посилений режим
+        icon: mdi:weather-windy
+        show_state: false
+      - type: button
+        entity: button.siku_blauberg_fan_192_168_50_123_sleep_mode
+        name: Нічний режим
+        icon: mdi:weather-night
+        show_state: false
+      grid_options:
+        columns: full
+    - type: history-graph
+      title: Вологість і оберти · 24 години
+      hours_to_show: 24
+      grid_options:
+        columns: full
+      entities:
+      - entity: sensor.siku_blauberg_fan_192_168_50_123_humidity
+        name: Вологість
+      - entity: sensor.siku_blauberg_fan_192_168_50_123_rpm
+        name: Оберти
+    - type: markdown
+      grid_options:
+        columns: full
+      content: >-
+        Локальна адреса: `192.168.50.123`. Рекуператор встановлений у
+        **кімнаті Олесі**. Картка дозволяє вмикати рекуператор, задавати
+        швидкість, режим, напрямок потоку та чергування напрямків.
+  - type: grid
+    cards:
+    - type: heading
+      heading: Пояснення
+      icon: mdi:information-outline
+      grid_options:
+        columns: full
+    - type: markdown
+      grid_options:
+        columns: full
+      content: >-
+        **Приплив** подає свіже повітря, **витяжка** видаляє відпрацьоване.
+        Швидкість кожного вентилятора можна змінювати окремо. Режим
+        **«Синхронізувати приплив і витяжку»** зв'язує їхні швидкості.
+        **Автоматичний режим** керує вентиляцією за датчиками PRANA, а
+        **розширений автоматичний режим** використовує посилений алгоритм
+        пристрою. Підігрів і зимовий режим вмикайте за потреби в холодний
+        період.
+
+        Рекуператори **Blauberg** підключені локально, без хмарного сервісу.
+        На їхніх картках доступні живлення, швидкість, автоматичний, ручний,
+        посилений і нічний режими, напрямок повітря та чергування напрямків.
+        Вологість, оберти, аварійний стан, таймери й версія прошивки відображаються
+        окремо; історія вологості та обертів зберігається у Home Assistant.
+- title: Присутність
+  path: presence
+  icon: mdi:map-marker-account
+  type: sections
+  max_columns: 4
+  dense_section_placement: true
+  sections:
+  - type: grid
+    cards:
+    - type: heading
+      heading: Хто зараз удома
+      grid_options:
+        columns: full
+    - type: map
+      default_zoom: 17
+      theme_mode: auto
+      aspect_ratio: '1'
+      grid_options:
+        columns: full
+      entities:
+      - person.dim_kovtuni
+      - person.katerina
+      - person.olesia
+      - person.babusia_sima
+      - zone.home
+    - type: entities
+      title: Особи
+      grid_options:
+        columns: full
+      entities:
+      - entity: person.dim_kovtuni
+        name: Дмитро
+      - entity: person.katerina
+        name: Катерина
+      - entity: person.olesia
+        name: Олеся
+      - entity: person.babusia_sima
+        name: Бабуся Сіма
+  - type: grid
+    cards:
+    - type: heading
+      heading: Телефони в мережі
+      grid_options:
+        columns: full
+    - type: entities
+      grid_options:
+        columns: full
+      entities:
+      - entity: device_tracker.sm_s918b
+        name: S23 Ultra (Дмитро, GPS)
+      - entity: device_tracker.s24_koristuvaca_kateryna
+        name: S24 (Катерина)
+      - entity: device_tracker.s20_fe_koristuvaca_kateryna
+        name: S20 FE (Олеся)
+      - entity: device_tracker.s23_ultra_dvk
+        name: S23 Ultra (Дмитро, Wi-Fi)
+      - entity: device_tracker.s21_pol_zovatela_kateryna
+        name: Galaxy S21 (бабуся Сіма)
+      - entity: device_tracker.a24_koristuvaca_vasilij
+        name: A24 (Василь)
+      - entity: device_tracker.galaxy_j8
+        name: Galaxy J8
+      - entity: device_tracker.galaxy_m12
+        name: Galaxy M12
+    - type: markdown
+      title: Що мапа показує, а що ні
+      grid_options:
+        columns: full
+      content: >
+        На мапі видно лише тих, у кого є координати - тобто лише телефони з
+        встановленим застосунком Home Assistant (зараз це один SM-S918B).
+        Решта телефонів визначаються роутером і мають лише два стани: вдома
+        або ні. Роутер бачить факт підключення до Wi-Fi, а не місце, тому
+        поставити їх на мапу неможливо в принципі.
+
+        **ASUS RT-AX55** (`192.168.50.1`) — основний роутер і DHCP-сервер мережі
+        **«Отаке»**. **Tenda AC10** (`192.168.50.2`) працює точкою доступу
+        **«Промінь»**, а **Tenda A9** (`192.168.50.102`) повторює «Отаке».
+        Це одна підмережа `192.168.50.0/24`, тому присутність людини має
+        враховувати телефон незалежно від конкретної точки Wi-Fi.

@@ -2,9 +2,23 @@
 # Loads default set of integrations. Do not remove.
 default_config:
 
+# Preserve the raw 16 kHz WAV for every Assist voice run. The Claude chat panel
+# exposes this private archive only to authenticated administrators so a long
+# dictation can be played back and sent through STT again.
+assist_pipeline:
+  debug_recording_dir: /userdata/hass/config/.private/claude-code-conversation/voice-recordings
+
 # Keep schedules and log timestamps aligned with the physical installation.
 homeassistant:
   time_zone: Europe/Kyiv
+  # camera.record refuses to write anywhere outside this list. The path below
+  # is an NFS mount of the NAS (systemd unit userdata-hass-config-media-video.mount),
+  # so motion clips never land on the board's own 2.5 GB partition.
+  allowlist_external_dirs:
+    - /userdata/hass/config/media/video
+
+# Read-only local telemetry from the Tenda access point and range extender.
+rest: !include network_monitoring.yaml
 
 # Load frontend themes from the themes folder
 frontend:
@@ -114,6 +128,17 @@ input_boolean:
     name: Зона 5 у розкладі
     icon: mdi:sprinkler
 
+# --- Журнал рішень про полив (додано 2026-08-08) ---
+# Автоматизація розкладу пише сюди підсумок останнього рішення. До цього
+# рішення жило тільки в пуші на телефон: якщо пуш не побачили, на дашборді
+# не лишалося жодного сліду, чому полив не відбувся.
+input_text:
+  poliv_ostannie_rishennia:
+    name: Полив - останнє рішення
+    icon: mdi:clipboard-text-clock
+    max: 255
+    initial: Ще не було жодного рішення після перезапуску
+
 automation: !include automations.yaml
 script: !include scripts.yaml
 scene: !include scenes.yaml
@@ -144,21 +169,21 @@ irrigation_unlimited:
       zones:
         - name: Зона 1
           zone_id: zona_1
-          entity_id: switch.avtopoliv_kontroler_switch_1
+          entity_id: switch.avtopoliv_kontroler_avtopoliv_klapan_1
           duration: "00:25:00"
         - name: Зона 2
           zone_id: zona_2
-          entity_id: switch.avtopoliv_kontroler_switch_2
+          entity_id: switch.avtopoliv_kontroler_avtopoliv_klapan_2
           duration: "00:25:00"
         - name: Зона 3
           zone_id: zona_3
-          entity_id: switch.avtopoliv_kontroler_switch_3
+          entity_id: switch.avtopoliv_kontroler_avtopoliv_klapan_3
           duration: "00:10:00"
         # Зона 5 у IU потрібна лише заради ЧЕРГИ і майстер-насоса.
         # У Smart Irrigation вона НЕ заведена навмисно - тривалість фіксована.
         - name: Зона 5
           zone_id: zona_5
-          entity_id: switch.avtopoliv_kontroler_switch_5
+          entity_id: switch.avtopoliv_kontroler_avtopoliv_klapan_5
           duration: "00:25:00"
       sequences:
         - name: Розумний полив
@@ -212,18 +237,18 @@ template:
         icon: >-
           {% if is_state('switch.mini_switch_k601_2_switch_1_2', 'on') %}
             mdi:sprinkler-variant
-          {% elif is_state('switch.avtopoliv_kontroler_switch_1', 'on')
-                  or is_state('switch.avtopoliv_kontroler_switch_2', 'on')
-                  or is_state('switch.avtopoliv_kontroler_switch_3', 'on') %}
+          {% elif is_state('switch.avtopoliv_kontroler_avtopoliv_klapan_1', 'on')
+                  or is_state('switch.avtopoliv_kontroler_avtopoliv_klapan_2', 'on')
+                  or is_state('switch.avtopoliv_kontroler_avtopoliv_klapan_3', 'on') %}
             mdi:valve-open
           {% else %}
             mdi:water-off
           {% endif %}
         state: >-
           {% set pump = is_state('switch.mini_switch_k601_2_switch_1_2', 'on') %}
-          {% set z1 = is_state('switch.avtopoliv_kontroler_switch_1', 'on') %}
-          {% set z2 = is_state('switch.avtopoliv_kontroler_switch_2', 'on') %}
-          {% set z3 = is_state('switch.avtopoliv_kontroler_switch_3', 'on') %}
+          {% set z1 = is_state('switch.avtopoliv_kontroler_avtopoliv_klapan_1', 'on') %}
+          {% set z2 = is_state('switch.avtopoliv_kontroler_avtopoliv_klapan_2', 'on') %}
+          {% set z3 = is_state('switch.avtopoliv_kontroler_avtopoliv_klapan_3', 'on') %}
           {% if pump and z1 %}ПОЛИВАЄ — ЗОНА 1
           {% elif pump and z2 %}ПОЛИВАЄ — ЗОНА 2
           {% elif pump and z3 %}ПОЛИВАЄ — ЗОНА 3
@@ -275,6 +300,14 @@ recorder:
       - automation
       - script
       - persistent_notification
+    # Dynamic client-list attributes are useful on the live dashboard but
+    # would create needless SQLite/eMMC churn when devices roam between APs.
+    entities:
+      - sensor.tenda_ap_clients
+      - sensor.tenda_ap_status
+      - sensor.tenda_ap_security
+      - sensor.tenda_repeater_status
+      - sensor.tenda_repeater_clients
 
 # --- Separate YAML dashboard with instantaneous power graphs ---
 lovelace:
@@ -322,21 +355,21 @@ sensor:
     end: "{{ now() }}"
   - platform: history_stats
     name: "Зона 1 - полив сьогодні"
-    entity_id: switch.avtopoliv_kontroler_switch_1
+    entity_id: switch.avtopoliv_kontroler_avtopoliv_klapan_1
     state: "on"
     type: time
     start: "{{ today_at('00:00') }}"
     end: "{{ now() }}"
   - platform: history_stats
     name: "Зона 2 - полив сьогодні"
-    entity_id: switch.avtopoliv_kontroler_switch_2
+    entity_id: switch.avtopoliv_kontroler_avtopoliv_klapan_2
     state: "on"
     type: time
     start: "{{ today_at('00:00') }}"
     end: "{{ now() }}"
   - platform: history_stats
     name: "Зона 3 - полив сьогодні"
-    entity_id: switch.avtopoliv_kontroler_switch_3
+    entity_id: switch.avtopoliv_kontroler_avtopoliv_klapan_3
     state: "on"
     type: time
     start: "{{ today_at('00:00') }}"
@@ -451,5 +484,53 @@ logger:
 # в цій версії HA ("does not support platform setup").
 # shell_command.update_motion_snapshot лишає останні 30 знімків, старі видаляє.
 
+# --- Camera clips: is the NAS video share actually mounted? (added 2026-08-05) ---
+# Guard for the motion-clip automation. If the NAS is unreachable the mount point
+# is just an ordinary empty directory, and writing clips into it would fill
+# /userdata - exactly the failure that took the whole system down earlier today.
+command_line:
+  - binary_sensor:
+      name: NAS videoarkhiv zmontovanyi
+      unique_id: nas_video_mount_ok
+      command: mountpoint -q /userdata/hass/config/media/video && echo ON || echo OFF
+      payload_on: "ON"
+      payload_off: "OFF"
+      scan_interval: 300
+  - binary_sensor:
+      name: CloudMate NAS Online
+      unique_id: cloudmate_nas_online
+      command: 'ping -W 1 -c 1 192.168.50.25 > /dev/null 2>&1 && echo ON || echo OFF'
+      payload_on: "ON"
+      payload_off: "OFF"
+      scan_interval: 30
+      device_class: connectivity
+      icon: mdi:nas
+  - binary_sensor:
+      name: TCL TV Online
+      unique_id: tcl_tv_online
+      command: 'ping -W 1 -c 1 192.168.50.175 > /dev/null 2>&1 && echo ON || echo OFF'
+      payload_on: "ON"
+      payload_off: "OFF"
+      scan_interval: 30
+      device_class: connectivity
+      icon: mdi:television
+  - binary_sensor:
+      name: Hikvision Camera Online
+      unique_id: hikvision_camera_online
+      command: 'ping -W 1 -c 1 192.168.50.201 > /dev/null 2>&1 && echo ON || echo OFF'
+      payload_on: "ON"
+      payload_off: "OFF"
+      scan_interval: 30
+      device_class: connectivity
+      icon: mdi:cctv
+
 shell_command:
+  # Keep the clip folder bounded. It lives on the NAS, but an unbounded
+  # folder is still bad manners - and if the mount ever silently fell away
+  # this would be running against the board's own disk.
+  # Makes today's folder before recording, then drops day folders older than
+  # 14 days. Retention by age, not by count: at ~140 motion events a day the
+  # old 200-file cap held barely a day and a half, which is useless for
+  # browsing "what happened on Tuesday".
+  prepare_motion_dir: "d=/userdata/hass/config/media/video/ha-motion; mkdir -p $d/$(date +%Y-%m-%d); find $d -mindepth 1 -maxdepth 1 -type d -mtime +14 -exec rm -rf {} +"
   update_motion_snapshot: "cd /userdata/hass/config/www/motion && ls -t motion_*.jpg 2>/dev/null | head -1 | xargs -I{} cp {} latest.jpg && ls -t motion_*.jpg 2>/dev/null | tail -n +31 | xargs -r rm --"

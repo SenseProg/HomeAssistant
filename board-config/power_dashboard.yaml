@@ -55,9 +55,16 @@ views:
       name: Фаза B - напруга
     - entity: sensor.energy_meter_phase_c_voltage_2
       name: Фаза C - напруга
-  - type: history-graph
-    title: Потужність за останню годину (сирі дані)
+  - type: custom:mini-graph-card
+    name: Потужність за останню годину
     hours_to_show: 1
+    points_per_hour: 60
+    update_interval: 10
+    line_width: 3
+    animate: true
+    show:
+      labels: true
+      points: false
     entities:
     - entity: sensor.zagalne_navantazhennia
       name: Разом
@@ -75,15 +82,29 @@ views:
   path: last-3h
   icon: mdi:clock-time-three-outline
   cards:
-  - type: history-graph
-    title: Загальна потужність за 3 години (сирі дані)
+  - type: custom:mini-graph-card
+    name: Загальна потужність за 3 години
     hours_to_show: 3
+    points_per_hour: 20
+    update_interval: 10
+    line_width: 3
+    animate: true
+    show:
+      labels: true
+      points: false
     entities:
     - entity: sensor.zagalne_navantazhennia
       name: Разом
-  - type: history-graph
-    title: Потужність фаз за 3 години
+  - type: custom:mini-graph-card
+    name: Потужність фаз за 3 години
     hours_to_show: 3
+    points_per_hour: 20
+    update_interval: 10
+    line_width: 3
+    animate: true
+    show:
+      labels: true
+      points: false
     entities:
     - entity: sensor.energy_meter_phase_a_power_2
       name: Фаза A
@@ -91,9 +112,16 @@ views:
       name: Фаза B
     - entity: sensor.energy_meter_phase_c_power_2
       name: Фаза C
-  - type: history-graph
-    title: Струм за 3 години
+  - type: custom:mini-graph-card
+    name: Струм за 3 години
     hours_to_show: 3
+    points_per_hour: 20
+    update_interval: 10
+    line_width: 3
+    animate: true
+    show:
+      labels: true
+      points: false
     entities:
     - entity: sensor.zagalnii_strum
       name: Разом
@@ -103,9 +131,16 @@ views:
       name: Фаза B
     - entity: sensor.energy_meter_phase_c_current_2
       name: Фаза C
-  - type: history-graph
-    title: Напруга за 3 години
+  - type: custom:mini-graph-card
+    name: Напруга за 3 години
     hours_to_show: 3
+    points_per_hour: 20
+    update_interval: 10
+    line_width: 3
+    animate: true
+    show:
+      labels: true
+      points: false
     entities:
     - entity: sensor.energy_meter_phase_a_voltage_2
       name: Фаза A
@@ -226,6 +261,37 @@ views:
     - type: energy-date-selection
       grid_options:
         columns: full
+    - type: markdown
+      title: Стан обліку Energy
+      grid_options:
+        columns: full
+      content: |
+        {% set source = 'sensor.inverter_total_energy_import' %}
+        {% set missing = ['unknown', 'unavailable', 'none', ''] %}
+        {% if states(source) in missing %}
+        ## ⚠️ Дані про енергію зараз не надходять
+
+        Основне джерело `{{ source }}` має стан **{{ states(source) }}**. Поки
+        лічильник недоступний, Home Assistant не може додати нові значення на
+        графік за сьогодні.
+        {% else %}
+        ## ✅ Облік працює
+
+        **З мережі сьогодні:** {{ states('sensor.inverter_today_energy_import') }} кВт·год  
+        **Навантаження будинку сьогодні:** {{ states('sensor.inverter_today_load_consumption') }} кВт·год
+
+        Офіційна панель «Енергія» бере імпорт із
+        `sensor.inverter_total_energy_import`. Графік будується з погодинної
+        довгострокової статистики, тому остання неповна година може з'явитися із
+        затримкою до однієї години. Імпорт із мережі та навантаження будинку
+        можуть відрізнятися через заряджання або розряджання акумулятора.
+        {% endif %}
+
+        {% if states('sensor.energy_meter_total_energy') in missing %}
+        > Хмарний лічильник Tuya зараз **{{ states('sensor.energy_meter_total_energy') }}**.
+        > Саме він був причиною порожнього графіка 5 серпня; тепер це резервне
+        > джерело й на основний облік не впливає.
+        {% endif %}
     - type: statistics-graph
       title: Загальна потужність за вибраний період
       period: hour
@@ -430,13 +496,19 @@ views:
       grid_options:
         columns: full
       entities:
-      - entity: sensor.energy_meter_total_energy_cost
+      - entity: sensor.inverter_total_energy_import_cost
         name: Вартість спожитого (наростаюча)
-      - entity: sensor.energy_meter_total_energy
-        name: Лічильник будинку
-    - type: history-graph
-      title: Перемикання тарифу за добу
+      - entity: sensor.inverter_total_energy_import
+        name: Імпорт із мережі (лічильник інвертора)
+    - type: custom:mini-graph-card
+      name: Перемикання тарифу за добу
       hours_to_show: 24
+      points_per_hour: 4
+      line_width: 3
+      animate: true
+      show:
+        labels: true
+        points: false
       grid_options:
         columns: full
       entities:
@@ -454,3 +526,115 @@ views:
         до цього моменту порахована за старою плоскою ціною 2.5 грн і заднім числом не переписується.
 
         '
+- title: Витрати
+  path: cost
+  icon: mdi:cash-multiple
+  type: sections
+  max_columns: 4
+  dense_section_placement: false
+  sections:
+  - type: grid
+    column_span: 2
+    cards:
+    - type: heading
+      heading: Скільки коштує електрика
+      icon: mdi:cash-multiple
+      grid_options:
+        columns: full
+    - type: statistic
+      entity: sensor.inverter_total_energy_import_cost
+      stat_type: change
+      name: Сьогодні
+      period:
+        calendar:
+          period: day
+      grid_options:
+        columns: 6
+    - type: statistic
+      entity: sensor.inverter_total_energy_import_cost
+      stat_type: change
+      name: Цей місяць
+      period:
+        calendar:
+          period: month
+      grid_options:
+        columns: 6
+    - type: statistic
+      entity: sensor.inverter_total_energy_import
+      stat_type: change
+      name: Спожито сьогодні
+      period:
+        calendar:
+          period: day
+      grid_options:
+        columns: 6
+    - type: statistic
+      entity: sensor.inverter_total_energy_import
+      stat_type: change
+      name: Спожито за місяць
+      period:
+        calendar:
+          period: month
+      grid_options:
+        columns: 6
+    - type: tile
+      entity: sensor.tarif_elektroenergii_zaraz
+      name: Ставка, що діє зараз
+      color: green
+      grid_options:
+        columns: full
+        rows: 1
+  - type: grid
+    column_span: 2
+    cards:
+    - type: heading
+      heading: Куди йде електрика
+      icon: mdi:chart-donut
+      grid_options:
+        columns: full
+    - type: energy-devices-graph
+      grid_options:
+        columns: full
+  - type: grid
+    column_span: 4
+    cards:
+    - type: heading
+      heading: Вартість за обраний період
+      icon: mdi:calendar-range
+      grid_options:
+        columns: full
+    - type: energy-date-selection
+      grid_options:
+        columns: full
+    - type: energy-sources-table
+      grid_options:
+        columns: full
+  - type: grid
+    column_span: 4
+    cards:
+    - type: heading
+      heading: Споживання за обраний період
+      icon: mdi:chart-bar
+      grid_options:
+        columns: full
+    - type: energy-usage-graph
+      grid_options:
+        columns: full
+    - type: markdown
+      text_only: true
+      grid_options:
+        columns: full
+      content: 'Гривні рахуються тільки для загального імпорту з мережі: Home Assistant множить
+        кожну спожиту кВт-год на ставку, яка діяла саме в ту годину. По окремих пристроях вартості
+        немає навмисно - їхні лічильники не знають, у який тариф потрапило споживання, і будь-яка
+        цифра тут була б вигаданою. Щоб оцінити пристрій, дивіться його кВт-год і множте на ставку
+        того часу, коли він працює: бойлер уночі коштує вдвічі дешевше за той самий бойлер удень.
+
+
+        Дати вибираються в блоці "Вартість за обраний період" - вибір діє і на графіки поруч.
+        Картки статистики вгорі від нього не залежать: вони завжди показують поточну добу і
+        поточний календарний місяць.
+
+
+        На слабкій платі ці картки оживають не миттєво - таблиця і графіки довантажуються
+        приблизно півхвилини.'
