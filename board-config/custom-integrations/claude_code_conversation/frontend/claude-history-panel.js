@@ -1,5 +1,6 @@
-// v0.5.0: оптимістичний рендер, ватчдог очікування, «Не чекати», динамічний
-// пошук агента й пайплайна замість зашитих ідентифікаторів.
+// v0.6.0: живий стримінг відповіді через підписку claude_code_conversation/stream
+// (бекенд транслює дельти токенів із stream-json CLI). Плюс усе з 0.5.0:
+// оптимістичний рендер, ватчдог, «Не чекати», динамічний пошук агента/пайплайна.
 const AGENT_ID_FALLBACK = "conversation.domashnii_asistent_claude";
 const PIPELINE_ID_FALLBACK = "01kz4r9qs1qzp5hsvg9vc7c0m0";
 const PANEL_CONVERSATION_ID = "claude-homemate-persistent-panel";
@@ -48,6 +49,10 @@ class ClaudeHistoryPanel extends HTMLElement {
     this._pollTimer = null;
     this._pollUntil = 0;
     this._pipelineIdResolved = null;
+    // Живий стримінг відповіді.
+    this._streamText = "";
+    this._streamUnsub = null;
+    this._streamRenderQueued = false;
   }
 
   set hass(value) {
@@ -77,7 +82,52 @@ class ClaudeHistoryPanel extends HTMLElement {
     this._stopCaptureTracks();
     this._clearTimer();
     this._stopAnswerPolling();
+    void this._closeStreamSubscription();
     void this._closeVoiceSubscription();
+  }
+
+  async _openStreamSubscription() {
+    await this._closeStreamSubscription();
+    try {
+      this._streamUnsub = await this._hass.connection.subscribeMessage(
+        (event) => this._handleStreamEvent(event),
+        { type: "claude_code_conversation/stream", conversation_id: PANEL_CONVERSATION_ID },
+      );
+    } catch (_error) {
+      this._streamUnsub = null; // старий бекенд без стриму — працює ватчдог
+    }
+  }
+
+  async _closeStreamSubscription() {
+    const unsubscribe = this._streamUnsub;
+    this._streamUnsub = null;
+    if (unsubscribe) {
+      try { await unsubscribe(); } catch (_error) { /* з'єднання вже закрите */ }
+    }
+  }
+
+  _handleStreamEvent(event) {
+    const kind = event?.event;
+    if (kind === "queued") {
+      this._setStatus("У черзі — Claude завершує попередній запит…");
+    } else if (kind === "start") {
+      this._setStatus("Claude пише відповідь…");
+    } else if (kind === "delta" && typeof event.text === "string") {
+      this._streamText += event.text;
+      this._queueStreamRender();
+    } else if (kind === "done") {
+      void this._closeStreamSubscription();
+      void this._loadHistory({ quiet: true });
+    }
+  }
+
+  _queueStreamRender() {
+    if (this._streamRenderQueued) return;
+    this._streamRenderQueued = true;
+    window.requestAnimationFrame(() => {
+      this._streamRenderQueued = false;
+      if (this._awaitingAnswer) this._renderHistory(this._lastRecords);
+    });
   }
 
   _renderShell() {
@@ -282,7 +332,9 @@ class ClaudeHistoryPanel extends HTMLElement {
       this._localEcho = null;
       this._awaitingAnswer = false;
       this._pendingRestoreText = "";
+      this._streamText = "";
       this._stopAnswerPolling();
+      void this._closeStreamSubscription();
       this._setStatus("Відповідь отримано.");
     }
   }
@@ -410,17 +462,26 @@ class ClaudeHistoryPanel extends HTMLElement {
     if (this._awaitingAnswer) {
       const thinking = document.createElement("div");
       thinking.className = "message assistant pending";
-      const dots = document.createElement("span");
-      dots.className = "typing";
-      dots.append(
-        document.createElement("i"),
-        document.createElement("i"),
-        document.createElement("i"),
-      );
-      const meta = document.createElement("span");
-      meta.className = "meta";
-      meta.textContent = "Claude готує відповідь — на цій платі це триває до двох хвилин";
-      thinking.append(dots, meta);
+      if (this._streamText) {
+        const content = document.createElement("span");
+        content.textContent = this._streamText + " ▌";
+        const meta = document.createElement("span");
+        meta.className = "meta";
+        meta.textContent = "Claude пише…";
+        thinking.append(content, meta);
+      } else {
+        const dots = document.createElement("span");
+        dots.className = "typing";
+        dots.append(
+          document.createElement("i"),
+          document.createElement("i"),
+          document.createElement("i"),
+        );
+        const meta = document.createElement("span");
+        meta.className = "meta";
+        meta.textContent = "Claude готує відповідь — на цій платі це триває до двох хвилин";
+        thinking.append(dots, meta);
+      }
       container.appendChild(thinking);
     }
     container.scrollTop = container.scrollHeight;
@@ -493,10 +554,12 @@ class ClaudeHistoryPanel extends HTMLElement {
     this._localEcho = { text, sentAt: this._sendStartedAt };
     this._awaitingAnswer = true;
     this._pendingRestoreText = text;
+    this._streamText = "";
     input.value = "";
     this._setComposerDisabled(true);
     this._setStatus("Claude готує відповідь…");
     this._renderHistory(this._lastRecords);
+    await this._openStreamSubscription();
     const watchdog = window.setTimeout(() => {
       if (token !== this._requestToken) return;
       this._softRelease(
@@ -518,7 +581,9 @@ class ClaudeHistoryPanel extends HTMLElement {
       if (token === this._requestToken) {
         this._localEcho = null;
         this._awaitingAnswer = false;
+        this._streamText = "";
         this._stopAnswerPolling();
+        void this._closeStreamSubscription();
         if (!input.value && this._pendingRestoreText) input.value = this._pendingRestoreText;
         this._pendingRestoreText = "";
         this._renderHistory(this._lastRecords);

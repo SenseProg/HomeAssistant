@@ -16,6 +16,11 @@ CLAUDE_WORKING_DIRECTORY = "/home/forlinx/house-analyst"
 HISTORY_FILE = (
     "/userdata/hass/config/.private/claude-code-conversation/history.jsonl"
 )
+MEMORY_FILE = (
+    "/userdata/hass/config/.private/claude-code-conversation/memory.jsonl"
+)
+MEMORY_MAX_ITEMS = 200
+MEMORY_RECALL_TOP_K = 5
 VOICE_RECORDING_DIR = (
     "/userdata/hass/config/.private/claude-code-conversation/voice-recordings"
 )

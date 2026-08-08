@@ -8,9 +8,10 @@ import voluptuous as vol
 
 from homeassistant.components import websocket_api
 from homeassistant.config_entries import ConfigEntryState
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, callback
 
 from . import ClaudeCodeConfigEntry
+from . import stream_bus
 from .const import DOMAIN, VOICE_RECORDING_DIR, VOICE_RECORDING_LIST_LIMIT
 from .history_store import async_recent_records
 from .http_api import encode_recording_id
@@ -99,7 +100,33 @@ async def websocket_voice_recordings(
     connection.send_result(msg["id"], {"recordings": recordings})
 
 
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): f"{DOMAIN}/stream",
+        vol.Required("conversation_id"): str,
+    }
+)
+@websocket_api.require_admin
+@callback
+def websocket_stream(
+    hass: HomeAssistant,
+    connection: websocket_api.ActiveConnection,
+    msg: dict[str, Any],
+) -> None:
+    """Stream answer progress events for one conversation to the panel."""
+
+    @callback
+    def _forward(event: dict[str, Any]) -> None:
+        connection.send_message(websocket_api.event_message(msg["id"], event))
+
+    connection.subscriptions[msg["id"]] = stream_bus.subscribe(
+        msg["conversation_id"], _forward
+    )
+    connection.send_result(msg["id"])
+
+
 def async_register_websocket_api(hass: HomeAssistant) -> None:
     """Register the integration WebSocket commands."""
     websocket_api.async_register_command(hass, websocket_history)
     websocket_api.async_register_command(hass, websocket_voice_recordings)
+    websocket_api.async_register_command(hass, websocket_stream)
