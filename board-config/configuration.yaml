@@ -91,6 +91,12 @@ input_select:
 # every scheduled/weather-driven irrigation automation. Manual controls and
 # emergency stop remain available independently.
 input_boolean:
+  # Set by the 21:00 rain question, read and cleared by the morning run.
+  # Off means "water normally" - so a missed evening check (HA down, no rain
+  # forecast) never silently cancels irrigation.
+  poliv_propustyty_zavtra:
+    name: Полив - пропустити завтрашній ранок
+    icon: mdi:weather-rainy
   poliv_avtomatika_dozvolena:
     name: Автоматичний полив дозволено
     icon: mdi:sprinkler-variant
@@ -138,6 +144,60 @@ input_text:
     icon: mdi:clipboard-text-clock
     max: 255
     initial: Ще не було жодного рішення після перезапуску
+
+# --- Розподіл споживання на день і ніч (додано 2026-08-08) ---
+#
+# Energy-дашборд рахує загальну вартість, але не показує, скільки з неї
+# припало на дорогий денний тариф, а скільки на дешевий нічний, і не рахує
+# гривні по окремих пристроях. utility_meter із двома тарифами розводить
+# кожен лічильник на дві гілки; перемикає їх автоматизація
+# "tarif_peremknuty_lichylnyky" о 07:00 і о 23:00 - ті самі межі, що й у
+# sensor.tarif_elektroenergii_zaraz.
+#
+# Лічильники БЕЗ cycle - наростаючі назавжди, з них будуються графіки витрат
+# (statistics-graph зі stat_type change сам рахує приріст за день чи місяць).
+# Лічильники з cycle: daily/monthly дають готові числа "сьогодні" і "цей
+# місяць" без звернення до статистики.
+#
+# ВАЖЛИВО: лічильники починають рахувати з моменту створення. Історію до
+# 2026-08-08 розділити на день і ніч неможливо - у статистиці збережена лише
+# сумарна вартість без розбиття за тарифом.
+utility_meter:
+  merezha_za_tarifom:
+    name: Мережа за тарифом
+    source: sensor.inverter_total_energy_import
+    tariffs: [den, nich]
+  merezha_dobovyi:
+    name: Мережа за добу
+    source: sensor.inverter_total_energy_import
+    cycle: daily
+    tariffs: [den, nich]
+  merezha_misiachnyi:
+    name: Мережа за місяць
+    source: sensor.inverter_total_energy_import
+    cycle: monthly
+    tariffs: [den, nich]
+
+  boiler_za_tarifom:
+    name: Бойлер за тарифом
+    source: sensor.boiler_spozhito
+    tariffs: [den, nich]
+  zariadka_za_tarifom:
+    name: Зарядка авто за тарифом
+    source: sensor.zariadka_avto_spozhito
+    tariffs: [den, nich]
+  pidloha_1_za_tarifom:
+    name: Тепла підлога 1 за тарифом
+    source: sensor.terneo_1_heating_energy
+    tariffs: [den, nich]
+  pidloha_2_za_tarifom:
+    name: Тепла підлога 2 за тарифом
+    source: sensor.terneo_2_heating_energy
+    tariffs: [den, nich]
+  nasos_za_tarifom:
+    name: Насос поливу за тарифом
+    source: sensor.nasos_polivu_spozhito
+    tariffs: [den, nich]
 
 automation: !include automations.yaml
 script: !include scripts.yaml
@@ -197,6 +257,170 @@ irrigation_unlimited:
 # --- Total load across all three phases (added 2026-08-02) ---
 template:
   - sensor:
+      # --- Вартість у гривнях (додано 2026-08-08) ---
+      #
+      # Кожен лічильник utility_meter уже розведений на денну і нічну гілку,
+      # тому множення на ставку точне, а не усереднене: денні кВт-год множаться
+      # на денну ставку, нічні - на нічну. Ставки беруться з тих самих
+      # input_number, що й sensor.tarif_elektroenergii_zaraz, тому правка ставки
+      # на вкладці "Тариф" одразу перераховує всі ці сенсори.
+      #
+      # state_class: total дає довгострокову статистику, тому картка
+      # statistics-graph зі stat_type "change" сама покаже витрати за день або
+      # за місяць у розрізі обраного періоду.
+      - name: "Витрати вдень сьогодні"
+        unique_id: cost_day_today
+        unit_of_measurement: "UAH"
+        device_class: monetary
+        state_class: total
+        state: >
+          {{ ((states('sensor.merezha_dobovyi_den') | float(0))
+            * (states('input_number.tarif_den_07_00_22_59') | float(0))) | round(2) }}
+        availability: >
+          {{ has_value('sensor.merezha_dobovyi_den') }}
+
+      - name: "Витрати вночі сьогодні"
+        unique_id: cost_night_today
+        unit_of_measurement: "UAH"
+        device_class: monetary
+        state_class: total
+        state: >
+          {{ ((states('sensor.merezha_dobovyi_nich') | float(0))
+            * (states('input_number.tarif_nich_23_00_06_59') | float(0))) | round(2) }}
+        availability: >
+          {{ has_value('sensor.merezha_dobovyi_nich') }}
+
+      - name: "Витрати вдень цього місяця"
+        unique_id: cost_day_month
+        unit_of_measurement: "UAH"
+        device_class: monetary
+        state_class: total
+        state: >
+          {{ ((states('sensor.merezha_misiachnyi_den') | float(0))
+            * (states('input_number.tarif_den_07_00_22_59') | float(0))) | round(2) }}
+        availability: >
+          {{ has_value('sensor.merezha_misiachnyi_den') }}
+
+      - name: "Витрати вночі цього місяця"
+        unique_id: cost_night_month
+        unit_of_measurement: "UAH"
+        device_class: monetary
+        state_class: total
+        state: >
+          {{ ((states('sensor.merezha_misiachnyi_nich') | float(0))
+            * (states('input_number.tarif_nich_23_00_06_59') | float(0))) | round(2) }}
+        availability: >
+          {{ has_value('sensor.merezha_misiachnyi_nich') }}
+
+      # Наростаючі гілки день/ніч окремо - потрібні саме для графіка:
+      # statistics-graph зі stat_type "change" будує з них стовпчики за день
+      # або за місяць і показує співвідношення дорогого й дешевого тарифу.
+      - name: "Витрати вдень разом"
+        unique_id: cost_day_total
+        unit_of_measurement: "UAH"
+        device_class: monetary
+        state_class: total
+        state: >
+          {{ ((states('sensor.merezha_za_tarifom_den') | float(0))
+            * (states('input_number.tarif_den_07_00_22_59') | float(0))) | round(2) }}
+        availability: >
+          {{ has_value('sensor.merezha_za_tarifom_den') }}
+
+      - name: "Витрати вночі разом"
+        unique_id: cost_night_total
+        unit_of_measurement: "UAH"
+        device_class: monetary
+        state_class: total
+        state: >
+          {{ ((states('sensor.merezha_za_tarifom_nich') | float(0))
+            * (states('input_number.tarif_nich_23_00_06_59') | float(0))) | round(2) }}
+        availability: >
+          {{ has_value('sensor.merezha_za_tarifom_nich') }}
+
+      - name: "Витрати на мережу разом"
+        unique_id: cost_grid_total
+        unit_of_measurement: "UAH"
+        device_class: monetary
+        state_class: total
+        state: >
+          {{ ((states('sensor.merezha_za_tarifom_den') | float(0))
+              * (states('input_number.tarif_den_07_00_22_59') | float(0))
+            + (states('sensor.merezha_za_tarifom_nich') | float(0))
+              * (states('input_number.tarif_nich_23_00_06_59') | float(0))) | round(2) }}
+        availability: >
+          {{ has_value('sensor.merezha_za_tarifom_den')
+             and has_value('sensor.merezha_za_tarifom_nich') }}
+
+      - name: "Витрати - бойлер"
+        unique_id: cost_device_boiler
+        unit_of_measurement: "UAH"
+        device_class: monetary
+        state_class: total
+        state: >
+          {{ ((states('sensor.boiler_za_tarifom_den') | float(0))
+              * (states('input_number.tarif_den_07_00_22_59') | float(0))
+            + (states('sensor.boiler_za_tarifom_nich') | float(0))
+              * (states('input_number.tarif_nich_23_00_06_59') | float(0))) | round(2) }}
+        availability: >
+          {{ has_value('sensor.boiler_za_tarifom_den')
+             and has_value('sensor.boiler_za_tarifom_nich') }}
+
+      - name: "Витрати - зарядка авто"
+        unique_id: cost_device_ev
+        unit_of_measurement: "UAH"
+        device_class: monetary
+        state_class: total
+        state: >
+          {{ ((states('sensor.zariadka_za_tarifom_den') | float(0))
+              * (states('input_number.tarif_den_07_00_22_59') | float(0))
+            + (states('sensor.zariadka_za_tarifom_nich') | float(0))
+              * (states('input_number.tarif_nich_23_00_06_59') | float(0))) | round(2) }}
+        availability: >
+          {{ has_value('sensor.zariadka_za_tarifom_den')
+             and has_value('sensor.zariadka_za_tarifom_nich') }}
+
+      - name: "Витрати - тепла підлога 1"
+        unique_id: cost_device_floor1
+        unit_of_measurement: "UAH"
+        device_class: monetary
+        state_class: total
+        state: >
+          {{ ((states('sensor.pidloha_1_za_tarifom_den') | float(0))
+              * (states('input_number.tarif_den_07_00_22_59') | float(0))
+            + (states('sensor.pidloha_1_za_tarifom_nich') | float(0))
+              * (states('input_number.tarif_nich_23_00_06_59') | float(0))) | round(2) }}
+        availability: >
+          {{ has_value('sensor.pidloha_1_za_tarifom_den')
+             and has_value('sensor.pidloha_1_za_tarifom_nich') }}
+
+      - name: "Витрати - тепла підлога 2"
+        unique_id: cost_device_floor2
+        unit_of_measurement: "UAH"
+        device_class: monetary
+        state_class: total
+        state: >
+          {{ ((states('sensor.pidloha_2_za_tarifom_den') | float(0))
+              * (states('input_number.tarif_den_07_00_22_59') | float(0))
+            + (states('sensor.pidloha_2_za_tarifom_nich') | float(0))
+              * (states('input_number.tarif_nich_23_00_06_59') | float(0))) | round(2) }}
+        availability: >
+          {{ has_value('sensor.pidloha_2_za_tarifom_den')
+             and has_value('sensor.pidloha_2_za_tarifom_nich') }}
+
+      - name: "Витрати - насос поливу"
+        unique_id: cost_device_pump
+        unit_of_measurement: "UAH"
+        device_class: monetary
+        state_class: total
+        state: >
+          {{ ((states('sensor.nasos_za_tarifom_den') | float(0))
+              * (states('input_number.tarif_den_07_00_22_59') | float(0))
+            + (states('sensor.nasos_za_tarifom_nich') | float(0))
+              * (states('input_number.tarif_nich_23_00_06_59') | float(0))) | round(2) }}
+        availability: >
+          {{ has_value('sensor.nasos_za_tarifom_den')
+             and has_value('sensor.nasos_za_tarifom_nich') }}
+
       - name: "Загальне навантаження"
         unique_id: total_load_power
         unit_of_measurement: "kW"
@@ -380,6 +604,10 @@ sensor:
 logger:
   logs:
     aioasuswrt.asuswrt: error
+    # Temporary 2026-08-05: capture the exact Tuya QR-login error code/message.
+    # Remove once the cloud re-authentication succeeds.
+    homeassistant.components.tuya: debug
+    tuya_sharing: debug
 
 # --- Per-device energy accounting (added 2026-08-03) ---
 #
@@ -528,9 +756,5 @@ shell_command:
   # Keep the clip folder bounded. It lives on the NAS, but an unbounded
   # folder is still bad manners - and if the mount ever silently fell away
   # this would be running against the board's own disk.
-  # Makes today's folder before recording, then drops day folders older than
-  # 14 days. Retention by age, not by count: at ~140 motion events a day the
-  # old 200-file cap held barely a day and a half, which is useless for
-  # browsing "what happened on Tuesday".
-  prepare_motion_dir: "d=/userdata/hass/config/media/video/ha-motion; mkdir -p $d/$(date +%Y-%m-%d); find $d -mindepth 1 -maxdepth 1 -type d -mtime +14 -exec rm -rf {} +"
+  prune_motion_clips: "cd /userdata/hass/config/media/video/ha-motion && ls -t ruh_*.mp4 2>/dev/null | tail -n +201 | xargs -r rm --"
   update_motion_snapshot: "cd /userdata/hass/config/www/motion && ls -t motion_*.jpg 2>/dev/null | head -1 | xargs -I{} cp {} latest.jpg && ls -t motion_*.jpg 2>/dev/null | tail -n +31 | xargs -r rm --"
