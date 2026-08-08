@@ -196,7 +196,14 @@ printf 'analyst_timer='; systemctl is-enabled house-analyst.timer 2>/dev/null ||
 
 
 def irrigation_health() -> dict[str, Any]:
-    """Check LocalTuya transport readiness without operating pump or valves."""
+    """Check LocalTuya transport readiness without operating pump or valves.
+
+    Readiness here is about transport only. Do not infer a fault from the pump
+    running while every valve is closed: the property has garden hydrants for a
+    hose, so that combination is a normal watering mode when
+    ``input_select.poliv_ruchna_zona`` is set to ``Без клапана (шланг)``.
+    See ``.claude/skills/home-assistant/references/irrigation.md``.
+    """
     command = f"""
 printf 'ha_service='; systemctl is-active home-assistant 2>/dev/null || true
 printf 'ha_http='; curl -s -o /dev/null -w '%{{http_code}}' --max-time 5 http://localhost:8123/ || true; printf '\n'
@@ -246,6 +253,7 @@ printf 'pump_errors_10m='; sudo journalctl -u home-assistant --since '-10 min' -
             "controller": "HA active/HTTP 200, expected IP/MAC reachable, hass TCP/6668 established, no matching errors for 10 minutes",
             "full_irrigation": "controller ready plus pump relay reachable with hass TCP/6668 established and no matching errors for 10 minutes",
             "physical_proof": "A controlled valve command must still report the selected LocalTuya switch on within 8 seconds; this read-only check never moves hardware",
+            "pump_without_valve": "Not an emergency by itself: garden hydrants let the pump feed a hose with every valve closed. It is a fault only when a zone was requested and did not open",
         },
         "transport": result,
     }

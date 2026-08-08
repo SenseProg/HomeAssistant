@@ -75,7 +75,14 @@ input_number:
     icon: mdi:counter
 
 # Яку зону відкривати, коли насос вмикають вручну - фізичною кнопкою на модулі
-# або тумблером в інтерфейсі. Насос не має працювати в закриту магістраль.
+# або тумблером в інтерфейсі.
+#
+# ВАЖЛИВО (уточнено 2026-08-08): насос МОЖЕ працювати без жодного відкритого
+# клапана. На ділянці є водяні розетки, у які вставляють шланг, і полив зі
+# шланга - штатний режим, а не аварія. Раніше конфігурація виходила з хибного
+# припущення "насос без клапана = сухий хід", через що при кожному ручному
+# пуску примусово відкривався клапан обраної зони, а сторож глушив насос через
+# три хвилини. Для шлангового поливу оберіть "Без клапана (шланг)".
 input_select:
   poliv_ruchna_zona:
     name: Ручний пуск - яку зону відкривати
@@ -85,6 +92,7 @@ input_select:
       - Зона 3
       - Зона 4
       - Зона 5
+      - Без клапана (шланг)
     icon: mdi:water-pump
 
 # Master commissioning gate. It starts off on first creation and is checked by
@@ -484,30 +492,40 @@ template:
       # 6 незалежних вмиканнях/вимиканнях 2026-08-03; фази A і C не реагували.
       # Напруга, яку реально бачить насос: він на фазі B (встановлено тим самим
       # вимірюванням). Це показ домового лічильника, а не самого насоса.
+      # Враховує всі п'ять зон, а не лише перші три: полив зони 4 або 5 раніше
+      # показувався як "АВАРІЯ — НАСОС БЕЗ КЛАПАНА". Насос без клапана більше не
+      # є аварією сам по собі - це штатний полив зі шланга через водяну розетку.
+      # Аварією лишається тільки насос без клапана, коли режим шланга НЕ обрано.
       - name: "Полив - стан системи"
         unique_id: irrigation_system_status
         icon: >-
+          {% set klapan = namespace(any=false) %}
+          {% for n in range(1, 9) %}
+            {% if is_state('switch.avtopoliv_kontroler_avtopoliv_klapan_' ~ n, 'on') %}
+              {% set klapan.any = true %}
+            {% endif %}
+          {% endfor %}
           {% if is_state('switch.mini_switch_k601_2_switch_1_2', 'on') %}
             mdi:sprinkler-variant
-          {% elif is_state('switch.avtopoliv_kontroler_avtopoliv_klapan_1', 'on')
-                  or is_state('switch.avtopoliv_kontroler_avtopoliv_klapan_2', 'on')
-                  or is_state('switch.avtopoliv_kontroler_avtopoliv_klapan_3', 'on') %}
+          {% elif klapan.any %}
             mdi:valve-open
           {% else %}
             mdi:water-off
           {% endif %}
         state: >-
           {% set pump = is_state('switch.mini_switch_k601_2_switch_1_2', 'on') %}
-          {% set z1 = is_state('switch.avtopoliv_kontroler_avtopoliv_klapan_1', 'on') %}
-          {% set z2 = is_state('switch.avtopoliv_kontroler_avtopoliv_klapan_2', 'on') %}
-          {% set z3 = is_state('switch.avtopoliv_kontroler_avtopoliv_klapan_3', 'on') %}
-          {% if pump and z1 %}ПОЛИВАЄ — ЗОНА 1
-          {% elif pump and z2 %}ПОЛИВАЄ — ЗОНА 2
-          {% elif pump and z3 %}ПОЛИВАЄ — ЗОНА 3
+          {% set hose = is_state('input_select.poliv_ruchna_zona', 'Без клапана (шланг)') %}
+          {% set zone = namespace(id=0) %}
+          {% for n in range(1, 9) %}
+            {% if zone.id == 0
+                  and is_state('switch.avtopoliv_kontroler_avtopoliv_klapan_' ~ n, 'on') %}
+              {% set zone.id = n %}
+            {% endif %}
+          {% endfor %}
+          {% if pump and zone.id %}ПОЛИВАЄ — ЗОНА {{ zone.id }}
+          {% elif pump and hose %}ПОЛИВАЄ — ШЛАНГ
           {% elif pump %}АВАРІЯ — НАСОС БЕЗ КЛАПАНА
-          {% elif z1 %}ПІДГОТОВКА/ЗУПИНКА — ЗОНА 1
-          {% elif z2 %}ПІДГОТОВКА/ЗУПИНКА — ЗОНА 2
-          {% elif z3 %}ПІДГОТОВКА/ЗУПИНКА — ЗОНА 3
+          {% elif zone.id %}ПІДГОТОВКА/ЗУПИНКА — ЗОНА {{ zone.id }}
           {% else %}ЗУПИНЕНО
           {% endif %}
 

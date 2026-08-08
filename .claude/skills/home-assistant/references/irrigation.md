@@ -4,9 +4,41 @@
 
 - Start: open the selected valve, confirm it is on, then start the pump.
 - Stop: stop the pump first, wait for pressure to fall, then close the valve.
-- Maximum continuous pump runtime: three hours.
+- Maximum continuous pump runtime: three hours. This is the only hard limit that
+  applies in every mode.
 - Every Stop/emergency action must stop the pump and all physical valves.
-- If the pump is on with no confirmed valve, execute emergency stop immediately.
+
+## The pump may legitimately run with no valve open
+
+Corrected 2026-08-08 by the owner. The property has garden hydrants — water
+outlets that take a hose. Running the pump with every zone valve closed is a
+normal irrigation mode, not dry running, so **a pump without a valve is not by
+itself an emergency**.
+
+The configuration used to assume the opposite, and that assumption produced two
+wrong behaviours: every manual pump start force-opened the valve selected in
+`input_select.poliv_ruchna_zona`, and the watchdog killed the pump three minutes
+later. A hose user therefore watered an unintended zone and then lost pressure.
+
+`input_select.poliv_ruchna_zona` now carries a sixth option, `Без клапана
+(шланг)`, alongside `Зона 1`…`Зона 5`. When it is selected:
+
+- `irrigation_manual_pump_opens_valve` opens nothing;
+- `irrigation_pump_without_open_valve` does not intervene at all;
+- `sensor.poliv_stan_sistemi` reports `ПОЛИВАЄ — ШЛАНГ` instead of
+  `АВАРІЯ — НАСОС БЕЗ КЛАПАНА`;
+- the three-hour maximum runtime still applies.
+
+In every other mode the previous behaviour is unchanged: a pump running with no
+valve is still treated as a fault, because the user asked for a zone and the
+zone did not open.
+
+Do not reintroduce logic that treats "pump on, no valve" as an unconditional
+emergency, and do not add a dry-run interlock on that basis. Ask which mode is
+selected before diagnosing.
+
+Note that `sensor.poliv_stan_sistemi` previously reported only zones 1-3, so a
+zone 4 or zone 5 run displayed as an emergency; it now scans all eight valves.
 
 ## Authoritative entities
 
