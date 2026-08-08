@@ -379,3 +379,37 @@
   - action: shell_command.prune_motion_clips
   mode: single
   max_exceeded: silent
+- id: tarif_peremknuty_lichylnyky
+  alias: Тариф - перемкнути лічильники день/ніч
+  description: 'Тримає всі utility_meter у тому самому тарифі, що й
+    sensor.tarif_elektroenergii_zaraz: день 07:00-22:59, ніч 23:00-06:59.
+
+    Без цієї автоматизації лічильники назавжди лишились би в тарифі, який був
+    активний при створенні, і весь розподіл день/ніч був би неправильний.
+
+    Тригер на старт Home Assistant обов''язковий: після перезапуску серед ночі
+    лічильники інакше лишалися б у денному тарифі до наступної сьомої ранку.
+    Затримка потрібна, щоб сутності utility_meter встигли з''явитися.'
+  triggers:
+  - trigger: time
+    at: '07:00:00'
+  - trigger: time
+    at: '23:00:00'
+  - trigger: homeassistant
+    event: start
+  actions:
+  - delay: 00:00:30
+  - action: utility_meter.select_tariff
+    target:
+      entity_id:
+      - select.merezha_za_tarifom
+      - select.merezha_dobovyi
+      - select.merezha_misiachnyi
+      - select.boiler_za_tarifom
+      - select.zariadka_za_tarifom
+      - select.pidloha_1_za_tarifom
+      - select.pidloha_2_za_tarifom
+      - select.nasos_za_tarifom
+    data:
+      tariff: "{{ 'den' if 7 <= now().hour < 23 else 'nich' }}"
+  mode: single
