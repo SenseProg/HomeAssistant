@@ -1655,292 +1655,501 @@ views:
   dense_section_placement: true
   sections:
   - type: grid
-    column_span: 2
+    column_span: 4
     cards:
     - type: heading
-      heading: Що система вирішила про полив
-      icon: mdi:clipboard-text-clock
+      heading: Полив
+      icon: mdi:sprinkler-variant
       grid_options:
         columns: full
     - type: markdown
       grid_options:
         columns: full
-      content: '### {{ states(''input_text.poliv_ostannie_rishennia'') }}
-
-
-        {% set lt = state_attr(''automation.poliv_rozklad_za_chasom_i_dniami_tizhnia'', ''last_triggered'')
-        %} Останній розгляд розкладу: {{ (lt | as_datetime | as_local).strftime(''%d.%m.%Y о %H:%M'')
-        if lt else ''ще не було'' }}.
-
-
-        Розумний полив зараз просить: зона 1 — {{ (states(''sensor.smart_irrigation_zona1'') | float(0)
-        / 60) | round(0) }} хв, зона 2 — {{ (states(''sensor.smart_irrigation_zona2'') | float(0) / 60)
-        | round(0) }} хв. Баланс води зони 1: {{ states(''sensor.smart_irrigation_zona1_bucket'') }} мм
-        ({{ ''дефіцит, ґрунт сухий'' if states(''sensor.smart_irrigation_zona1_bucket'') | float(0) <
-        0 else ''запас після дощу або поливу'' }}).'
-    - type: markdown
+      content: |-
+        ## {{ states('sensor.poliv_stan_sistemi') }}
+        **Наступний полив:** {% set nr = state_attr('sun.sun', 'next_rising') %}{{ (as_timestamp(nr) - 4500) | timestamp_custom('%d.%m о %H:%M', true) if nr else '—' }} · старт розраховано так, щоб закінчити на схід сонця
+        🕘 {{ states('input_text.poliv_ostannie_rishennia') }}
+    - type: tile
+      entity: weather.forecast_golovna
+      name: Погода зараз
       grid_options:
-        columns: full
-      content: '### Скільки води просить Розумний полив і чому
-
-
-        {%- set zones = [(''Зона 1'', ''zona1'', 200), (''Зона 2'', ''zona2'', 200), (''Зона 5'', ''zona5'',
-        100)] %}
-
-        {%- set ns = namespace(total=0) %}
-
-        {% for label, key, area in zones %}
-
-        {%- set secs = states(''sensor.smart_irrigation_'' ~ key) | float(0) %}
-
-        {%- set bucket = states(''sensor.smart_irrigation_'' ~ key ~ ''_bucket'') | float(0) %}
-
-        {%- set deficit = states(''sensor.smart_irrigation_'' ~ key ~ ''_et_deficiency'') | float(0) %}
-
-        {%- set ns.total = ns.total + secs %}
-
-        **{{ label }}** ({{ area }} м²) —
-
-        {%- if secs > 0 %} полив {{ (secs / 60) | round(1) }} хв.
-
-        Причина: ґрунту бракує {{ (bucket | abs) | round(2) }} мм води, і саме стільки треба долити.
-
-        {%- elif bucket > 0 %} поливати не треба.
-
-        Причина: у ґрунті ще є запас {{ bucket | round(2) }} мм — дощу вистачило.
-
-        {%- else %} поливати не треба.
-
-        Причина: баланс нульовий, дефіциту немає{% if deficit != 0 %} (розрахунковий баланс за добу {{
-        deficit | round(2) }} мм){% endif %}.
-
-        {%- endif %}
-
-        {% endfor %}
-
-
-        {% if ns.total > 0 -%}
-
-        **Разом на ранок: {{ (ns.total / 60) | round(0) }} хв.** Старт розрахований так, щоб полив
-
-        закінчився приблизно на схід сонця.
-
-        {%- else -%}
-
-        **Разом: поливу не буде.** Жодна зона не має дефіциту вологи.
-
-        {%- endif %}
-
-
-        ### Звідки береться дощ у розрахунку
-
-
-        Датчика дощу на ділянці немає. Опади беруться з **Open-Meteo** — безкоштовного
-
-        погодного сервісу, за координатами будинку із налаштувань Home Assistant. Розумний
-
-        полив опитує його **кожні 30 хвилин** і накопичує показники за добу.
-
-
-        Так само звідти надходять температура, вологість, тиск, вітер, точка роси й сонячна
-
-        радіація — усі дев''ять полів групи датчиків. З них модуль PyETO рахує випаровування
-
-        (евапотранспірацію) за формулою Пенмана-Монтейта.
-
-
-        Це прогноз і модель для місцевості, а не вимір на твоєму газоні: якщо злива пройшла
-
-        смугою повз ділянку, система про це не дізнається.
-
-
-        ### Як рахується тривалість
-
-
-        Для кожної зони ведеться «відро води» в міліметрах: дощ наповнює, спека й вітер
-
-        випаровують, надлишок стікає вглиб.
-
-
-        - **Мінус** — ґрунту бракує води, на цю нестачу призначається полив.
-
-        - **Нуль або плюс** — вологи вистачає, полив пропускається.
-
-
-        Хвилини рахуються з площі та продуктивності: зони 1 і 2 — 200 м² при 40 л/хв, зона 5 —
-
-        100 м² при 20 л/хв. Це однакова інтенсивність 12 мм/год, тому за однакової посухи всі
-
-        три поливаються приблизно однаково довго.
-
-
-        Перерахунок — **щодня о 19:55** за погодою минулої доби. Дощ, який іде просто зараз,
-
-        потрапить у розрахунок аж увечері, а не в момент поливу.
-
-        '
+        columns: 16
+        rows: 1
     - type: tile
       entity: input_boolean.poliv_propustyty_zavtra
-      name: Пропустити завтрашній ранок
-      icon: mdi:weather-rainy
+      name: Пропустити завтра
       color: red
       grid_options:
+        columns: 16
+        rows: 1
+    - type: tile
+      entity: automation.poliv_rozklad_za_chasom_i_dniami_tizhnia
+      name: Автополив до сходу
+      color: green
+      grid_options:
+        columns: 16
+        rows: 1
+  - type: grid
+    column_span: 1
+    cards:
+    - type: heading
+      heading: Зона 1 · 200 м²
+      grid_options:
         columns: full
+    - type: gauge
+      entity: sensor.smart_irrigation_zona1_bucket
+      name: Баланс води
+      unit: mm
+      min: -12
+      max: 24
+      needle: true
+      severity:
+        green: 0
+        yellow: -4
+        red: -12
+      grid_options:
+        columns: full
+    - type: tile
+      entity: sensor.smart_irrigation_zona1
+      name: Полив на ранок
+      icon: mdi:timer-sand
+      grid_options:
+        columns: 6
+        rows: 1
+    - type: tile
+      entity: input_boolean.poliv_zona_1_vkl
+      name: У розкладі
+      grid_options:
+        columns: 6
         rows: 1
     - type: markdown
       grid_options:
         columns: full
-      content: '### Як приймається рішення
-
-
-        Питання про дощ ставиться **звечора о 21:00**, коли ти ще не спиш, а не о пів на п''яту ранку.
-        Увечері система дивиться прогноз саме на завтрашній ранок (з 03:00 до 09:00) і, якщо очікує дощ,
-        питає, чи пропустити полив.
-
-
-        - Натиснув «Пропустити» → вмикається прапорець нижче, і вранці поливу не буде.
-
-        - Натиснув «Поливати» або нічого не натиснув → полив іде як звичайно.
-
-
-        **Мовчання означає «поливати».** Це навмисно: якщо ввечері ніхто не відповів, або Home Assistant
-        був вимкнений, або прогноз не справдився — полив не має тихо зникнути.
-
-
-        Вранці полив скасовує лише дві речі: увімкнений прапорець «пропустити завтрашній ранок» і **фактичний
-        дощ у момент старту**. Прогноз уранці вже нічого не вирішує, і ніяких 30 хвилин очікування відповіді
-        немає.
-
-
-        ### Два різні механізми, які легко переплутати
-
-
-        **Скільки поливати — Розумний полив.** Щодня о 19:55 перераховує баланс води в ґрунті: випарувалося
-        мінус випало дощу, і з цього виводить тривалість. Він **ніколи не скасовує** полив — максимум
-        видає нуль. Дощ, який іде просто зараз, він побачить аж на перерахунку о 19:55.
-
-
-        **Чи поливати взагалі — автоматизація розкладу.** За 1 годину 15 хвилин до сходу сонця запитує
-        погодинний прогноз Met.no і перевіряє дві речі: чи йде дощ у цю хвилину і чи прогнозують понад
-        0,2 мм опадів у найближчі 6 годин.
-
-
-        **Дощ визначається за прогнозом Met.no з інтернету, а не за датчиком у дворі** — власного датчика
-        дощу немає. Тому «дощу не було, а полив скасовано» — очікувана ситуація: скасовує прогноз, а не
-        факт.'
+      content: '{% set secs = states(''sensor.smart_irrigation_zona1'') | float(0) %}{% set b = states(''sensor.smart_irrigation_zona1_bucket'')
+        | float(0) %}{% if secs > 0 %}Ллємо {{ (secs/60) | round(1) }} хв: ґрунту бракує {{ (b | abs)
+        | round(2) }} мм.{% elif b > 0 %}Поливати не треба: запас {{ b | round(2) }} мм — дощу вистачило.{%
+        else %}Поливати не треба: дефіциту немає.{% endif %}'
+    - type: tile
+      entity: input_number.poliv_zona_1_hvylyn
+      name: Хвилин вручну
+      features:
+      - type: numeric-input
+        style: buttons
+      grid_options:
+        columns: full
+    - type: button
+      name: Полити зараз
+      icon: mdi:play
+      grid_options:
+        columns: 6
+      tap_action:
+        action: call-service
+        service: script.poliv_zona_1
+    - type: button
+      name: Стоп
+      icon: mdi:stop
+      grid_options:
+        columns: 6
+      tap_action:
+        action: call-service
+        service: script.poliv_stop_all
   - type: grid
-    column_span: 2
+    column_span: 1
     cards:
     - type: heading
-      heading: Розклад поливу
+      heading: Зона 2 · 200 м²
+      grid_options:
+        columns: full
+    - type: gauge
+      entity: sensor.smart_irrigation_zona2_bucket
+      name: Баланс води
+      unit: mm
+      min: -12
+      max: 24
+      needle: true
+      severity:
+        green: 0
+        yellow: -4
+        red: -12
+      grid_options:
+        columns: full
+    - type: tile
+      entity: sensor.smart_irrigation_zona2
+      name: Полив на ранок
+      icon: mdi:timer-sand
+      grid_options:
+        columns: 6
+        rows: 1
+    - type: tile
+      entity: input_boolean.poliv_zona_2_vkl
+      name: У розкладі
+      grid_options:
+        columns: 6
+        rows: 1
+    - type: markdown
+      grid_options:
+        columns: full
+      content: '{% set secs = states(''sensor.smart_irrigation_zona2'') | float(0) %}{% set b = states(''sensor.smart_irrigation_zona2_bucket'')
+        | float(0) %}{% if secs > 0 %}Ллємо {{ (secs/60) | round(1) }} хв: ґрунту бракує {{ (b | abs)
+        | round(2) }} мм.{% elif b > 0 %}Поливати не треба: запас {{ b | round(2) }} мм — дощу вистачило.{%
+        else %}Поливати не треба: дефіциту немає.{% endif %}'
+    - type: tile
+      entity: input_number.poliv_zona_2_hvylyn
+      name: Хвилин вручну
+      features:
+      - type: numeric-input
+        style: buttons
+      grid_options:
+        columns: full
+    - type: button
+      name: Полити зараз
+      icon: mdi:play
+      grid_options:
+        columns: 6
+      tap_action:
+        action: call-service
+        service: script.poliv_zona_2
+    - type: button
+      name: Стоп
+      icon: mdi:stop
+      grid_options:
+        columns: 6
+      tap_action:
+        action: call-service
+        service: script.poliv_stop_all
+  - type: grid
+    column_span: 1
+    cards:
+    - type: heading
+      heading: Зона 5 · 100 м²
+      grid_options:
+        columns: full
+    - type: gauge
+      entity: sensor.smart_irrigation_zona5_bucket
+      name: Баланс води
+      unit: mm
+      min: -12
+      max: 24
+      needle: true
+      severity:
+        green: 0
+        yellow: -4
+        red: -12
+      grid_options:
+        columns: full
+    - type: tile
+      entity: sensor.smart_irrigation_zona5
+      name: Полив на ранок
+      icon: mdi:timer-sand
+      grid_options:
+        columns: 6
+        rows: 1
+    - type: tile
+      entity: input_boolean.poliv_zona_5_vkl
+      name: У розкладі
+      grid_options:
+        columns: 6
+        rows: 1
+    - type: markdown
+      grid_options:
+        columns: full
+      content: '{% set secs = states(''sensor.smart_irrigation_zona5'') | float(0) %}{% set b = states(''sensor.smart_irrigation_zona5_bucket'')
+        | float(0) %}{% if secs > 0 %}Ллємо {{ (secs/60) | round(1) }} хв: ґрунту бракує {{ (b | abs)
+        | round(2) }} мм.{% elif b > 0 %}Поливати не треба: запас {{ b | round(2) }} мм — дощу вистачило.{%
+        else %}Поливати не треба: дефіциту немає.{% endif %}'
+    - type: tile
+      entity: input_number.poliv_zona_5_hvylyn
+      name: Хвилин вручну
+      features:
+      - type: numeric-input
+        style: buttons
+      grid_options:
+        columns: full
+    - type: button
+      name: Полити зараз
+      icon: mdi:play
+      grid_options:
+        columns: 6
+      tap_action:
+        action: call-service
+        service: script.poliv_zona_5
+    - type: button
+      name: Стоп
+      icon: mdi:stop
+      grid_options:
+        columns: 6
+      tap_action:
+        action: call-service
+        service: script.poliv_stop_all
+  - type: grid
+    column_span: 1
+    cards:
+    - type: heading
+      heading: Ручні зони 3 · 4
       grid_options:
         columns: full
     - type: markdown
       grid_options:
         columns: full
-      content: "**Автоматичний старт:** за 1 год 15 хв до сходу сонця, щоб полив закінчився приблизно\
-        \ на схід.\n**Наступний запуск:** {% set nr = state_attr('sun.sun', 'next_rising') %} {{ (as_timestamp(nr)\
-        \ - 4500) | timestamp_custom('%d.%m.%Y %H:%M', true)\n   if nr else 'дані про схід сонця ще завантажуються'\
-        \ }}"
-    - type: entities
+      content: За розкладом не поливаються — тільки вручну.
+    - type: tile
+      entity: input_number.poliv_zona_3_hvylyn
+      name: Зона 3, хв
+      features:
+      - type: numeric-input
+        style: buttons
       grid_options:
         columns: full
-      entities:
-      - type: section
-        label: Дні тижня
-      - entity: input_boolean.poliv_pn
-        name: Понеділок
-      - entity: input_boolean.poliv_vt
-        name: Вівторок
-      - entity: input_boolean.poliv_sr
-        name: Середа
-      - entity: input_boolean.poliv_cht
-        name: Четвер
-      - entity: input_boolean.poliv_pt
-        name: П'ятниця
-      - entity: input_boolean.poliv_sb
-        name: Субота
-      - entity: input_boolean.poliv_nd
-        name: Неділя
-      - type: section
-        label: Зони у розкладі та тривалість
-      - entity: input_boolean.poliv_zona_1_vkl
-        name: Зона 1
-      - entity: input_number.poliv_zona_1_hvylyn
-        name: '    хвилин, якщо розрахунку немає'
-      - entity: input_boolean.poliv_zona_2_vkl
-        name: Зона 2
-      - entity: input_number.poliv_zona_2_hvylyn
-        name: '    хвилин, якщо розрахунку немає'
-      - entity: input_boolean.poliv_zona_5_vkl
-        name: Зона 5
-      - entity: input_number.poliv_zona_5_hvylyn
-        name: '    хвилин, якщо розрахунку немає'
-    - type: entities
-      title: Автоматизація розкладу
+    - type: button
+      name: Полити зону 3
+      icon: mdi:play
       grid_options:
         columns: full
-      entities:
-      - entity: automation.poliv_rozklad_za_chasom_i_dniami_tizhnia
-        name: Автополив до сходу сонця
+      tap_action:
+        action: call-service
+        service: script.poliv_zona_3
+    - type: tile
+      entity: input_number.poliv_zona_4_hvylyn
+      name: Зона 4, хв
+      features:
+      - type: numeric-input
+        style: buttons
+      grid_options:
+        columns: full
+    - type: button
+      name: Полити зону 4
+      icon: mdi:play
+      grid_options:
+        columns: full
+      tap_action:
+        action: call-service
+        service: script.poliv_zona_4
   - type: grid
+    column_span: 4
     cards:
     - type: heading
-      heading: Керування системою поливу
-      grid_options:
-        columns: full
-    - type: tile
-      entity: sensor.poliv_stan_sistemi
-      name: СТАН ПОЛИВУ
-      icon: mdi:sprinkler-variant
-      color: state
-      vertical: false
+      heading: Керування
       grid_options:
         columns: full
     - type: tile
       entity: input_boolean.poliv_avtomatika_dozvolena
-      name: Дозволити автоматичний полив
-      icon: mdi:sprinkler-variant
+      name: Автоматичний полив
       grid_options:
-        columns: full
+        columns: 12
+        rows: 1
     - type: tile
       entity: switch.mini_switch_k601_2_switch_1_2
-      name: Насос поливу
-      icon: mdi:pump
+      name: Насос · шланг — можна вмикати будь-коли
       grid_options:
-        columns: full
-    - type: entities
-      title: Планувальник Irrigation Unlimited
-      entities:
-      - entity: binary_sensor.irrigation_unlimited_c1_m
-        name: Система поливу
-      - entity: binary_sensor.irrigation_unlimited_c1_s1
-        name: Розумна послідовність
-      - entity: binary_sensor.irrigation_unlimited_c1_z1
-        name: Зона 1
-      - entity: binary_sensor.irrigation_unlimited_c1_z2
-        name: Зона 2
-      - entity: binary_sensor.irrigation_unlimited_c1_z3
-        name: Зона 3
-    - type: button
-      name: Аварійно зупинити все
-      icon: mdi:stop-circle
+        columns: 12
+        rows: 1
+    - type: glance
+      columns: 7
       show_state: false
       grid_options:
-        columns: full
+        columns: 12
+      entities:
+      - entity: input_boolean.poliv_pn
+        name: Пн
+        tap_action:
+          action: toggle
+      - entity: input_boolean.poliv_vt
+        name: Вт
+        tap_action:
+          action: toggle
+      - entity: input_boolean.poliv_sr
+        name: Ср
+        tap_action:
+          action: toggle
+      - entity: input_boolean.poliv_cht
+        name: Чт
+        tap_action:
+          action: toggle
+      - entity: input_boolean.poliv_pt
+        name: Пт
+        tap_action:
+          action: toggle
+      - entity: input_boolean.poliv_sb
+        name: Сб
+        tap_action:
+          action: toggle
+      - entity: input_boolean.poliv_nd
+        name: Нд
+        tap_action:
+          action: toggle
+    - type: button
+      name: Аварійно зупинити все
+      icon: mdi:stop-circle-outline
+      show_state: false
+      grid_options:
+        columns: 12
       tap_action:
         action: call-service
         service: script.poliv_stop_all
         confirmation:
           text: Вимкнути насос і всі клапани?
   - type: grid
+    column_span: 4
     cards:
     - type: heading
-      heading: Тривалість роботи сьогодні
+      heading: Довідка
+      icon: mdi:information-outline
       grid_options:
         columns: full
+    - type: markdown
+      grid_options:
+        columns: full
+      content: |-
+        <details>
+        <summary><b>Скільки води просить Розумний полив і чому</b></summary>
+
+        {%- set zones = [('Зона 1', 'zona1', 200), ('Зона 2', 'zona2', 200), ('Зона 5', 'zona5', 100)] %}
+        {%- set ns = namespace(total=0) %}
+        {% for label, key, area in zones %}
+        {%- set secs = states('sensor.smart_irrigation_' ~ key) | float(0) %}
+        {%- set bucket = states('sensor.smart_irrigation_' ~ key ~ '_bucket') | float(0) %}
+        {%- set deficit = states('sensor.smart_irrigation_' ~ key ~ '_et_deficiency') | float(0) %}
+        {%- set ns.total = ns.total + secs %}
+        **{{ label }}** ({{ area }} м²) —
+        {%- if secs > 0 %} полив {{ (secs / 60) | round(1) }} хв.
+        Причина: ґрунту бракує {{ (bucket | abs) | round(2) }} мм води, і саме стільки треба долити.
+        {%- elif bucket > 0 %} поливати не треба.
+        Причина: у ґрунті ще є запас {{ bucket | round(2) }} мм — дощу вистачило.
+        {%- else %} поливати не треба.
+        Причина: баланс нульовий, дефіциту немає{% if deficit != 0 %} (розрахунковий баланс за добу {{ deficit | round(2) }} мм){% endif %}.
+        {%- endif %}
+        {% endfor %}
+
+        {% if ns.total > 0 -%}
+        **Разом на ранок: {{ (ns.total / 60) | round(0) }} хв.** Старт розрахований так, щоб полив
+        закінчився приблизно на схід сонця.
+        {%- else -%}
+        **Разом: поливу не буде.** Жодна зона не має дефіциту вологи.
+        {%- endif %}
+
+        ### Звідки береться дощ у розрахунку
+
+        Датчика дощу на ділянці немає. Опади беруться з **Open-Meteo** — безкоштовного
+        погодного сервісу, за координатами будинку із налаштувань Home Assistant. Розумний
+        полив опитує його **кожні 30 хвилин** і накопичує показники за добу.
+
+        Так само звідти надходять температура, вологість, тиск, вітер, точка роси й сонячна
+        радіація — усі дев'ять полів групи датчиків. З них модуль PyETO рахує випаровування
+        (евапотранспірацію) за формулою Пенмана-Монтейта.
+
+        Це прогноз і модель для місцевості, а не вимір на твоєму газоні: якщо злива пройшла
+        смугою повз ділянку, система про це не дізнається.
+
+        ### Як рахується тривалість
+
+        Для кожної зони ведеться «відро води» в міліметрах: дощ наповнює, спека й вітер
+        випаровують, надлишок стікає вглиб.
+
+        - **Мінус** — ґрунту бракує води, на цю нестачу призначається полив.
+        - **Нуль або плюс** — вологи вистачає, полив пропускається.
+
+        Хвилини рахуються з площі та продуктивності: зони 1 і 2 — 200 м² при 40 л/хв, зона 5 —
+        100 м² при 20 л/хв. Це однакова інтенсивність 12 мм/год, тому за однакової посухи всі
+        три поливаються приблизно однаково довго.
+
+        Перерахунок — **щодня о 19:55** за погодою минулої доби. Дощ, який іде просто зараз,
+        потрапить у розрахунок аж увечері, а не в момент поливу.
+
+        </details>
+        <details>
+        <summary><b>Як приймається рішення про ранок</b></summary>
+
+        Питання про дощ ставиться **звечора о 21:00**, коли ти ще не спиш, а не о пів на п'яту ранку. Увечері система дивиться прогноз саме на завтрашній ранок (з 03:00 до 09:00) і, якщо очікує дощ, питає, чи пропустити полив.
+
+        - Натиснув «Пропустити» → вмикається прапорець «Пропустити завтра» у шапці, і вранці поливу не буде.
+        - Натиснув «Поливати» або нічого не натиснув → полив іде як звичайно.
+
+        **Мовчання означає «поливати».** Це навмисно: якщо ввечері ніхто не відповів, або Home Assistant був вимкнений, або прогноз не справдився — полив не має тихо зникнути.
+
+        Вранці полив скасовує лише дві речі: увімкнений прапорець «пропустити завтрашній ранок» і **фактичний дощ у момент старту**. Прогноз уранці вже нічого не вирішує, і ніяких 30 хвилин очікування відповіді немає.
+
+        ### Два різні механізми, які легко переплутати
+
+        **Скільки поливати — Розумний полив.** Щодня о 19:55 перераховує баланс води в ґрунті: випарувалося мінус випало дощу, і з цього виводить тривалість. Він **ніколи не скасовує** полив — максимум видає нуль. Дощ, який іде просто зараз, він побачить аж на перерахунку о 19:55.
+
+        **Чи поливати взагалі — автоматизація розкладу.** За 1 годину 15 хвилин до сходу сонця запитує погодинний прогноз Met.no і перевіряє дві речі: чи йде дощ у цю хвилину і чи прогнозують понад 0,2 мм опадів у найближчі 6 годин.
+
+        **Дощ визначається за прогнозом Met.no з інтернету, а не за датчиком у дворі** — власного датчика дощу немає. Тому «дощу не було, а полив скасовано» — очікувана ситуація: скасовує прогноз, а не факт.
+
+        </details>
+        <details>
+        <summary><b>Про насос і шланг</b></summary>
+
+        Насос вмикається без жодних умов — плитку «Насос» у «Керуванні» можна вмикати будь-коли, наприклад щоб полити зі шланга. Робота насоса без відкритого клапана — штатний режим: на лінії стоять водяні розетки. Єдиний ліміт — автостоп після 3 годин безперервної роботи.
+
+        </details>
+  - type: grid
+    column_span: 2
+    cards:
+    - type: heading
+      heading: Вода за 7 днів
+      grid_options:
+        columns: full
+    - type: statistics-graph
+      chart_type: bar
+      period: day
+      days_to_show: 7
+      stat_types:
+      - change
+      grid_options:
+        columns: full
+      entities:
+      - entity: sensor.smart_irrigation_zona1_water_used
+        name: Зона 1
+      - entity: sensor.smart_irrigation_zona2_water_used
+        name: Зона 2
+      - entity: sensor.smart_irrigation_zona5_water_used
+        name: Зона 5
+  - type: grid
+    column_span: 2
+    cards:
+    - type: heading
+      heading: Насос
+      grid_options:
+        columns: full
+    - type: tile
+      entity: sensor.nasos_polivu_potuzhnist_zaraz
+      name: Потужність зараз
+      grid_options:
+        columns: 6
+        rows: 1
+    - type: tile
+      entity: sensor.nasos_polivu_spozhito
+      name: Спожито всього
+      grid_options:
+        columns: 6
+        rows: 1
+    - type: tile
+      entity: sensor.nasos_polivu_spozhito_za_sesiiu
+      name: Спожито за сесію
+      grid_options:
+        columns: 6
+        rows: 1
+    - type: tile
+      entity: sensor.nasos_polivu_napruga
+      name: Напруга
+      grid_options:
+        columns: 6
+        rows: 1
+    - type: statistics-graph
+      title: Спожито за добу
+      chart_type: bar
+      period: day
+      days_to_show: 30
+      stat_types:
+      - change
+      grid_options:
+        columns: full
+      entities:
+      - entity: sensor.nasos_polivu_spozhito
+        name: Насос
     - type: custom:mini-graph-card
-      name: Насос і клапани · години роботи сьогодні
+      name: Робота сьогодні · години
       hours_to_show: 24
       points_per_hour: 4
       line_width: 3
@@ -1959,340 +2168,10 @@ views:
         name: Зона 2
       - entity: sensor.zona_3_poliv_sogodni
         name: Зона 3
-  - type: grid
-    cards:
-    - type: heading
-      heading: Зона 1 · 200 м²
-      grid_options:
-        columns: full
-    - type: tile
-      entity: input_number.poliv_zona_1_hvylyn
-      name: Тривалість (хв)
-      grid_options:
-        columns: full
-      features:
-      - type: numeric-input
-        style: buttons
-    - type: entities
-      grid_options:
-        columns: full
-      entities:
-      - entity: switch.avtopoliv_kontroler_avtopoliv_klapan_1
-        name: Клапан
-      - entity: binary_sensor.irrigation_unlimited_c1_z1
-        name: Стан поливу
-      - entity: timer.poliv_zoni_1
-        name: Залишилось поливати
-      - entity: sensor.smart_irrigation_zona1
-        name: Розрахунок Розумного поливу
     - type: markdown
       grid_options:
         columns: full
-      content: '**Площа:** 200 м² · **полив за розкладом:** тривалість рахує Розумний полив, нуль означає,
-        що поливати не треба.
-
-
-        Для ручного поливу задайте тривалість вище і натисніть **«Ручний старт»**. Клапаном і насосом
-        керує Irrigation Unlimited: клапан відкривається першим, насос зупиняється першим.'
-    - type: button
-      name: Ручний старт
-      icon: mdi:play
-      grid_options:
-        columns: 6
-      tap_action:
-        action: call-service
-        service: script.poliv_zona_1
-    - type: button
-      name: Стоп
-      icon: mdi:stop
-      grid_options:
-        columns: 6
-      tap_action:
-        action: call-service
-        service: script.poliv_stop_all
-  - type: grid
-    cards:
-    - type: heading
-      heading: Зона 2 · 200 м²
-      grid_options:
-        columns: full
-    - type: tile
-      entity: input_number.poliv_zona_2_hvylyn
-      name: Тривалість (хв)
-      grid_options:
-        columns: full
-      features:
-      - type: numeric-input
-        style: buttons
-    - type: entities
-      grid_options:
-        columns: full
-      entities:
-      - entity: switch.avtopoliv_kontroler_avtopoliv_klapan_2
-        name: Клапан
-      - entity: binary_sensor.irrigation_unlimited_c1_z2
-        name: Стан поливу
-      - entity: timer.poliv_zoni_2
-        name: Залишилось поливати
-      - entity: sensor.smart_irrigation_zona2
-        name: Розрахунок Розумного поливу
-    - type: markdown
-      grid_options:
-        columns: full
-      content: '**Площа:** 200 м² · **полив за розкладом:** тривалість рахує Розумний полив, нуль означає,
-        що поливати не треба.
-
-
-        Для ручного поливу задайте тривалість вище і натисніть **«Ручний старт»**. Клапаном і насосом
-        керує Irrigation Unlimited: клапан відкривається першим, насос зупиняється першим.'
-    - type: button
-      name: Ручний старт
-      icon: mdi:play
-      grid_options:
-        columns: 6
-      tap_action:
-        action: call-service
-        service: script.poliv_zona_2
-    - type: button
-      name: Стоп
-      icon: mdi:stop
-      grid_options:
-        columns: 6
-      tap_action:
-        action: call-service
-        service: script.poliv_stop_all
-  - type: grid
-    cards:
-    - type: heading
-      heading: Зона 3
-      grid_options:
-        columns: full
-    - type: tile
-      entity: input_number.poliv_zona_3_hvylyn
-      name: Тривалість (хв)
-      grid_options:
-        columns: full
-      features:
-      - type: numeric-input
-        style: buttons
-    - type: entities
-      grid_options:
-        columns: full
-      entities:
-      - entity: switch.avtopoliv_kontroler_avtopoliv_klapan_3
-        name: Клапан
-      - entity: binary_sensor.irrigation_unlimited_c1_z3
-        name: Стан поливу
-      - entity: timer.poliv_zoni_3
-        name: Залишилось поливати
-    - type: markdown
-      grid_options:
-        columns: full
-      content: '**Площа:** не заміряна · **за розкладом не поливається** — тільки вручну звідси.
-
-
-        Для ручного поливу задайте тривалість вище і натисніть **«Ручний старт»**. Клапаном і насосом
-        керує Irrigation Unlimited: клапан відкривається першим, насос зупиняється першим.'
-    - type: button
-      name: Ручний старт
-      icon: mdi:play
-      grid_options:
-        columns: 6
-      tap_action:
-        action: call-service
-        service: script.poliv_zona_3
-    - type: button
-      name: Стоп
-      icon: mdi:stop
-      grid_options:
-        columns: 6
-      tap_action:
-        action: call-service
-        service: script.poliv_stop_all
-  - type: grid
-    cards:
-    - type: heading
-      heading: Зона 4
-      grid_options:
-        columns: full
-    - type: tile
-      entity: input_number.poliv_zona_4_hvylyn
-      name: Тривалість (хв)
-      grid_options:
-        columns: full
-      features:
-      - type: numeric-input
-        style: buttons
-    - type: entities
-      grid_options:
-        columns: full
-      entities:
-      - entity: switch.avtopoliv_kontroler_avtopoliv_klapan_4
-        name: Клапан
-      - entity: timer.poliv_zoni_4
-        name: Залишилось поливати
-    - type: markdown
-      grid_options:
-        columns: full
-      content: '**Площа:** не заміряна · **за розкладом не поливається** — тільки вручну звідси.
-
-
-        Для ручного поливу задайте тривалість вище і натисніть **«Ручний старт»**. Клапаном і насосом
-        керує Irrigation Unlimited: клапан відкривається першим, насос зупиняється першим.'
-    - type: button
-      name: Ручний старт
-      icon: mdi:play
-      grid_options:
-        columns: 6
-      tap_action:
-        action: call-service
-        service: script.poliv_zona_4
-    - type: button
-      name: Стоп
-      icon: mdi:stop
-      grid_options:
-        columns: 6
-      tap_action:
-        action: call-service
-        service: script.poliv_stop_all
-  - type: grid
-    cards:
-    - type: heading
-      heading: Зона 5 · 100 м²
-      grid_options:
-        columns: full
-    - type: tile
-      entity: input_number.poliv_zona_5_hvylyn
-      name: Тривалість (хв)
-      grid_options:
-        columns: full
-      features:
-      - type: numeric-input
-        style: buttons
-    - type: entities
-      grid_options:
-        columns: full
-      entities:
-      - entity: switch.avtopoliv_kontroler_avtopoliv_klapan_5
-        name: Клапан
-      - entity: binary_sensor.irrigation_unlimited_c1_z4
-        name: Стан поливу
-      - entity: timer.poliv_zoni_5
-        name: Залишилось поливати
-      - entity: sensor.smart_irrigation_zona5
-        name: Розрахунок Розумного поливу
-    - type: markdown
-      grid_options:
-        columns: full
-      content: '**Площа:** 100 м² · **полив за розкладом:** тривалість рахує Розумний полив, нуль означає,
-        що поливати не треба.
-
-
-        Для ручного поливу задайте тривалість вище і натисніть **«Ручний старт»**. Клапаном і насосом
-        керує Irrigation Unlimited: клапан відкривається першим, насос зупиняється першим.'
-    - type: button
-      name: Ручний старт
-      icon: mdi:play
-      grid_options:
-        columns: 6
-      tap_action:
-        action: call-service
-        service: script.poliv_zona_5
-    - type: button
-      name: Стоп
-      icon: mdi:stop
-      grid_options:
-        columns: 6
-      tap_action:
-        action: call-service
-        service: script.poliv_stop_all
-  - type: grid
-    cards:
-    - type: heading
-      heading: Насос - споживання електроенергії
-      grid_options:
-        columns: full
-    - type: tile
-      entity: sensor.nasos_polivu_potuzhnist_zaraz
-      name: Потужність зараз
-      grid_options:
-        columns: 6
-    - type: tile
-      entity: sensor.nasos_polivu_spozhito
-      name: Спожито всього
-      grid_options:
-        columns: 6
-    - type: entities
-      grid_options:
-        columns: full
-      entities:
-      - entity: sensor.nasos_polivu_robota_sogodni
-        name: Напрацювання сьогодні
-      - entity: sensor.nasos_polivu_energiia_sogodni
-        name: Спожито сьогодні
-      - entity: sensor.nasos_polivu_spozhito_za_sesiiu
-        name: Спожито за сесію
-      - entity: sensor.nasos_polivu_napruga
-        name: Напруга на насосі (фаза B)
-    - type: tile
-      entity: input_number.nasos_polivu_potuzhnist
-      name: Потужність насоса (калібрування)
-      grid_options:
-        columns: full
-      features:
-      - type: numeric-input
-        style: buttons
-    - type: statistics-graph
-      title: Спожито за добу
-      chart_type: bar
-      period: day
-      days_to_show: 30
-      stat_types:
-      - change
-      grid_options:
-        columns: full
-      entities:
-      - entity: sensor.nasos_polivu_spozhito
-        name: Насос
-    - type: custom:mini-graph-card
-      name: Потужність насоса · 24 години
-      hours_to_show: 24
-      points_per_hour: 4
-      line_width: 3
-      animate: true
-      show:
-        labels: true
-        points: false
-      color_thresholds:
-      - value: 0
-        color: '#43a047'
-      - value: 900
-        color: '#1e88e5'
-      - value: 1300
-        color: '#e53935'
-      grid_options:
-        columns: full
-      entities:
-      - entity: sensor.nasos_polivu_potuzhnist_zaraz
-        name: Насос
-    - type: markdown
-      title: Як рахується
-      grid_options:
-        columns: full
-      content: 'Реле Tuya Mini switch K601, яким керується насос, лічильника енергії не має - воно вміє
-        лише вмикати і вимикати. Тому споживання рахується як час роботи реле, помножений на потужність
-        із поля вище.
-
-        Потужність 1100 Вт виміряна 2026-08-03 по стрибку загального лічильника будинку: контрольований
-        запуск дав 994 Вт, два реальні пуски о 19:11 і 19:13 - 1119 і 1426 Вт. Взято медіану. Якщо захочеш
-        уточнити - зміни значення у полі вище, графіки перерахуються від моменту зміни.
-
-        Насос присутній у системі двічі - через хмару Tuya і локально (LocalTuya). Головною є ЛОКАЛЬНА
-        сутність: поки вона віддає on або off, рішення приймається лише за нею. Хмарна працює резервом
-        і враховується тільки тоді, коли локальна недоступна. Якщо мовчать обидві - потужність вважається
-        нульовою, щоб не нараховувати вигадане споживання.
-
-        '
+      content: 'Єдиний захист: автостоп після 3 годин безперервної роботи.'
 - title: Заряджання авто
   path: ev-charging
   icon: mdi:ev-station
