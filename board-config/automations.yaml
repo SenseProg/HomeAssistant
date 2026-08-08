@@ -149,76 +149,37 @@
       rain_soon: "{% set fl = (fc.get('weather.forecast_golovna', {}).get('forecast', []))[:6] %} {% set ns = namespace(wet=false) %} {% for f in fl %}\n  {% if f.condition in ['rainy', 'pouring', 'lightning-rainy',\
         \ 'snowy-rainy', 'hail']\n        or (f.precipitation | default(0) | float(0)) > 0.2 %}\n    {% set ns.wet = true %}\n  {% endif %}\n{% endfor %} {{ ns.wet }}\n"
   - if:
-    - condition: template
-      value_template: '{{ rain_now or rain_soon }}'
+    - condition: state
+      entity_id: input_boolean.poliv_propustyty_zavtra
+      state: 'on'
     then:
-    - action: notify.mobile_app_sm_s918b
-      data:
-        title: Полив за розкладом
-        message: '{{ ''Зараз дощ.'' if rain_now else ''Найближчими годинами прогнозують дощ.'' }} Поливати попри це?'
-        data:
-          tag: poliv_dosh
-          actions:
-          - action: POLIV_YES
-            title: Поливати
-          - action: POLIV_NO
-            title: Пропустити
-    - action: persistent_notification.create
-      data:
-        notification_id: poliv_dosh
-        title: Полив за розкладом · очікує рішення
-        message: "{{ 'Зараз іде дощ за даними Met.no.' if rain_now else 'Дощу зараз\
-          \ немає, але Met.no прогнозує опади в найближчі 6 годин.' }} Питання надіслано\
-          \ на телефон о {{ now().strftime('%H:%M') }}. Якщо ніхто не натисне «Поливати»\
-          \ протягом 30 хвилин, полив буде пропущено. Планувалося: зона 1 - {{ (zona_1_seconds\
-          \ | int(0) / 60) | round(0) }} хв, зона 2 - {{ (zona_2_seconds | int(0) /\
-          \ 60) | round(0) }} хв.\n"
+    - action: input_boolean.turn_off
+      target:
+        entity_id: input_boolean.poliv_propustyty_zavtra
     - action: input_text.set_value
       target:
         entity_id: input_text.poliv_ostannie_rishennia
       data:
-        value: "{{ now().strftime('%d.%m %H:%M') }} · чекаю відповіді · {{ 'дощ зараз'\
-          \ if rain_now else 'прогноз дощу на 6 год' }}\n"
-    - wait_for_trigger:
-      - trigger: event
-        event_type: mobile_app_notification_action
-        event_data:
-          action: POLIV_YES
-      - trigger: event
-        event_type: mobile_app_notification_action
-        event_data:
-          action: POLIV_NO
-      timeout: 00:30:00
-      continue_on_timeout: true
-    - if:
-      - condition: template
-        value_template: "{{ wait.trigger is none\n   or wait.trigger.event.data.action != 'POLIV_YES' }}\n"
-      then:
-      - action: notify.mobile_app_sm_s918b
-        data:
-          message: Полив пропущено через дощ.
-          data:
-            tag: poliv_dosh
-      - action: persistent_notification.create
-        data:
-          notification_id: poliv_dosh
-          title: Полив пропущено
-          message: "Полив за розкладом о {{ (now() - timedelta(minutes=30)).strftime('%H:%M')\
-            \ }} пропущено. Причина: {{ 'на момент старту йшов дощ' if rain_now else\
-            \ 'Met.no прогнозував опади в найближчі 6 годин' }}, а на питання «Поливати\
-            \ попри це?» {{ 'ніхто не відповів протягом 30 хвилин' if wait.trigger\
-            \ is none else 'була відповідь «Пропустити»' }}. Не полито: зона 1 - {{\
-            \ (zona_1_seconds | int(0) / 60) | round(0) }} хв, зона 2 - {{ (zona_2_seconds\
-            \ | int(0) / 60) | round(0) }} хв. Розумний полив про це рішення не знає\
-            \ і перерахує баланс води о 19:55 незалежно від нього.\n"
-      - action: input_text.set_value
-        target:
-          entity_id: input_text.poliv_ostannie_rishennia
-        data:
-          value: "{{ now().strftime('%d.%m %H:%M') }} · пропущено · {{ 'дощ' if rain_now\
-            \ else 'прогноз дощу' }} · {{ 'без відповіді 30 хв' if wait.trigger is\
-            \ none else 'обрано «Пропустити»' }}\n"
-      - stop: Полив пропущено через дощ
+        value: '{{ now().strftime(''%d.%m %H:%M'') }} · пропущено · рішення ухвалене
+          звечора'
+    - stop: Полив пропущено - так вирішили ввечері
+  - if:
+    - condition: template
+      value_template: '{{ rain_now }}'
+    then:
+    - action: persistent_notification.create
+      data:
+        notification_id: poliv_dosh
+        title: Полив пропущено · дощ
+        message: 'Полив за розкладом о {{ now().strftime(''%H:%M'') }} пропущено: у
+          момент старту йшов дощ. Питання не ставилося - його ставлять увечері за
+          прогнозом, а дощ просто зараз скасовує полив без обговорення.'
+    - action: input_text.set_value
+      target:
+        entity_id: input_text.poliv_ostannie_rishennia
+      data:
+        value: '{{ now().strftime(''%d.%m %H:%M'') }} · пропущено · дощ у момент старту'
+    - stop: Полив пропущено через дощ
   - action: persistent_notification.dismiss
     data:
       notification_id: poliv_dosh
@@ -412,4 +373,132 @@
       - select.nasos_za_tarifom
     data:
       tariff: "{{ 'den' if 7 <= now().hour < 23 else 'nich' }}"
+  mode: single
+- id: irrigation_evening_rain_ask
+  alias: Полив - вечірнє питання про дощ
+  description: 'О 21:00 дивиться погодинний прогноз на завтрашній ранок (03:00-09:00
+    - вікно, у яке потрапляє старт за 1:15 до сходу) і, якщо очікується дощ, питає,
+    чи поливати. Відповідь запам''ятовується у input_boolean.poliv_propustyty_zavtra,
+    і ранковий розклад просто її виконує.
+
+    Питати о 04:30, як було раніше, не мало сенсу: о пів на п''яту ніхто не бачить
+    сповіщення, 30 хвилин минають, і день пропускається за замовчуванням. Тепер
+    питання ставиться, коли на нього реально можуть відповісти.
+
+    Мовчання = пропустити, як і просили. Але прапорець скидається на початку
+    перевірки, тож якщо дощу не прогнозують, ранок поллється без жодних питань.'
+  triggers:
+  - trigger: time
+    at: '21:00:00'
+  conditions:
+  - condition: state
+    entity_id: input_boolean.poliv_avtomatika_dozvolena
+    state: 'on'
+  actions:
+  - action: input_boolean.turn_off
+    target:
+      entity_id: input_boolean.poliv_propustyty_zavtra
+  - action: weather.get_forecasts
+    target:
+      entity_id: weather.forecast_golovna
+    data:
+      type: hourly
+    response_variable: fc
+  - variables:
+      rain_morning: "{% set fl = fc.get('weather.forecast_golovna', {}).get('forecast',\
+        \ []) %} {% set ns = namespace(wet=false, mm=0.0) %} {% for f in fl %}\n  {%\
+        \ set t = as_datetime(f.datetime) | as_local %}\n  {% if t.date() == (now()\
+        \ + timedelta(days=1)).date() and 3 <= t.hour <= 9 %}\n    {% if f.condition\
+        \ in ['rainy', 'pouring', 'lightning-rainy', 'snowy-rainy', 'hail']\n       \
+        \ or (f.precipitation | default(0) | float(0)) > 0.2 %}\n      {% set ns.wet\
+        \ = true %}\n    {% endif %}\n    {% set ns.mm = ns.mm + (f.precipitation |\
+        \ default(0) | float(0)) %}\n  {% endif %}\n{% endfor %} {{ ns.wet }}\n"
+      rain_mm: "{% set fl = fc.get('weather.forecast_golovna', {}).get('forecast', [])\
+        \ %} {% set ns = namespace(mm=0.0) %} {% for f in fl %}\n  {% set t = as_datetime(f.datetime)\
+        \ | as_local %}\n  {% if t.date() == (now() + timedelta(days=1)).date() and\
+        \ 3 <= t.hour <= 9 %}\n    {% set ns.mm = ns.mm + (f.precipitation | default(0)\
+        \ | float(0)) %}\n  {% endif %}\n{% endfor %} {{ ns.mm | round(1) }}\n"
+  - if:
+    - condition: template
+      value_template: '{{ rain_morning }}'
+    then:
+    - action: notify.mobile_app_sm_s918b
+      data:
+        title: Полив завтра вранці
+        message: 'На ранок прогнозують дощ ({{ rain_mm }} мм). Поливати попри це?'
+        data:
+          tag: poliv_dosh_vechir
+          actions:
+          - action: POLIV_YES
+            title: Поливати
+          - action: POLIV_NO
+            title: Пропустити
+    - action: persistent_notification.create
+      data:
+        notification_id: poliv_dosh_vechir
+        title: Полив завтра вранці · очікує рішення
+        message: 'Met.no прогнозує на завтрашній ранок дощ ({{ rain_mm }} мм за
+          03:00-09:00). Питання надіслано на телефон о {{ now().strftime(''%H:%M'')
+          }}. Якщо до 23:59 ніхто не натисне «Поливати», ранковий полив буде пропущено.'
+    - action: input_text.set_value
+      target:
+        entity_id: input_text.poliv_ostannie_rishennia
+      data:
+        value: '{{ now().strftime(''%d.%m %H:%M'') }} · чекаю відповіді · прогноз дощу
+          на ранок {{ rain_mm }} мм'
+    - wait_for_trigger:
+      - trigger: event
+        event_type: mobile_app_notification_action
+        event_data:
+          action: POLIV_YES
+      - trigger: event
+        event_type: mobile_app_notification_action
+        event_data:
+          action: POLIV_NO
+      timeout: '02:59:00'
+      continue_on_timeout: true
+    - if:
+      - condition: template
+        value_template: '{{ wait.trigger is none or wait.trigger.event.data.action
+          != ''POLIV_YES'' }}'
+      then:
+      - action: input_boolean.turn_on
+        target:
+          entity_id: input_boolean.poliv_propustyty_zavtra
+      - action: notify.mobile_app_sm_s918b
+        data:
+          message: Завтрашній ранковий полив пропущено через дощ.
+          data:
+            tag: poliv_dosh_vechir
+      - action: persistent_notification.create
+        data:
+          notification_id: poliv_dosh_vechir
+          title: Завтрашній полив пропущено
+          message: 'Ранковий полив завтра пропущено. Причина: прогноз дощу {{ rain_mm
+            }} мм, а на питання {{ ''ніхто не відповів'' if wait.trigger is none else
+            ''обрано «Пропустити»'' }}.'
+      - action: input_text.set_value
+        target:
+          entity_id: input_text.poliv_ostannie_rishennia
+        data:
+          value: '{{ now().strftime(''%d.%m %H:%M'') }} · завтра пропустити · дощ {{
+            rain_mm }} мм · {{ ''без відповіді'' if wait.trigger is none else ''обрано
+            «Пропустити»'' }}'
+      else:
+      - action: persistent_notification.dismiss
+        data:
+          notification_id: poliv_dosh_vechir
+      - action: input_text.set_value
+        target:
+          entity_id: input_text.poliv_ostannie_rishennia
+        data:
+          value: '{{ now().strftime(''%d.%m %H:%M'') }} · завтра поливати попри дощ
+            · рішення підтверджено'
+    else:
+    - action: input_text.set_value
+      target:
+        entity_id: input_text.poliv_ostannie_rishennia
+      data:
+        value: '{{ now().strftime(''%d.%m %H:%M'') }} · дощу на ранок не прогнозують
+          · поллється за розкладом'
   mode: single

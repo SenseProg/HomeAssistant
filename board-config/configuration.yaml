@@ -91,6 +91,12 @@ input_select:
 # every scheduled/weather-driven irrigation automation. Manual controls and
 # emergency stop remain available independently.
 input_boolean:
+  # Set by the 21:00 rain question, read and cleared by the morning run.
+  # Off means "water normally" - so a missed evening check (HA down, no rain
+  # forecast) never silently cancels irrigation.
+  poliv_propustyty_zavtra:
+    name: Полив - пропустити завтрашній ранок
+    icon: mdi:weather-rainy
   poliv_avtomatika_dozvolena:
     name: Автоматичний полив дозволено
     icon: mdi:sprinkler-variant
