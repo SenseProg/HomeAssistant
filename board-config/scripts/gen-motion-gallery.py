@@ -1,96 +1,141 @@
 #!/usr/bin/env python3
-"""Build a static gallery of the motion clips at www/motion/gallery.html.
+"""Build the motion-clip gallery at www/motion/gallery.html.
 
-Every attempt to render this list as a Lovelace card failed the same way: the
-markdown card's HTML lands in the DOM - days, links, everything - but this
-frontend build never paints it, in a sections grid or in masonry. That is a
-rendering bug no card arrangement gets around. A plain HTML page does not go
-through Lovelace at all, so it simply works.
+Rendered as a plain page rather than Lovelace cards on purpose: every card
+approach produced correct HTML in the DOM that this frontend build then refused
+to paint (see references/dashboards.md). The motion tab is a panel view holding
+one iframe onto this file.
 
-The clips stay on the NAS: www/motion-clips is a bind mount, so this page costs
-a few kilobytes and no video is copied onto the board.
+Clips are emitted as JSON and the players are created on demand by the filter,
+not baked into the markup. At ~140 events a day over a 14-day retention that is
+the difference between a couple of hundred <video> elements and two thousand.
 
-Two folder layouts are read, deliberately. ha-motion/<day>/ruh_<hhmmss>.mp4 is
-the current one; flat ha-motion/ruh_<yyyymmdd>_<hhmmss>.mp4 is what the
-automation produces whenever a concurrent session reverts that change - which
-has happened four times today. Handling both means the gallery never goes blank
-because of a revert.
+The clips live on the NAS; www/motion-clips is a bind mount, so nothing here
+costs board storage beyond this one HTML file.
 """
 import html
+import json
 import os
 import re
 
 CLIPS = '/userdata/hass/config/www/motion-clips'
 OUT = '/userdata/hass/config/www/motion/gallery.html'
-PER_DAY = 60  # a full day is ~140 clips and no browser enjoys that many players
 
-by_day = {}
-for name in os.listdir(CLIPS):
+# Two layouts are read deliberately: ha-motion/<day>/ruh_<hhmmss>.mp4 is current,
+# flat ha-motion/ruh_<yyyymmdd>_<hhmmss>.mp4 is what the automation writes
+# whenever a concurrent session reverts that change - which happened four times
+# on 2026-08-08. Reading both means a revert never empties the gallery.
+items = []
+for name in sorted(os.listdir(CLIPS)):
     full = os.path.join(CLIPS, name)
     if os.path.isdir(full) and re.fullmatch(r'\d{4}-\d{2}-\d{2}', name):
         for f in os.listdir(full):
-            m = re.fullmatch(r'ruh_(\d{6})\.mp4', f)
+            m = re.fullmatch(r'ruh_(\d{2})(\d{2})(\d{2})\.mp4', f)
             if m:
-                by_day.setdefault(name, []).append((m.group(1), '%s/%s' % (name, f)))
+                h, mi, se = m.groups()
+                items.append({'d': name, 'h': int(h), 't': '%s:%s:%s' % (h, mi, se),
+                              'u': '/local/motion-clips/%s/%s' % (name, f)})
     else:
-        m = re.fullmatch(r'ruh_(\d{4})(\d{2})(\d{2})_(\d{6})\.mp4', name)
+        m = re.fullmatch(r'ruh_(\d{4})(\d{2})(\d{2})_(\d{2})(\d{2})(\d{2})\.mp4', name)
         if m:
-            y, mo, d, hms = m.groups()
-            by_day.setdefault('%s-%s-%s' % (y, mo, d), []).append((hms, name))
+            y, mo, d, h, mi, se = m.groups()
+            items.append({'d': '%s-%s-%s' % (y, mo, d), 'h': int(h),
+                          't': '%s:%s:%s' % (h, mi, se),
+                          'u': '/local/motion-clips/%s' % name})
 
-days = sorted(by_day, reverse=True)
+items.sort(key=lambda c: (c['d'], c['t']), reverse=True)
+days = sorted({c['d'] for c in items}, reverse=True)
 
-parts = ["""<!doctype html><html lang="uk"><head><meta charset="utf-8">
+per_day = {}
+for c in items:
+    per_day[c['d']] = per_day.get(c['d'], 0) + 1
+
+day_opts = ''.join(
+    '<option value="%s">%s — %d</option>' % (html.escape(d), html.escape(d), per_day[d])
+    for d in days)
+hour_opts = ''.join('<option value="%d">%02d:00</option>' % (h, h) for h in range(24))
+
+page = """<!doctype html><html lang="uk"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Cache-Control" content="no-store">
 <title>Рух — відеоролики</title><style>
 :root{color-scheme:dark}
+*{box-sizing:border-box}
 body{margin:0;padding:16px;background:#111418;color:#e1e1e1;
      font:15px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
-h1{font-size:19px;margin:0 0 4px}
-.sub{color:#8b949e;font-size:13px;margin-bottom:20px}
-h2{font-size:16px;margin:26px 0 10px;padding-bottom:6px;border-bottom:1px solid #2a2f36}
+h1{font-size:19px;margin:0 0 12px}
+.snap{margin:0 0 18px;max-width:520px}
+.snap img{width:100%;border-radius:10px;display:block}
+.snap figcaption{color:#8b949e;font-size:13px;padding-top:6px}
+.bar{position:sticky;top:0;z-index:5;background:#111418;padding:10px 0 12px;
+     border-bottom:1px solid #2a2f36;margin-bottom:16px;
+     display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+label{font-size:13px;color:#9fb0c0}
+select{background:#1b2027;color:#e1e1e1;border:1px solid #2f3742;border-radius:7px;
+       padding:6px 9px;font-size:14px}
+button{background:#1b2027;color:#e1e1e1;border:1px solid #2f3742;border-radius:7px;
+       padding:6px 12px;font-size:14px;cursor:pointer}
+button:hover{background:#232a33}
+#count{color:#8b949e;font-size:13px;margin-left:auto}
 .grid{display:grid;gap:14px;grid-template-columns:repeat(auto-fill,minmax(260px,1fr))}
 figure{margin:0;background:#181c22;border-radius:10px;overflow:hidden}
 video{width:100%;display:block;background:#000}
 figcaption{padding:7px 10px;font-size:13px;color:#9fb0c0}
+.empty{color:#8b949e;padding:20px 0}
 </style></head><body>
 <h1>Рух — відеоролики</h1>
-<div class="sub">Файли лежать на NAS. Найновіші зверху.</div>
-<figure style="margin:0 0 22px;max-width:520px">
-<img src="/local/motion/latest.jpg" style="width:100%;border-radius:10px;display:block">
-<figcaption style="color:#8b949e;font-size:13px;padding-top:6px">Останній зафіксований рух</figcaption>
-</figure>"""]
+<figure class="snap">
+<img src="/local/motion/latest.jpg" alt="Останній рух">
+<figcaption>Останній зафіксований рух</figcaption>
+</figure>
+<div class="bar">
+  <label>День <select id="day">__DAYS__</select></label>
+  <label>з <select id="from">__HOURS__</select></label>
+  <label>до <select id="to">__HOURS__</select></label>
+  <button id="reset">Уся доба</button>
+  <span id="count"></span>
+</div>
+<div class="grid" id="grid"></div>
+<script>
+const CLIPS = __DATA__;
+const day = document.getElementById('day'),
+      from = document.getElementById('from'),
+      to = document.getElementById('to'),
+      grid = document.getElementById('grid'),
+      count = document.getElementById('count');
+from.value = 0; to.value = 23;
 
-total = 0
-for day in days:
-    files = [rel for _, rel in sorted(by_day[day], reverse=True)]
-    if not files:
-        continue
-    shown = files[:PER_DAY]
-    extra = '' if len(files) <= PER_DAY else \
-        ' <span style="color:#6e7681">(показано %d із %d)</span>' % (len(shown), len(files))
-    parts.append('<h2>%s — %d %s%s</h2><div class="grid">'
-                 % (html.escape(day), len(files),
-                    'ролик' if len(files) == 1 else 'роликів', extra))
-    for rel in shown:
-        base = os.path.basename(rel)
-        m = re.search(r'(\d{2})(\d{2})(\d{2})\.mp4$', base)
-        t = '%s:%s:%s' % m.groups() if m else base
-        parts.append(
-            '<figure><video controls preload="none" '
-            'src="/local/motion-clips/%s"></video>'
-            '<figcaption>%s</figcaption></figure>'
-            % (html.escape(rel), html.escape(t)))
-    parts.append('</div>')
-    total += len(files)
+function render(){
+  const d = day.value, a = +from.value, b = +to.value;
+  const sel = CLIPS.filter(c => c.d === d && c.h >= a && c.h <= b);
+  grid.innerHTML = '';
+  count.textContent = sel.length + ' з ' + CLIPS.filter(c => c.d === d).length;
+  if(!sel.length){
+    grid.innerHTML = '<div class="empty">За цей проміжок роликів немає.</div>';
+    return;
+  }
+  const frag = document.createDocumentFragment();
+  for(const c of sel){
+    const fig = document.createElement('figure');
+    const v = document.createElement('video');
+    v.controls = true; v.preload = 'none'; v.src = c.u;
+    const cap = document.createElement('figcaption');
+    cap.textContent = c.t;
+    fig.append(v, cap); frag.append(fig);
+  }
+  grid.append(frag);
+}
+day.onchange = from.onchange = to.onchange = render;
+document.getElementById('reset').onclick = () => { from.value = 0; to.value = 23; render(); };
+render();
+</script>
+</body></html>"""
 
-if not days:
-    parts.append('<p>Роликів ще немає.</p>')
-
-parts.append('</body></html>')
+page = (page.replace('__DAYS__', day_opts)
+            .replace('__HOURS__', hour_opts)
+            .replace('__DATA__', json.dumps(items, ensure_ascii=False)))
 
 os.makedirs(os.path.dirname(OUT), exist_ok=True)
 with open(OUT, 'w', encoding='utf-8') as fh:
-    fh.write('\n'.join(parts))
-print('gallery written: %d days, %d clips, %d bytes'
-      % (len(days), total, os.path.getsize(OUT)))
+    fh.write(page)
+print('gallery: %d days, %d clips, %d bytes' % (len(days), len(items), os.path.getsize(OUT)))

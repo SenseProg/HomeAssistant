@@ -1482,7 +1482,7 @@ views:
   panel: true
   cards:
   - type: iframe
-    url: /local/motion/gallery.html
+    url: /local/motion/gallery.html?v=2
     aspect_ratio: 150%
 - title: Автополив
   path: poliv
