@@ -360,7 +360,7 @@
     event: start
   actions:
   - delay: 00:00:30
-  - action: utility_meter.select_tariff
+  - action: select.select_option
     target:
       entity_id:
       - select.merezha_za_tarifom
@@ -372,7 +372,7 @@
       - select.pidloha_2_za_tarifom
       - select.nasos_za_tarifom
     data:
-      tariff: "{{ 'den' if 7 <= now().hour < 23 else 'nich' }}"
+      option: "{{ 'den' if 7 <= now().hour < 23 else 'nich' }}"
   mode: single
 - id: irrigation_evening_rain_ask
   alias: Полив - вечірнє питання про дощ
