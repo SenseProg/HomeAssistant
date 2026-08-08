@@ -598,7 +598,7 @@ views:
       icon: mdi:white-balance-sunny
       color: orange
       grid_options:
-        columns: 6
+        columns: 12
         rows: 1
     - type: tile
       entity: sensor.vitrati_vnochi_sogodni
@@ -606,7 +606,7 @@ views:
       icon: mdi:weather-night
       color: blue
       grid_options:
-        columns: 6
+        columns: 12
         rows: 1
     - type: tile
       entity: sensor.vitrati_vden_tsogo_misiatsia
@@ -614,7 +614,7 @@ views:
       icon: mdi:white-balance-sunny
       color: orange
       grid_options:
-        columns: 6
+        columns: 12
         rows: 1
     - type: tile
       entity: sensor.vitrati_vnochi_tsogo_misiatsia
@@ -622,23 +622,23 @@ views:
       icon: mdi:weather-night
       color: blue
       grid_options:
-        columns: 6
+        columns: 12
         rows: 1
     - type: tile
       entity: sensor.merezha_dobovyi_den
-      name: Спожито вдень сьогодні
+      name: Спожито вдень
       icon: mdi:transmission-tower-export
       color: orange
       grid_options:
-        columns: 6
+        columns: 12
         rows: 1
     - type: tile
       entity: sensor.merezha_dobovyi_nich
-      name: Спожито вночі сьогодні
+      name: Спожито вночі
       icon: mdi:transmission-tower-export
       color: blue
       grid_options:
-        columns: 6
+        columns: 12
         rows: 1
   - type: grid
     column_span: 4
