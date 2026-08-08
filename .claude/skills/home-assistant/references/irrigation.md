@@ -8,37 +8,41 @@
   applies in every mode.
 - Every Stop/emergency action must stop the pump and all physical valves.
 
-## The pump may legitimately run with no valve open
+## The pump may always be started, with or without a valve
 
-Corrected 2026-08-08 by the owner. The property has garden hydrants — water
-outlets that take a hose. Running the pump with every zone valve closed is a
-normal irrigation mode, not dry running, so **a pump without a valve is not by
-itself an emergency**.
+Corrected 2026-08-08 by the owner, and this is not a special mode — it is the
+normal state of affairs. The property has garden hydrants: water outlets that
+take a hose. The pump is switched on often and casually — the physical button on
+the module, the toggle in the interface, whatever is at hand — and running it
+with every zone valve closed is an ordinary event, **never an emergency**.
 
-The configuration used to assume the opposite, and that assumption produced two
-wrong behaviours: every manual pump start force-opened the valve selected in
-`input_select.poliv_ruchna_zona`, and the watchdog killed the pump three minutes
-later. A hose user therefore watered an unintended zone and then lost pressure.
+Manual pump start therefore has **no conditions and no options at all**. Switch
+it on and it simply runs. Nothing opens a valve for you, nothing stops it for
+lacking one.
 
-`input_select.poliv_ruchna_zona` now carries a sixth option, `Без клапана
-(шланг)`, alongside `Зона 1`…`Зона 5`. When it is selected:
+The configuration used to assume the opposite. Two automations were built on
+that assumption and are now **deleted**, not disabled:
 
-- `irrigation_manual_pump_opens_valve` opens nothing;
-- `irrigation_pump_without_open_valve` does not intervene at all;
-- `sensor.poliv_stan_sistemi` reports `ПОЛИВАЄ — ШЛАНГ` instead of
-  `АВАРІЯ — НАСОС БЕЗ КЛАПАНА`;
-- the three-hour maximum runtime still applies.
+- `irrigation_manual_pump_opens_valve` — force-opened the zone chosen in
+  `input_select.poliv_ruchna_zona` on every manual start. The owner had "Зона 5"
+  selected, so every hose watering also flooded zone 5.
+- `irrigation_pump_without_open_valve` — killed the pump three minutes after it
+  ran without a valve.
 
-In every other mode the previous behaviour is unchanged: a pump running with no
-valve is still treated as a fault, because the user asked for a zone and the
-zone did not open.
+The helper `input_select.poliv_ruchna_zona` is deleted too, together with its
+dashboard row. An intermediate attempt added a "Без клапана (шланг)" option to
+it; the owner rejected that as needless ceremony, and it was removed. Do not
+bring back a mode selector for this.
 
-Do not reintroduce logic that treats "pump on, no valve" as an unconditional
-emergency, and do not add a dry-run interlock on that basis. Ask which mode is
-selected before diagnosing.
+What remains as protection: `irrigation_pump_max_runtime_3h` (three hours of
+continuous running) and `irrigation_close_valves_when_pump_idle` (clears a valve
+left open after the pump has been off for five minutes).
 
-Note that `sensor.poliv_stan_sistemi` previously reported only zones 1-3, so a
-zone 4 or zone 5 run displayed as an emergency; it now scans all eight valves.
+Do not reintroduce any dry-run interlock, any "pump on with no valve" fault, or
+any condition gating manual pump start. `sensor.poliv_stan_sistemi` has no
+emergency state left: pump plus an open valve reads `ПОЛИВАЄ — ЗОНА N`, pump
+alone reads `ПОЛИВАЄ — ШЛАНГ`. It scans all eight valves — it used to check only
+zones 1-3, so a zone 4 or 5 run displayed as an emergency.
 
 ## Authoritative entities
 

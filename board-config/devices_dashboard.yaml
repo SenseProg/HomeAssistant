@@ -1585,10 +1585,6 @@ views:
         name:     хвилин
       - entity: input_number.poliv_zona_3_hvylyn
         name:     хвилин
-      - type: section
-        label: Ручний пуск
-      - entity: input_select.poliv_ruchna_zona
-        name: Кнопка на модулі відкриває
     - type: entities
       title: Автоматизація розкладу
       grid_options:

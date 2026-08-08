@@ -15,38 +15,6 @@
     data:
       value: '{{ states(''sensor.nasos_polivu_spozhito'') | float(0) }}'
   mode: single
-- id: irrigation_manual_pump_opens_valve
-  alias: Полив - ручний пуск насоса відкриває клапан
-  description: 'Якщо насос увімкнули вручну - фізичною кнопкою на модулі або тумблером в інтерфейсі -
-    і жоден клапан не відкритий, одразу відкриває зону, обрану в "Ручний пуск - яку зону відкривати".
-    Спрацьовує за секунду, тому захист "насос без відкритого клапана" не встигає вимкнути насос. УТОЧНЕНО
-    2026-08-08: насос МОЖЕ працювати без жодного клапана - на ділянці є водяні розетки, у які вставляють
-    шланг, і полив зі шланга є штатним режимом. Тому у списку зон додано варіант "Без клапана (шланг)":
-    з ним ця автоматизація не відкриває нічого, а насос просто працює на шланг.'
-  triggers:
-  - trigger: state
-    entity_id: switch.mini_switch_k601_2_switch_1_2
-    from: 'off'
-    to: 'on'
-  conditions:
-  - condition: not
-    conditions:
-    - condition: state
-      entity_id: input_select.poliv_ruchna_zona
-      state: Без клапана (шланг)
-  - condition: template
-    value_template: "{{ not is_state('switch.avtopoliv_kontroler_avtopoliv_klapan_1', 'on')\n   and not\
-      \ is_state('switch.avtopoliv_kontroler_avtopoliv_klapan_2', 'on')\n   and not is_state('switch.avtopoliv_kontroler_avtopoliv_klapan_3',\
-      \ 'on')\n   and not is_state('switch.avtopoliv_kontroler_avtopoliv_klapan_4', 'on')\n   and not\
-      \ is_state('switch.avtopoliv_kontroler_avtopoliv_klapan_5', 'on') }}\n"
-  actions:
-  - action: switch.turn_on
-    target:
-      entity_id: "{% set z = states('input_select.poliv_ruchna_zona') %} {{ 'switch.avtopoliv_kontroler_avtopoliv_klapan_2'\
-        \ if z == 'Зона 2'\n   else 'switch.avtopoliv_kontroler_avtopoliv_klapan_3' if z == 'Зона 3'\n\
-        \   else 'switch.avtopoliv_kontroler_avtopoliv_klapan_4' if z == 'Зона 4'\n   else 'switch.avtopoliv_kontroler_avtopoliv_klapan_5'\
-        \ if z == 'Зона 5'\n   else 'switch.avtopoliv_kontroler_avtopoliv_klapan_1' }}\n"
-  mode: single
 - id: irrigation_close_valves_when_pump_idle
   alias: Полив - закрити клапани, якщо насос давно вимкнений
   description: Прибирає забутий відкритий клапан після ручного пуску. Irrigation Unlimited закриває свої
@@ -78,43 +46,6 @@
   conditions: []
   actions:
   - action: script.poliv_stop_all
-  mode: single
-- id: irrigation_pump_without_open_valve
-  alias: Полив - насос без відкритого клапана
-  description: 'Глушить насос, якщо він працює без жодного відкритого клапана. ПЕРЕПИСАНО 2026-08-04 після
-    реального збою: 04:24:44 ця автоматизація обірвала полив зони 5 на 10-й хвилині з 25. Клапан - хмарний
-    Tuya з оновленням раз на ~216 с, він о 04:24:34 повідомив ''закрито'', хоча Irrigation Unlimited тримав
-    зону активною до 04:39. Стара витримка 10 с спрацювала рівно через 10 секунд після хибного стану.
-    Тепер сторож не втручається, поки IU веде свій цикл або поки виконується скрипт зони - вони знають
-    правду краще за хмару. Витримку піднято з 10 с до 3 хв, щоб хмара встигла оновитися. Насос без клапана
-    3 хвилини не постраждає: це не сухий хід, а лише підвищений тиск. УТОЧНЕНО 2026-08-08: сухого ходу
-    без клапана не буває - на ділянці є водяні розетки для шланга, і робота насоса без жодного клапана
-    штатна. Тому при обраному режимі "Без клапана (шланг)" цей сторож не втручається взагалі; єдиним обмеженням
-    лишаються максимальні 3 години безперервної роботи. В інших режимах поведінка не змінилася.'
-  triggers:
-  - trigger: template
-    value_template: "{{ is_state('switch.mini_switch_k601_2_switch_1_2', 'on')\n   and not is_state('binary_sensor.irrigation_unlimited_c1_m',\
-      \ 'on')\n   and not is_state('script.poliv_zona_1', 'on')\n   and not is_state('script.poliv_zona_2',\
-      \ 'on')\n   and not is_state('script.poliv_zona_3', 'on')\n   and not is_state('script.poliv_zona_4',\
-      \ 'on')\n   and not is_state('script.poliv_zona_5', 'on')\n   and not is_state('switch.avtopoliv_kontroler_avtopoliv_klapan_1',\
-      \ 'on')\n   and not is_state('switch.avtopoliv_kontroler_avtopoliv_klapan_2', 'on')\n   and not\
-      \ is_state('switch.avtopoliv_kontroler_avtopoliv_klapan_3', 'on')\n   and not is_state('switch.avtopoliv_kontroler_avtopoliv_klapan_4',\
-      \ 'on')\n   and not is_state('switch.avtopoliv_kontroler_avtopoliv_klapan_5', 'on') }}\n"
-    for: 00:03:00
-  conditions:
-  - condition: not
-    conditions:
-    - condition: state
-      entity_id: input_select.poliv_ruchna_zona
-      state: Без клапана (шланг)
-  actions:
-  - action: script.poliv_stop_all
-  - action: persistent_notification.create
-    data:
-      title: Аварійна зупинка поливу
-      notification_id: poliv_avariya
-      message: Насос працював понад 3 хвилини без жодного відкритого клапана і без активного циклу Irrigation
-        Unlimited. Полив зупинено о {{ now().strftime('%H:%M:%S') }}.
   mode: single
 - id: irrigation_pump_max_runtime_3h
   alias: Полив - максимальна робота насоса 3 години
