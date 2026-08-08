@@ -52,13 +52,22 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     await hass.http.async_register_static_paths(
         [StaticPathConfig(FRONTEND_URL, str(FRONTEND_DIR), cache_headers=False)]
     )
+    # Версія модуля — це mtime файлу панелі: після кожного оновлення JS і
+    # рестарту HA браузери отримують новий URL і не тримають стару панель у
+    # кеші (раніше зашите ?v=0.4.0 доводилося міняти руками, і без цього
+    # користувачі до ~10 годин бачили попередню версію).
+    panel_source = FRONTEND_DIR / "claude-history-panel.js"
+    try:
+        panel_version = int(panel_source.stat().st_mtime)
+    except OSError:
+        panel_version = 0
     await panel_custom.async_register_panel(
         hass=hass,
         frontend_url_path="claude-home",
         webcomponent_name="claude-history-panel",
         sidebar_title="Claude чат",
         sidebar_icon="mdi:message-text-clock-outline",
-        module_url=f"{FRONTEND_URL}/claude-history-panel.js?v=0.4.0",
+        module_url=f"{FRONTEND_URL}/claude-history-panel.js?v={panel_version}",
         embed_iframe=False,
         require_admin=True,
     )
