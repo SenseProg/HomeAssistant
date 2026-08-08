@@ -128,6 +128,17 @@ input_boolean:
     name: Зона 5 у розкладі
     icon: mdi:sprinkler
 
+# --- Журнал рішень про полив (додано 2026-08-08) ---
+# Автоматизація розкладу пише сюди підсумок останнього рішення. До цього
+# рішення жило тільки в пуші на телефон: якщо пуш не побачили, на дашборді
+# не лишалося жодного сліду, чому полив не відбувся.
+input_text:
+  poliv_ostannie_rishennia:
+    name: Полив - останнє рішення
+    icon: mdi:clipboard-text-clock
+    max: 255
+    initial: Ще не було жодного рішення після перезапуску
+
 automation: !include automations.yaml
 script: !include scripts.yaml
 scene: !include scenes.yaml

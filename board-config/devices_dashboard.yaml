@@ -675,6 +675,64 @@ views:
     column_span: 2
     cards:
     - type: heading
+      heading: Двір · температури за 24 години
+      icon: mdi:thermometer-lines
+      grid_options:
+        columns: full
+    - type: custom:mini-graph-card
+      name: SONOFF і зовнішні датчики PRANA
+      hours_to_show: 24
+      points_per_hour: 4
+      line_width: 3
+      height: 180
+      animate: true
+      show:
+        labels: true
+        points: false
+        extrema: true
+        average: true
+      grid_options:
+        columns: full
+      entities:
+      - entity: sensor.sonoff_a48005a66a_temperature
+        name: Двір · SONOFF
+        color: '#43a047'
+      - entity: sensor.2_floor_outside_temperature
+        name: PRANA · зовні 1
+        color: '#1e88e5'
+      - entity: sensor.2_floor_outside_temperature_2
+        name: PRANA · зовні 2
+        color: '#fb8c00'
+  - type: grid
+    column_span: 2
+    cards:
+    - type: heading
+      heading: Двір · вологість за 24 години
+      icon: mdi:water-percent
+      grid_options:
+        columns: full
+    - type: custom:mini-graph-card
+      name: SONOFF на дворі
+      hours_to_show: 24
+      points_per_hour: 4
+      line_width: 3
+      height: 180
+      animate: true
+      show:
+        labels: true
+        points: false
+        extrema: true
+        average: true
+      grid_options:
+        columns: full
+      entities:
+      - entity: sensor.sonoff_a48005a66a_humidity
+        name: Двір · вологість
+        color: '#039be5'
+  - type: grid
+    column_span: 2
+    cards:
+    - type: heading
       heading: Температура по кімнатах
       icon: mdi:home-thermometer
       grid_options:
@@ -787,63 +845,72 @@ views:
     column_span: 2
     cards:
     - type: heading
-      heading: Якість повітря · спальня батьків
-      icon: mdi:molecule-co2
+      heading: Будинок середній · температури за 24 години
+      icon: mdi:chart-line
       grid_options:
         columns: full
-    - type: gauge
-      entity: sensor.2_floor_carbon_dioxide
-      name: CO₂
-      unit: ppm
-      min: 400
-      max: 2000
-      needle: true
-      severity:
-        green: 400
-        yellow: 800
-        red: 1200
+    - type: custom:mini-graph-card
+      name: Температури по кімнатах
+      hours_to_show: 24
+      points_per_hour: 4
+      line_width: 3
+      height: 180
+      animate: true
+      show:
+        labels: true
+        points: false
+        extrema: true
+        average: true
       grid_options:
         columns: full
-    - type: markdown
-      text_only: true
-      grid_options:
-        columns: full
-      content: >-
-        Зелена зона до 800 ppm — повітря свіже. Жовта 800–1200 ppm — варто
-        провітрити. Червона понад 1200 ppm — задушливо, працездатність падає.
-        Датчик CO₂ є лише в PRANA у спальні батьків.
+      entities:
+      - entity: sensor.sonoff_a4800819f3_temperature
+        name: 2 поверх · датчик 1
+        color: '#43a047'
+      - entity: sensor.sonoff_a48005e8ed_temperature
+        name: 2 поверх · датчик 2
+        color: '#1e88e5'
+      - entity: sensor.2_floor_inside_temperature
+        name: Спальня батьків
+        color: '#fb8c00'
   - type: grid
     column_span: 2
     cards:
     - type: heading
-      heading: Дім бабусі і дідуся
-      icon: mdi:home-heart
-      grid_options:
-        columns: full
-    - type: tile
-      entity: sensor.2i_poverkh_t_h_temperature
-      name: Температура
-      icon: mdi:home-thermometer
-      color: orange
-      grid_options:
-        columns: 12
-        rows: 1
-    - type: tile
-      entity: sensor.2i_poverkh_t_h_humidity
-      name: Вологість
+      heading: Будинок середній · вологість за 24 години
       icon: mdi:water-percent
-      color: blue
-      grid_options:
-        columns: 12
-        rows: 1
-    - type: markdown
-      text_only: true
       grid_options:
         columns: full
-      content: >-
-        Це окремий **Wi-Fi Tuya-датчик** усередині Дому бабусі і дідуся.
-        Зовнішній SONOFF «Темп. Вулиця. Балкон.» фізично стоїть на дворі й
-        показаний у блоці «Надворі зараз».
+    - type: custom:mini-graph-card
+      name: Вологість по кімнатах
+      hours_to_show: 24
+      points_per_hour: 4
+      line_width: 3
+      height: 180
+      animate: true
+      show:
+        labels: true
+        points: false
+        extrema: true
+        average: true
+      grid_options:
+        columns: full
+      entities:
+      - entity: sensor.sonoff_a4800819f3_humidity
+        name: 2 поверх · датчик 1
+        color: '#43a047'
+      - entity: sensor.sonoff_a48005e8ed_humidity
+        name: 2 поверх · датчик 2
+        color: '#1e88e5'
+      - entity: sensor.2_floor_humidity
+        name: Спальня батьків
+        color: '#fb8c00'
+      - entity: sensor.siku_blauberg_fan_192_168_50_27_humidity
+        name: Кімната хлопців
+        color: '#8e24aa'
+      - entity: sensor.siku_blauberg_fan_192_168_50_123_humidity
+        name: Кімната Олесі
+        color: '#00acc1'
   - type: grid
     column_span: 2
     cards:
@@ -892,6 +959,28 @@ views:
       - type: fan-speed
       grid_options:
         columns: 12
+    - type: tile
+      entity: fan.2_floor_extract_fan
+      name: PRANA · витяжка
+      icon: mdi:fan-off
+      features:
+      - type: fan-speed
+      grid_options:
+        columns: 12
+    - type: tile
+      entity: switch.2_floor_heater
+      name: PRANA · нагрівач
+      icon: mdi:radiator
+      grid_options:
+        columns: 12
+        rows: 1
+    - type: tile
+      entity: switch.2_floor_winter
+      name: PRANA · зимовий режим
+      icon: mdi:snowflake-thermometer
+      grid_options:
+        columns: 12
+        rows: 1
     - type: markdown
       text_only: true
       grid_options:
@@ -900,6 +989,90 @@ views:
         Повне керування й облік споживання залишаються на вкладках **Тепла
         підлога** та **Вентиляція**. Тут — тільки те, що потрібно змінити
         одразу, коли побачив показник вище.
+  - type: grid
+    column_span: 2
+    cards:
+    - type: heading
+      heading: Дім бабусі і дідуся
+      icon: mdi:home-heart
+      grid_options:
+        columns: full
+    - type: tile
+      entity: sensor.2i_poverkh_t_h_temperature
+      name: Температура
+      icon: mdi:home-thermometer
+      color: orange
+      grid_options:
+        columns: 12
+        rows: 1
+    - type: tile
+      entity: sensor.2i_poverkh_t_h_humidity
+      name: Вологість
+      icon: mdi:water-percent
+      color: blue
+      grid_options:
+        columns: 12
+        rows: 1
+    - type: markdown
+      text_only: true
+      grid_options:
+        columns: full
+      content: >-
+        Це окремий **Wi-Fi Tuya-датчик** усередині Дому бабусі і дідуся.
+        Зовнішній SONOFF «Темп. Вулиця. Балкон.» фізично стоїть на дворі й
+        показаний у блоці «Надворі зараз».
+    - type: custom:mini-graph-card
+      name: Температура і вологість
+      hours_to_show: 24
+      points_per_hour: 4
+      line_width: 3
+      height: 180
+      animate: true
+      show:
+        labels: true
+        labels_secondary: true
+        points: false
+        extrema: true
+        average: true
+      grid_options:
+        columns: full
+      entities:
+      - entity: sensor.2i_poverkh_t_h_temperature
+        name: Температура
+        color: '#ef6c00'
+      - entity: sensor.2i_poverkh_t_h_humidity
+        name: Вологість
+        color: '#039be5'
+        y_axis: secondary
+  - type: grid
+    column_span: 2
+    cards:
+    - type: heading
+      heading: Якість повітря · спальня батьків
+      icon: mdi:molecule-co2
+      grid_options:
+        columns: full
+    - type: gauge
+      entity: sensor.2_floor_carbon_dioxide
+      name: CO₂
+      unit: ppm
+      min: 400
+      max: 2000
+      needle: true
+      severity:
+        green: 400
+        yellow: 800
+        red: 1200
+      grid_options:
+        columns: full
+    - type: markdown
+      text_only: true
+      grid_options:
+        columns: full
+      content: >-
+        Зелена зона до 800 ppm — повітря свіже. Жовта 800–1200 ppm — варто
+        провітрити. Червона понад 1200 ppm — задушливо, працездатність падає.
+        Датчик CO₂ є лише в PRANA у спальні батьків.
   - type: grid
     column_span: 2
     cards:
@@ -953,148 +1126,6 @@ views:
         Олесі Blauberg передає лише вологість, у **великому будинку**
         температурних датчиків ще немає. Відсутні показники не підміняються
         даними з інших кімнат.
-  - type: grid
-    column_span: 2
-    cards:
-    - type: heading
-      heading: Двір · температури за 24 години
-      icon: mdi:thermometer-lines
-      grid_options:
-        columns: full
-    - type: custom:mini-graph-card
-      name: SONOFF і зовнішні датчики PRANA
-      hours_to_show: 24
-      points_per_hour: 4
-      line_width: 3
-      height: 180
-      animate: true
-      show:
-        labels: true
-        points: false
-        extrema: true
-        average: true
-      grid_options:
-        columns: full
-      entities:
-      - entity: sensor.sonoff_a48005a66a_temperature
-        name: Двір · SONOFF
-        color: '#43a047'
-      - entity: sensor.2_floor_outside_temperature
-        name: PRANA · зовні 1
-        color: '#1e88e5'
-      - entity: sensor.2_floor_outside_temperature_2
-        name: PRANA · зовні 2
-        color: '#fb8c00'
-  - type: grid
-    column_span: 2
-    cards:
-    - type: heading
-      heading: Будинок середній · температури за 24 години
-      icon: mdi:chart-line
-      grid_options:
-        columns: full
-    - type: custom:mini-graph-card
-      name: Температури по кімнатах
-      hours_to_show: 24
-      points_per_hour: 4
-      line_width: 3
-      height: 180
-      animate: true
-      show:
-        labels: true
-        points: false
-        extrema: true
-        average: true
-      grid_options:
-        columns: full
-      entities:
-      - entity: sensor.sonoff_a4800819f3_temperature
-        name: 2 поверх · датчик 1
-        color: '#43a047'
-      - entity: sensor.sonoff_a48005e8ed_temperature
-        name: 2 поверх · датчик 2
-        color: '#1e88e5'
-      - entity: sensor.2_floor_inside_temperature
-        name: Спальня батьків
-        color: '#fb8c00'
-      - entity: sensor.terneo_2_air_temperature
-        name: Кухня · повітря
-        color: '#8e24aa'
-      - entity: sensor.sonoff_a48001c18f_temperature
-        name: Гостьова
-        color: '#e53935'
-  - type: grid
-    column_span: 2
-    cards:
-    - type: heading
-      heading: Будинок середній · вологість за 24 години
-      icon: mdi:water-percent
-      grid_options:
-        columns: full
-    - type: custom:mini-graph-card
-      name: Вологість по кімнатах
-      hours_to_show: 24
-      points_per_hour: 4
-      line_width: 3
-      height: 180
-      animate: true
-      show:
-        labels: true
-        points: false
-        extrema: true
-        average: true
-      grid_options:
-        columns: full
-      entities:
-      - entity: sensor.sonoff_a4800819f3_humidity
-        name: 2 поверх · датчик 1
-        color: '#43a047'
-      - entity: sensor.sonoff_a48005e8ed_humidity
-        name: 2 поверх · датчик 2
-        color: '#1e88e5'
-      - entity: sensor.2_floor_humidity
-        name: Спальня батьків
-        color: '#fb8c00'
-      - entity: sensor.siku_blauberg_fan_192_168_50_27_humidity
-        name: Кімната хлопців
-        color: '#8e24aa'
-      - entity: sensor.siku_blauberg_fan_192_168_50_123_humidity
-        name: Кімната Олесі
-        color: '#00acc1'
-      - entity: sensor.sonoff_a48001c18f_humidity
-        name: Гостьова
-        color: '#e53935'
-  - type: grid
-    column_span: 2
-    cards:
-    - type: heading
-      heading: Дім бабусі і дідуся · за 24 години
-      icon: mdi:chart-line
-      grid_options:
-        columns: full
-    - type: custom:mini-graph-card
-      name: Температура і вологість
-      hours_to_show: 24
-      points_per_hour: 4
-      line_width: 3
-      height: 180
-      animate: true
-      show:
-        labels: true
-        labels_secondary: true
-        points: false
-        extrema: true
-        average: true
-      grid_options:
-        columns: full
-      entities:
-      - entity: sensor.2i_poverkh_t_h_temperature
-        name: Температура
-        color: '#ef6c00'
-      - entity: sensor.2i_poverkh_t_h_humidity
-        name: Вологість
-        color: '#039be5'
-        y_axis: secondary
 - title: Інвертор Deye
   path: deye-inverter
   icon: mdi:solar-power-variant
@@ -1646,6 +1677,65 @@ views:
   dense_section_placement: true
   sections:
   - type: grid
+    column_span: 2
+    cards:
+    - type: heading
+      heading: Що система вирішила про полив
+      icon: mdi:clipboard-text-clock
+      grid_options:
+        columns: full
+    - type: markdown
+      grid_options:
+        columns: full
+      content: >-
+        ### {{ states('input_text.poliv_ostannie_rishennia') }}
+
+
+        {% set lt = state_attr('automation.poliv_rozklad_za_chasom_i_dniami_tizhnia',
+        'last_triggered') %}
+        Останній розгляд розкладу:
+        {{ (lt | as_datetime | as_local).strftime('%d.%m.%Y о %H:%M')
+        if lt else 'ще не було' }}.
+
+
+        Розумний полив зараз просить: зона 1 —
+        {{ (states('sensor.smart_irrigation_zona1') | float(0) / 60) | round(0) }} хв,
+        зона 2 —
+        {{ (states('sensor.smart_irrigation_zona2') | float(0) / 60) | round(0) }} хв.
+        Баланс води зони 1:
+        {{ states('sensor.smart_irrigation_zona1_bucket') }} мм
+        ({{ 'дефіцит, ґрунт сухий' if states('sensor.smart_irrigation_zona1_bucket')
+        | float(0) < 0 else 'запас після дощу або поливу' }}).
+    - type: markdown
+      grid_options:
+        columns: full
+      content: >-
+        ### Хто вирішує, чи поливати
+
+
+        Рішень **два, і вони незалежні одне від одного**.
+
+
+        **1. Скільки поливати — Розумний полив.** Щодня о 19:55 він перераховує
+        баланс води в ґрунті: скільки випарувалося мінус скільки випало дощу за
+        добу, і з цього виводить тривалість. Він **ніколи не скасовує** полив —
+        лише може видати тривалість нуль. Дощ, який іде просто зараз, він
+        побачить аж на наступному перерахунку о 19:55, а не одразу.
+
+
+        **2. Чи поливати взагалі — автоматизація розкладу.** За 1 годину 15
+        хвилин до сходу сонця вона запитує погодинний прогноз Met.no і перевіряє
+        дві речі: чи йде дощ у цю хвилину і чи прогнозують понад 0,2 мм опадів у
+        найближчі 6 годин. Якщо щось із цього справдилось, вона **не скасовує
+        полив сама** — надсилає на телефон питання «Поливати попри це?» і чекає
+        30 хвилин. Немає відповіді — полив пропускається.
+
+
+        **Дощ визначається за прогнозом Met.no з інтернету, а не за датчиком у
+        дворі.** Власного датчика дощу в системі немає, тому «дощу немає зараз,
+        але скасовано» — це нормальна і очікувана ситуація: скасовує прогноз.
+  - type: grid
+    column_span: 2
     cards:
     - type: heading
       heading: Розклад поливу
@@ -1655,10 +1745,11 @@ views:
       grid_options:
         columns: full
       content: >-
-        **Автоматичний старт:** за 30 хвилин до сходу сонця.
+        **Автоматичний старт:** за 1 год 15 хв до сходу сонця, щоб полив
+        закінчився приблизно на схід.
 
         **Наступний запуск:**
-        {{ (as_timestamp(state_attr('sun.sun', 'next_rising')) - 1800)
+        {{ (as_timestamp(state_attr('sun.sun', 'next_rising')) - 4500)
            | timestamp_custom('%d.%m.%Y %H:%M', true) }}
     - type: entities
       grid_options:
