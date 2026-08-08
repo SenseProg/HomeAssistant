@@ -542,23 +542,32 @@ views:
       grid_options:
         columns: full
     - type: statistic
-      entity: sensor.inverter_total_energy_import_cost
+      entity: sensor.vitrati_na_merezhu_razom
       stat_type: change
       name: Сьогодні
       period:
         calendar:
           period: day
       grid_options:
-        columns: 6
+        columns: 4
     - type: statistic
-      entity: sensor.inverter_total_energy_import_cost
+      entity: sensor.vitrati_na_merezhu_razom
       stat_type: change
       name: Цей місяць
       period:
         calendar:
           period: month
       grid_options:
-        columns: 6
+        columns: 4
+    - type: statistic
+      entity: sensor.vitrati_na_merezhu_razom
+      stat_type: change
+      name: Цей рік
+      period:
+        calendar:
+          period: year
+      grid_options:
+        columns: 4
     - type: statistic
       entity: sensor.inverter_total_energy_import
       stat_type: change
@@ -567,7 +576,7 @@ views:
         calendar:
           period: day
       grid_options:
-        columns: 6
+        columns: 4
     - type: statistic
       entity: sensor.inverter_total_energy_import
       stat_type: change
@@ -576,7 +585,16 @@ views:
         calendar:
           period: month
       grid_options:
-        columns: 6
+        columns: 4
+    - type: statistic
+      entity: sensor.inverter_total_energy_import
+      stat_type: change
+      name: Спожито за рік
+      period:
+        calendar:
+          period: year
+      grid_options:
+        columns: 4
     - type: tile
       entity: sensor.tarif_elektroenergii_zaraz
       name: Ставка, що діє зараз
@@ -588,8 +606,189 @@ views:
     column_span: 2
     cards:
     - type: heading
-      heading: Куди йде електрика
-      icon: mdi:chart-donut
+      heading: Дорогий день і дешева ніч
+      icon: mdi:theme-light-dark
+      grid_options:
+        columns: full
+    - type: tile
+      entity: sensor.vitrati_vden_sogodni
+      name: Удень сьогодні
+      icon: mdi:white-balance-sunny
+      color: orange
+      grid_options:
+        columns: 12
+        rows: 1
+    - type: tile
+      entity: sensor.vitrati_vnochi_sogodni
+      name: Уночі сьогодні
+      icon: mdi:weather-night
+      color: blue
+      grid_options:
+        columns: 12
+        rows: 1
+    - type: tile
+      entity: sensor.vitrati_vden_tsogo_misiatsia
+      name: Удень за місяць
+      icon: mdi:white-balance-sunny
+      color: orange
+      grid_options:
+        columns: 12
+        rows: 1
+    - type: tile
+      entity: sensor.vitrati_vnochi_tsogo_misiatsia
+      name: Уночі за місяць
+      icon: mdi:weather-night
+      color: blue
+      grid_options:
+        columns: 12
+        rows: 1
+    - type: tile
+      entity: sensor.merezha_dobovyi_den
+      name: Спожито вдень
+      icon: mdi:transmission-tower-export
+      color: orange
+      grid_options:
+        columns: 12
+        rows: 1
+    - type: tile
+      entity: sensor.merezha_dobovyi_nich
+      name: Спожито вночі
+      icon: mdi:transmission-tower-export
+      color: blue
+      grid_options:
+        columns: 12
+        rows: 1
+  - type: grid
+    column_span: 4
+    cards:
+    - type: heading
+      heading: Витрати по днях - день проти ночі
+      icon: mdi:chart-bar-stacked
+      grid_options:
+        columns: full
+    - type: statistics-graph
+      title: Гривні за добу
+      days_to_show: 30
+      period: day
+      stat_types:
+      - change
+      chart_type: bar
+      grid_options:
+        columns: full
+      entities:
+      - entity: sensor.vitrati_vden_razom
+        name: Удень
+      - entity: sensor.vitrati_vnochi_razom
+        name: Уночі
+  - type: grid
+    column_span: 4
+    cards:
+    - type: heading
+      heading: Скільки витрат забрав кожен пристрій
+      icon: mdi:devices
+      grid_options:
+        columns: full
+    - type: statistics-graph
+      title: Гривні за добу по пристроях
+      days_to_show: 30
+      period: day
+      stat_types:
+      - change
+      chart_type: bar
+      grid_options:
+        columns: full
+      entities:
+      - entity: sensor.vitrati_boiler
+        name: Бойлер
+      - entity: sensor.vitrati_zariadka_avto
+        name: Зарядка авто
+      - entity: sensor.vitrati_tepla_pidloga_1
+        name: Тепла підлога 1
+      - entity: sensor.vitrati_tepla_pidloga_2
+        name: Тепла підлога 2
+      - entity: sensor.vitrati_nasos_polivu
+        name: Насос поливу
+      - entity: sensor.vitrati_inshe_bez_lichilnika
+        name: Інше (без лічильника)
+  - type: grid
+    column_span: 4
+    cards:
+    - type: heading
+      heading: По місяцях
+      icon: mdi:calendar-month
+      grid_options:
+        columns: full
+    - type: statistics-graph
+      title: Спожито з мережі по місяцях
+      days_to_show: 400
+      period: month
+      stat_types:
+      - change
+      chart_type: bar
+      grid_options:
+        columns: full
+      entities:
+      - entity: sensor.inverter_total_energy_import
+        name: З мережі
+    - type: statistics-graph
+      title: Гривні по місяцях - день проти ночі
+      days_to_show: 400
+      period: month
+      stat_types:
+      - change
+      chart_type: bar
+      grid_options:
+        columns: full
+      entities:
+      - entity: sensor.vitrati_vden_razom
+        name: Удень
+      - entity: sensor.vitrati_vnochi_razom
+        name: Уночі
+    - type: statistics-graph
+      title: Гривні по місяцях по пристроях
+      days_to_show: 400
+      period: month
+      stat_types:
+      - change
+      chart_type: bar
+      grid_options:
+        columns: full
+      entities:
+      - entity: sensor.vitrati_boiler
+        name: Бойлер
+      - entity: sensor.vitrati_zariadka_avto
+        name: Зарядка авто
+      - entity: sensor.vitrati_tepla_pidloga_1
+        name: Тепла підлога 1
+      - entity: sensor.vitrati_tepla_pidloga_2
+        name: Тепла підлога 2
+      - entity: sensor.vitrati_nasos_polivu
+        name: Насос поливу
+      - entity: sensor.vitrati_inshe_bez_lichilnika
+        name: Інше (без лічильника)
+  - type: grid
+    column_span: 4
+    cards:
+    - type: heading
+      heading: Довільний період - оберіть дату нижче
+      icon: mdi:calendar-cursor
+      grid_options:
+        columns: full
+    - type: markdown
+      text_only: true
+      grid_options:
+        columns: full
+      content: 'Три картки в цьому блоці показують саме той відрізок часу, який обрано
+        в рядку з датою. Стрілками гортаються попередні й наступні періоди, а кнопка
+        з трьома крапками перемикає добу, тиждень, місяць або рік. Решта вкладки від
+        цього вибору не залежить - там завжди поточна доба, місяць і рік.'
+    - type: energy-date-selection
+      grid_options:
+        columns: full
+    - type: energy-sources-table
+      grid_options:
+        columns: full
+    - type: energy-usage-graph
       grid_options:
         columns: full
     - type: energy-devices-graph
@@ -599,42 +798,46 @@ views:
     column_span: 4
     cards:
     - type: heading
-      heading: Вартість за обраний період
-      icon: mdi:calendar-range
-      grid_options:
-        columns: full
-    - type: energy-date-selection
-      grid_options:
-        columns: full
-    - type: energy-sources-table
-      grid_options:
-        columns: full
-  - type: grid
-    column_span: 4
-    cards:
-    - type: heading
-      heading: Споживання за обраний період
-      icon: mdi:chart-bar
-      grid_options:
-        columns: full
-    - type: energy-usage-graph
+      heading: Як це рахується
+      icon: mdi:information-outline
       grid_options:
         columns: full
     - type: markdown
       text_only: true
       grid_options:
         columns: full
-      content: 'Гривні рахуються тільки для загального імпорту з мережі: Home Assistant множить
-        кожну спожиту кВт-год на ставку, яка діяла саме в ту годину. По окремих пристроях вартості
-        немає навмисно - їхні лічильники не знають, у який тариф потрапило споживання, і будь-яка
-        цифра тут була б вигаданою. Щоб оцінити пристрій, дивіться його кВт-год і множте на ставку
-        того часу, коли він працює: бойлер уночі коштує вдвічі дешевше за той самий бойлер удень.
+      content: 'Кожен лічильник розведений на дві гілки: денну і нічну. Перемикання
+        відбувається о 07:00 і о 23:00 - рівно там, де змінюється ставка. Тому денні
+        кВт-год множаться на денну ставку, а нічні на нічну, і цифра точна, а не
+        усереднена. Правка ставки на вкладці "Тариф" одразу перераховує все.
 
 
-        Дати вибираються в блоці "Вартість за обраний період" - вибір діє і на графіки поруч.
-        Картки статистики вгорі від нього не залежать: вони завжди показують поточну добу і
-        поточний календарний місяць.
+        Витрати по пристроях рахуються з тих самих лічильників, які Energy-дашборд
+        показує в кВт-год - просто з урахуванням тарифу. Окремим рядом іде "Інше
+        (без лічильника)" - різниця між усім купленим з мережі і сумою пяти
+        вимірюваних пристроїв: світло, розетки, побутова техніка, насоси опалення,
+        сама плата. Разом ці шість рядів дають повний рахунок.
 
 
-        На слабкій платі ці картки оживають не миттєво - таблиця і графіки довантажуються
-        приблизно півхвилини.'
+        Ряд "Інше" іноді провалюється в мінус. Це не помилка: пристрої частину часу
+        живляться від батареї інвертора, а гривні рахуються лише за куплені з мережі
+        кіловати. У такі години виміряні пристрої витратили більше, ніж було куплено,
+        і залишок стає відємним.
+
+
+        ЧОМУ ТУТ БІЛЬШЕ, НІЖ НА ENERGY-ДАШБОРДІ. Історію з 1 серпня 2026 перераховано
+        заднім числом за НИНІШНІМИ ставками: кожну годину зі статистики споживання
+        віднесено до дня або ночі за київським часом і помножено на 5,00 або 2,50 грн.
+        Energy-дашборд натомість показує те, що нарахував історично, а до 3 серпня
+        там діяла плоска ціна 2,50 грн на цілу добу. Тому його цифра менша. Тутешня
+        відповідає на питання "скільки це коштувало б за сьогоднішнім тарифом", а не
+        "скільки нарахувала система тоді".
+
+
+        Глибше 1 серпня 2026 даних немає - там закінчується довгострокова статистика
+        споживання, і ділити нічого. Тому "цей рік" поки дорівнює серпню, а графік по
+        місяцях має єдиний стовпчик.
+
+
+        На слабкій платі ці картки оживають не миттєво - таблиця і графіки
+        довантажуються приблизно півхвилини.'

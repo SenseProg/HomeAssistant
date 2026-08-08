@@ -1,13 +1,14 @@
 [Unit]
-Description=NAS photo album (read-only)
+Description=CloudMate photo album outside the Home Assistant backup tree (read-only)
 After=network-online.target
 Wants=network-online.target
 
 [Mount]
 What=192.168.50.25:/Фотоальбом
-Where=/userdata/hass/config/media/foto
+Where=/mnt/homemate_media/foto
 Type=nfs
 Options=ro,soft,timeo=100,retrans=3,noatime,nolock,_netdev
+TimeoutSec=30
 
 [Install]
 WantedBy=multi-user.target
