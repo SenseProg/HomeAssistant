@@ -70,9 +70,10 @@
     на схід сонця". Для газону з дощуванням зверху це правильний час - вода встигає всотатися до спеки,
     а листя висихає одразу після сходу.
 
-    За розкладом поливаються ТІЛЬКИ зони 1 і 2 - саме вони заведені у Smart Irrigation і саме їхня сумарна
-    тривалість задає зсув від сходу. Зони 3, 4 і 5 автоматично не поливаються взагалі, лише вручну з дашборда
-    (рішення користувача, 2026-08-04).
+    За розкладом поливаються зони 1, 2 і 5 - усі три заведені у Smart Irrigation, і їхня сумарна тривалість
+    задає зсув від сходу. Зона 5 додана до SI 2026-08-08: 100 м², 20 л/хв, тобто та сама інтенсивність
+    12 мм/год, що й у зон 1-2 (200 м², 40 л/хв). Зони 3 і 4 автоматично не поливаються взагалі, лише вручну
+    з дашборда.
 
     Виконує полив Irrigation Unlimited, бо тільки він керує насосом-майстром: прямий контроль клапанів
     у SI вимкнено навмисно - її valve_runner про насос не знає і відкривав би клапани всуху.
@@ -83,8 +84,8 @@
 
     ДВА ТРИГЕРИ навмисно. Подія Smart Irrigation дає точний старт, але SI НЕ реєструє тригер узагалі,
     якщо сумарна тривалість її зон дорівнює нулю (а це нормальна ситуація наступного дня після поливу).
-    Зона 5 у SI не заведена і має поливатися незалежно, тому додано другий тригер від сонця на -75 хв
-    (25 хв зони 5 плюс до 50 хв зон 1 і 2). mode: single не дасть запуститися двічі, якщо спрацюють обидва.'
+    Другий тригер від сонця на -75 хв лишається запобіжником на випадок, коли SI не реєструє свою подію
+    (нульова сумарна тривалість). mode: single не дасть запуститися двічі, якщо спрацюють обидва.'
   triggers:
   - trigger: event
     event_type: smart_irrigation_start_irrigation_all_zones
@@ -106,6 +107,9 @@
         \ * 60 }}\n{% endif %}"
       zona_2_seconds: "{% set smart = states('sensor.smart_irrigation_zona2') %} {% if is_number(smart)\
         \ %}\n  {{ smart | int(0) }}\n{% else %}\n  {{ (states('input_number.poliv_zona_2_hvylyn') | int(25))\
+        \ * 60 }}\n{% endif %}"
+      zona_5_seconds: "{% set smart = states('sensor.smart_irrigation_zona5') %} {% if is_number(smart)\
+        \ %}\n  {{ smart | int(0) }}\n{% else %}\n  {{ (states('input_number.poliv_zona_5_hvylyn') | int(25))\
         \ * 60 }}\n{% endif %}"
   - action: weather.get_forecasts
     target:
@@ -212,12 +216,13 @@
     - condition: state
       entity_id: input_boolean.poliv_zona_5_vkl
       state: 'on'
+    - condition: template
+      value_template: '{{ zona_5_seconds | int(0) > 0 }}'
     then:
     - action: irrigation_unlimited.manual_run
       data:
         entity_id: binary_sensor.irrigation_unlimited_c1_z4
-        time: '{% set m = states(''input_number.poliv_zona_5_hvylyn'') | int(25) %}{{ ''%02d:%02d:00''
-          | format(m // 60, m % 60) }}'
+        time: '{{ timedelta(seconds=zona_5_seconds | int(0)) }}'
         queue: true
     - wait_template: '{{ is_state(''binary_sensor.irrigation_unlimited_c1_z4'', ''on'') }}'
       timeout: 00:00:30

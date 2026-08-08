@@ -58,16 +58,119 @@ views:
       title: Про WAN-сенсори
       grid_options:
         columns: full
-      content: 'Вбудовані сенсори WAN-статусу і зовнішньої IP (через UPnP/IGD) на цьому роутері нестабільні і завжди повертають unavailable/0.0.0.0 - це обмеження прошивки ASUS, не Home Assistant. Прибрано з дашборда свідомо.
+      content: 'Вбудовані сенсори WAN-статусу і зовнішньої IP (через UPnP/IGD) на цьому роутері нестабільні
+        і завжди повертають unavailable/0.0.0.0 - це обмеження прошивки ASUS, не Home Assistant. Прибрано
+        з дашборда свідомо.
 
         '
     - type: markdown
       title: Усі активні клієнти та їхня точка підключення
       grid_options:
         columns: full
-      content: "**Позначення:** \U0001F50C Ethernet · \U0001F4F6 Wi-Fi · частота/покоління вказуються\nлише тоді, коли їх повідомляє точка доступу. Сама частота 5 ГГц ще не\nдоводить, що клієнт працює саме у Wi-Fi 5 або Wi-Fi 6.\n\n{% set ap_clients = state_attr('sensor.tenda_ap_clients', 'onlineList') or [] %}\n{% set repeater_clients = state_attr('sensor.tenda_repeater_clients', 'onlineList') or [] %}\n{% set missing = ['unknown', 'unavailable', 'none', ''] %}\n{% set ap = namespace(macs=[]) %}\n{% set repeater = namespace(macs=[]) %}\n{% for client in ap_clients if client.qosListConnectType | default('') == 'wifi' and client.qosListMac is defined %}\n  {% set ap.macs = ap.macs + [client.qosListMac | lower] %}\n{% endfor %}\n{% for client in repeater_clients if client.devMac is defined %}\n  {% set repeater.macs = repeater.macs + [client.devMac | lower] %}\n{% endfor %}\n{% set names = {\n  'device_tracker.homemate': 'HomeMate (ПК)',\n  'device_tracker.ok3568': 'Плата Home Assistant MB35x8',\n  'device_tracker.s23_ultra_dvk': 'Samsung S23 Ultra — Дмитро',\n  'device_tracker.s24_koristuvaca_kateryna': 'Samsung S24 — Катерина',\n  'device_tracker.s20_fe_koristuvaca_kateryna': 'Samsung S20 FE — Олеся',\n  'device_tracker.s21_pol_zovatela_kateryna': 'Samsung Galaxy S21 — бабуся Сіма',\n  'device_tracker.a24_koristuvaca_vasilij': 'Samsung Galaxy A24 — Василь',\n  'device_tracker.galaxy_j8': 'Samsung Galaxy J8',\n  'device_tracker.laptop_u1i8pnmk': 'Ноутбук LAPTOP-U1I8PNMK',\n  'device_tracker.cloudmate': 'CloudMate — NAS QNAP',\n  'device_tracker.esp_eea5c5': 'Blauberg №1 — кімната хлопців',\n  'device_tracker.esp_eea84e': 'Blauberg №2 — кімната Олесі'\n} %}\n{% set ip_names = {\n  '192.168.50.13': 'Термостат Terneo — контур 1',\n  '192.168.50.25': 'CloudMate — NAS QNAP',\n  '192.168.50.27': 'Blauberg №1 — кімната хлопців',\n  '192.168.50.36': 'Зарядна станція авто — 7,5 кВт',\n  '192.168.50.91': 'Насос автополиву K601',\n  '192.168.50.118': 'Бойлер Midea',\n  '192.168.50.157': 'Термостат Terneo — контур 2',\n  '192.168.50.164': 'SONOFF ZBBridge — Zigbee-шлюз',\n  '192.168.50.176': 'Контролер гаражних воріт — Sonoff/eWeLink',\n  '192.168.50.179': 'Інвертор Deye',\n  '192.168.50.219': 'Трифазний лічильник електроенергії будинку',\n  '192.168.50.221': 'Контролер автополиву Tuya — 8 зон'\n} %}\n{% set mac_names = {\n  '00:08:9B:ED:62:EF': 'CloudMate — NAS QNAP',\n  '04:D6:F4:70:AD:B3': 'Бойлер Midea',\n  '08:3A:F2:2D:32:30': 'Контролер гаражних воріт — Sonoff/eWeLink',\n  '14:2B:2F:E1:54:60': 'Рекуператор PRANA — спальня батьків',\n  '30:83:98:C1:6E:AC': 'Термостат Terneo — контур 1',\n  '3C:0B:59:11:9A:13': 'Зарядна станція авто — 7,5 кВт',\n  '80:64:7C:46:E8:D1': 'Насос автополиву K601',\n  '84:CC:A8:96:28:A7': 'SONOFF ZBBridge — Zigbee-шлюз',\n  '98:F4:AB:EE:A5:C5': 'Blauberg №1 — кімната хлопців',\n  '98:F4:AB:EE:A8:4E': 'Blauberg №2 — кімната Олесі',\n  'D4:27:87:50:23:6C': 'Інвертор Deye',\n  'D8:D6:68:31:BA:49': 'Трифазний лічильник електроенергії будинку',\n  'E0:98:06:AF:B7:41': 'Термостат Terneo — контур 2',\n  'DC:6A:E7:A1:09:F2': 'Xiaomi — модель не визначена',\n  '62:1A:51:F4:B2:EE': 'Samsung Galaxy A24 — Василь',\n  '38:2C:E5:2D:5B:32': 'Контролер автополиву Tuya — 8 зон'\n} %}\n{% set connection_types = {\n  '00:08:9b:ed:62:ef': '\U0001F50C Ethernet',\n  '66:55:7e:21:d0:ac': '\U0001F50C Ethernet',\n  'b4:0f:3b:38:3f:50': '\U0001F50C Ethernet',\n  '10:12:fb:f7:95:ad': '\U0001F50C Ethernet',\n  '34:6f:24:b5:ad:4b': '\U0001F4F6 Wi-Fi · 5 ГГц',\n  '06:55:69:ba:91:6f': '\U0001F4F6 Wi-Fi · 5 ГГц',\n  '28:07:08:a8:10:66': '\U0001F4F6 Wi-Fi · 5 ГГц',\n  '5e:82:f5:51:3c:0d': '\U0001F4F6 Wi-Fi · 5 ГГц',\n  '70:09:71:a2:44:f4': '\U0001F4F6 Wi-Fi · 5 ГГц',\n  '04:d6:f4:70:ad:b3': '\U0001F4F6 Wi-Fi · 2,4 ГГц',\n  '08:3a:f2:2d:32:30': '\U0001F4F6 Wi-Fi · 2,4 ГГц',\n  '14:2b:2f:e1:54:60': '\U0001F4F6 Wi-Fi · 2,4 ГГц',\n  '30:83:98:c1:6e:ac': '\U0001F4F6 Wi-Fi · 2,4 ГГц',\n  '3c:0b:59:11:9a:13': '\U0001F4F6 Wi-Fi · 2,4 ГГц',\n  '38:2c:e5:2d:5b:32':\
-        \ '\U0001F4F6 Wi-Fi · 2,4 ГГц',\n  'f0:35:75:b3:31:80': '\U0001F4F6 Wi-Fi',\n  '80:64:7c:46:e8:d1': '\U0001F4F6 Wi-Fi · 2,4 ГГц',\n  '84:cc:a8:96:28:a7': '\U0001F4F6 Wi-Fi · 2,4 ГГц',\n  '98:f4:ab:ee:a5:c5': '\U0001F4F6 Wi-Fi · 2,4 ГГц',\n  '98:f4:ab:ee:a8:4e': '\U0001F4F6 Wi-Fi · 2,4 ГГц',\n  'd4:27:87:50:23:6c': '\U0001F4F6 Wi-Fi · 2,4 ГГц',\n  'd8:d6:68:31:ba:49': '\U0001F4F6 Wi-Fi · 2,4 ГГц',\n  'e0:98:06:af:b7:41': '\U0001F4F6 Wi-Fi · 2,4 ГГц'\n} %}\n{% set ns = namespace(found=false, seen=[]) %}\n{% set cloudmate_mac = '00:08:9b:ed:62:ef' %}\n{% set ns.found = true %}\n{% set ns.seen = ns.seen + [cloudmate_mac] %}\n- **CloudMate — NAS QNAP** — `192.168.50.25` · `00:08:9B:ED:62:EF` ·\n  **\U0001F50C Ethernet** · {{ '\U0001F7E2 доступний' if is_state('binary_sensor.cloudmate_nas_online', 'on') else ('\U0001F534 недоступний' if is_state('binary_sensor.cloudmate_nas_online', 'off') else '\U0001F7E1 стан визначається') }}\n{% set tcl_mac = 'f0:35:75:b3:31:80' %}\n{% set ns.found = true %}\n{% set ns.seen = ns.seen + [tcl_mac] %}\n- **Телевізор TCL** — `192.168.50.175` · `F0:35:75:B3:31:80` ·\n  **\U0001F4F6 Wi-Fi** · {{ '\U0001F7E2 увімкнений і в мережі' if is_state('binary_sensor.tcl_tv_online', 'on') else ('\U0001F534 вимкнений або недоступний' if is_state('binary_sensor.tcl_tv_online', 'off') else '\U0001F7E1 стан визначається') }}\n{% set camera_mac = '10:12:fb:f7:95:ad' %}\n{% set ns.found = true %}\n{% set ns.seen = ns.seen + [camera_mac] %}\n- **Камера Hikvision — двір** — `192.168.50.201` · `10:12:FB:F7:95:AD` ·\n  **\U0001F50C Ethernet** · {{ '\U0001F7E2 доступна' if is_state('binary_sensor.hikvision_camera_online', 'on') else ('\U0001F534 недоступна' if is_state('binary_sensor.hikvision_camera_online', 'off') else '\U0001F7E1 стан визначається') }}\n{% for tracker in states.device_tracker if tracker.state == 'home' %}\n  {% set source = tracker.attributes.source_type | default('') %}\n  {% set ip = tracker.attributes.ip | default('', true) %}\n  {% set mac = tracker.attributes.mac | default('', true) | lower %}\n  {% if source == 'router' and ip %}\n    {% set ns.found = true %}\n    {% set ns.seen = ns.seen + [mac] %}\n    {% if mac in ap.macs %}\n      {% set connection = 'Tenda AC10 · «Промінь»' %}\n    {% elif mac in repeater.macs %}\n      {% set connection = 'Tenda A9 · повторювач «Отаке»' %}\n    {% else %}\n      {% set connection = 'ASUS RT-AX55 · «Отаке»' %}\n    {% endif %}\n    {% set link = namespace(type=connection_types.get(mac, '❔ тип з’єднання не повідомлено')) %}\n    {% set interface = tracker.attributes.interface | default('', true) | lower %}\n    {% if mac in ap.macs %}\n      {% for client in ap_clients if client.qosListMac | default('') | lower == mac %}\n        {% set access = client.qosListAccessType | default('') %}\n        {% set link.type = '\U0001F4F6 Wi-Fi 4 · 2,4 ГГц' if access == 'wifi_2G' else ('\U0001F4F6 Wi-Fi 5 · 5 ГГц' if access == 'wifi_5G' else '\U0001F4F6 Wi-Fi') %}\n      {% endfor %}\n    {% elif mac in repeater.macs %}\n      {% set link.type = '\U0001F4F6 Wi-Fi 4 · 2,4 ГГц' %}\n    {% elif interface in ['2.4g', '2.4ghz', 'wifi_2g'] %}\n      {% set link.type = '\U0001F4F6 Wi-Fi · 2,4 ГГц' %}\n    {% elif interface in ['5g', '5ghz', 'wifi_5g'] %}\n      {% set link.type = '\U0001F4F6 Wi-Fi · 5 ГГц' %}\n    {% elif interface in ['6g', '6ghz', 'wifi_6g'] %}\n      {% set link.type = '\U0001F4F6 Wi-Fi 6E · 6 ГГц' %}\n    {% else %}\n      {% set link.type = connection_types.get(mac, '❔ тип з’єднання не повідомлено') %}\n    {% endif %}\n- **{{ names.get(tracker.entity_id, tracker.name) }}** — `{{ ip }}` · `{{ mac | upper }}` · **{{ link.type }}** · **{{ connection }}**\n  {% endif %}\n{% endfor %}\n{% set irrigation_mac = '38:2c:e5:2d:5b:32' %}\n{% if states('switch.avtopoliv_kontroler_avtopoliv_klapan_1') not in missing\n      and irrigation_mac not in ns.seen %}\n  {% set ns.found = true %}\n  {% set ns.seen = ns.seen + [irrigation_mac] %}\n- **Контролер автополиву\
-        \ Tuya — 8 зон** — `192.168.50.221` · `38:2C:E5:2D:5B:32` · **\U0001F4F6 Wi-Fi · 2,4 ГГц** · **ASUS RT-AX55 · «Отаке»**\n{% endif %}\n{% set pump_mac = '80:64:7c:46:e8:d1' %}\n{% set pump_entity = 'switch.mini_switch_k601_2_switch_1_2' %}\n{% if states(pump_entity) not in missing and pump_mac not in ns.seen %}\n  {% set ns.found = true %}\n  {% set ns.seen = ns.seen + [pump_mac] %}\n- **Насос автополиву K601** — `192.168.50.91` · `80:64:7C:46:E8:D1` · **\U0001F4F6 Wi-Fi · 2,4 ГГц** · **ASUS RT-AX55 · «Отаке»**\n{% endif %}\n{% for client in ap_clients if client.qosListConnectType | default('') == 'wifi' and client.qosListMac is defined %}\n  {% set mac = client.qosListMac | lower %}\n  {% if mac not in ns.seen %}\n    {% set ns.found = true %}\n    {% set ns.seen = ns.seen + [mac] %}\n    {% set ip = client.qosListIP | default('IP не отримано', true) %}\n    {% set fallback = client.qosListHostname if client.qosListHostname | default('Unknown') not in ['', 'Unknown'] else 'Невідомий пристрій' %}\n    {% set access = client.qosListAccessType | default('') %}\n    {% set link_type = '\U0001F4F6 Wi-Fi 4 · 2,4 ГГц' if access == 'wifi_2G' else ('\U0001F4F6 Wi-Fi 5 · 5 ГГц' if access == 'wifi_5G' else '\U0001F4F6 Wi-Fi') %}\n- **{{ ip_names.get(ip, mac_names.get(mac | upper, fallback)) }}** — `{{ ip }}` · `{{ mac | upper }}` · **{{ link_type }}** · **Tenda AC10 · «Промінь»**\n  {% endif %}\n{% endfor %}\n{% for client in repeater_clients if client.devMac is defined %}\n  {% set mac = client.devMac | lower %}\n  {% if mac not in ns.seen %}\n    {% set ns.found = true %}\n    {% set ns.seen = ns.seen + [mac] %}\n    {% set ip = client.devIp | default('IP не отримано', true) %}\n    {% set fallback = client.devName if client.devName | default('UnKnown') not in ['', 'UnKnown'] else 'Невідомий пристрій' %}\n- **{{ ip_names.get(ip, mac_names.get(mac | upper, fallback)) }}** — {% if ip != 'UnKnown' %}`{{ ip }}`{% else %}IP не отримано{% endif %} · `{{ mac | upper }}` · **\U0001F4F6 Wi-Fi 4 · 2,4 ГГц** · **Tenda A9 · повторювач «Отаке»**\n  {% endif %}\n{% endfor %}\n{% if not ns.found %}\nНемає активних клієнтів або мережеві пристрої недоступні.\n{% endif %}\n"
+      content: "**Позначення:** \U0001F50C Ethernet · \U0001F4F6 Wi-Fi · частота/покоління вказуються\n\
+        лише тоді, коли їх повідомляє точка доступу. Сама частота 5 ГГц ще не\nдоводить, що клієнт працює\
+        \ саме у Wi-Fi 5 або Wi-Fi 6.\n\n{% set ap_clients = state_attr('sensor.tenda_ap_clients', 'onlineList')\
+        \ or [] %}\n{% set repeater_clients = state_attr('sensor.tenda_repeater_clients', 'onlineList')\
+        \ or [] %}\n{% set missing = ['unknown', 'unavailable', 'none', ''] %}\n{% set ap = namespace(macs=[])\
+        \ %}\n{% set repeater = namespace(macs=[]) %}\n{% for client in ap_clients if client.qosListConnectType\
+        \ | default('') == 'wifi' and client.qosListMac is defined %}\n  {% set ap.macs = ap.macs + [client.qosListMac\
+        \ | lower] %}\n{% endfor %}\n{% for client in repeater_clients if client.devMac is defined %}\n\
+        \  {% set repeater.macs = repeater.macs + [client.devMac | lower] %}\n{% endfor %}\n{% set names\
+        \ = {\n  'device_tracker.homemate': 'HomeMate (ПК)',\n  'device_tracker.ok3568': 'Плата Home Assistant\
+        \ MB35x8',\n  'device_tracker.s23_ultra_dvk': 'Samsung S23 Ultra — Дмитро',\n  'device_tracker.s24_koristuvaca_kateryna':\
+        \ 'Samsung S24 — Катерина',\n  'device_tracker.s20_fe_koristuvaca_kateryna': 'Samsung S20 FE —\
+        \ Олеся',\n  'device_tracker.s21_pol_zovatela_kateryna': 'Samsung Galaxy S21 — бабуся Сіма',\n\
+        \  'device_tracker.a24_koristuvaca_vasilij': 'Samsung Galaxy A24 — Василь',\n  'device_tracker.galaxy_j8':\
+        \ 'Samsung Galaxy J8',\n  'device_tracker.laptop_u1i8pnmk': 'Ноутбук LAPTOP-U1I8PNMK',\n  'device_tracker.cloudmate':\
+        \ 'CloudMate — NAS QNAP',\n  'device_tracker.esp_eea5c5': 'Blauberg №1 — кімната хлопців',\n \
+        \ 'device_tracker.esp_eea84e': 'Blauberg №2 — кімната Олесі'\n} %}\n{% set ip_names = {\n  '192.168.50.13':\
+        \ 'Термостат Terneo — контур 1',\n  '192.168.50.25': 'CloudMate — NAS QNAP',\n  '192.168.50.27':\
+        \ 'Blauberg №1 — кімната хлопців',\n  '192.168.50.36': 'Зарядна станція авто — 7,5 кВт',\n  '192.168.50.91':\
+        \ 'Насос автополиву K601',\n  '192.168.50.118': 'Бойлер Midea',\n  '192.168.50.157': 'Термостат\
+        \ Terneo — контур 2',\n  '192.168.50.164': 'SONOFF ZBBridge — Zigbee-шлюз',\n  '192.168.50.176':\
+        \ 'Контролер гаражних воріт — Sonoff/eWeLink',\n  '192.168.50.179': 'Інвертор Deye',\n  '192.168.50.219':\
+        \ 'Трифазний лічильник електроенергії будинку',\n  '192.168.50.221': 'Контролер автополиву Tuya\
+        \ — 8 зон'\n} %}\n{% set mac_names = {\n  '00:08:9B:ED:62:EF': 'CloudMate — NAS QNAP',\n  '04:D6:F4:70:AD:B3':\
+        \ 'Бойлер Midea',\n  '08:3A:F2:2D:32:30': 'Контролер гаражних воріт — Sonoff/eWeLink',\n  '14:2B:2F:E1:54:60':\
+        \ 'Рекуператор PRANA — спальня батьків',\n  '30:83:98:C1:6E:AC': 'Термостат Terneo — контур 1',\n\
+        \  '3C:0B:59:11:9A:13': 'Зарядна станція авто — 7,5 кВт',\n  '80:64:7C:46:E8:D1': 'Насос автополиву\
+        \ K601',\n  '84:CC:A8:96:28:A7': 'SONOFF ZBBridge — Zigbee-шлюз',\n  '98:F4:AB:EE:A5:C5': 'Blauberg\
+        \ №1 — кімната хлопців',\n  '98:F4:AB:EE:A8:4E': 'Blauberg №2 — кімната Олесі',\n  'D4:27:87:50:23:6C':\
+        \ 'Інвертор Deye',\n  'D8:D6:68:31:BA:49': 'Трифазний лічильник електроенергії будинку',\n  'E0:98:06:AF:B7:41':\
+        \ 'Термостат Terneo — контур 2',\n  'DC:6A:E7:A1:09:F2': 'Xiaomi — модель не визначена',\n  '62:1A:51:F4:B2:EE':\
+        \ 'Samsung Galaxy A24 — Василь',\n  '38:2C:E5:2D:5B:32': 'Контролер автополиву Tuya — 8 зон'\n\
+        } %}\n{% set connection_types = {\n  '00:08:9b:ed:62:ef': '\U0001F50C Ethernet',\n  '66:55:7e:21:d0:ac':\
+        \ '\U0001F50C Ethernet',\n  'b4:0f:3b:38:3f:50': '\U0001F50C Ethernet',\n  '10:12:fb:f7:95:ad':\
+        \ '\U0001F50C Ethernet',\n  '34:6f:24:b5:ad:4b': '\U0001F4F6 Wi-Fi · 5 ГГц',\n  '06:55:69:ba:91:6f':\
+        \ '\U0001F4F6 Wi-Fi · 5 ГГц',\n  '28:07:08:a8:10:66': '\U0001F4F6 Wi-Fi · 5 ГГц',\n  '5e:82:f5:51:3c:0d':\
+        \ '\U0001F4F6 Wi-Fi · 5 ГГц',\n  '70:09:71:a2:44:f4': '\U0001F4F6 Wi-Fi · 5 ГГц',\n  '04:d6:f4:70:ad:b3':\
+        \ '\U0001F4F6 Wi-Fi · 2,4 ГГц',\n  '08:3a:f2:2d:32:30': '\U0001F4F6 Wi-Fi · 2,4 ГГц',\n  '14:2b:2f:e1:54:60':\
+        \ '\U0001F4F6 Wi-Fi · 2,4 ГГц',\n  '30:83:98:c1:6e:ac': '\U0001F4F6 Wi-Fi · 2,4 ГГц',\n  '3c:0b:59:11:9a:13':\
+        \ '\U0001F4F6 Wi-Fi · 2,4 ГГц',\n  '38:2c:e5:2d:5b:32': '\U0001F4F6 Wi-Fi · 2,4 ГГц',\n  'f0:35:75:b3:31:80':\
+        \ '\U0001F4F6 Wi-Fi',\n  '80:64:7c:46:e8:d1': '\U0001F4F6 Wi-Fi · 2,4 ГГц',\n  '84:cc:a8:96:28:a7':\
+        \ '\U0001F4F6 Wi-Fi · 2,4 ГГц',\n  '98:f4:ab:ee:a5:c5': '\U0001F4F6 Wi-Fi · 2,4 ГГц',\n  '98:f4:ab:ee:a8:4e':\
+        \ '\U0001F4F6 Wi-Fi · 2,4 ГГц',\n  'd4:27:87:50:23:6c': '\U0001F4F6 Wi-Fi · 2,4 ГГц',\n  'd8:d6:68:31:ba:49':\
+        \ '\U0001F4F6 Wi-Fi · 2,4 ГГц',\n  'e0:98:06:af:b7:41': '\U0001F4F6 Wi-Fi · 2,4 ГГц'\n} %}\n{%\
+        \ set ns = namespace(found=false, seen=[]) %}\n{% set cloudmate_mac = '00:08:9b:ed:62:ef' %}\n\
+        {% set ns.found = true %}\n{% set ns.seen = ns.seen + [cloudmate_mac] %}\n- **CloudMate — NAS\
+        \ QNAP** — `192.168.50.25` · `00:08:9B:ED:62:EF` ·\n  **\U0001F50C Ethernet** · {{ '\U0001F7E2\
+        \ доступний' if is_state('binary_sensor.cloudmate_nas_online', 'on') else ('\U0001F534 недоступний'\
+        \ if is_state('binary_sensor.cloudmate_nas_online', 'off') else '\U0001F7E1 стан визначається')\
+        \ }}\n{% set tcl_mac = 'f0:35:75:b3:31:80' %}\n{% set ns.found = true %}\n{% set ns.seen = ns.seen\
+        \ + [tcl_mac] %}\n- **Телевізор TCL** — `192.168.50.175` · `F0:35:75:B3:31:80` ·\n  **\U0001F4F6\
+        \ Wi-Fi** · {{ '\U0001F7E2 увімкнений і в мережі' if is_state('binary_sensor.tcl_tv_online', 'on')\
+        \ else ('\U0001F534 вимкнений або недоступний' if is_state('binary_sensor.tcl_tv_online', 'off')\
+        \ else '\U0001F7E1 стан визначається') }}\n{% set camera_mac = '10:12:fb:f7:95:ad' %}\n{% set\
+        \ ns.found = true %}\n{% set ns.seen = ns.seen + [camera_mac] %}\n- **Камера Hikvision — двір**\
+        \ — `192.168.50.201` · `10:12:FB:F7:95:AD` ·\n  **\U0001F50C Ethernet** · {{ '\U0001F7E2 доступна'\
+        \ if is_state('binary_sensor.hikvision_camera_online', 'on') else ('\U0001F534 недоступна' if\
+        \ is_state('binary_sensor.hikvision_camera_online', 'off') else '\U0001F7E1 стан визначається')\
+        \ }}\n{% for tracker in states.device_tracker if tracker.state == 'home' %}\n  {% set source =\
+        \ tracker.attributes.source_type | default('') %}\n  {% set ip = tracker.attributes.ip | default('',\
+        \ true) %}\n  {% set mac = tracker.attributes.mac | default('', true) | lower %}\n  {% if source\
+        \ == 'router' and ip %}\n    {% set ns.found = true %}\n    {% set ns.seen = ns.seen + [mac] %}\n\
+        \    {% if mac in ap.macs %}\n      {% set connection = 'Tenda AC10 · «Промінь»' %}\n    {% elif\
+        \ mac in repeater.macs %}\n      {% set connection = 'Tenda A9 · повторювач «Отаке»' %}\n    {%\
+        \ else %}\n      {% set connection = 'ASUS RT-AX55 · «Отаке»' %}\n    {% endif %}\n    {% set\
+        \ link = namespace(type=connection_types.get(mac, '❔ тип з’єднання не повідомлено')) %}\n    {%\
+        \ set interface = tracker.attributes.interface | default('', true) | lower %}\n    {% if mac in\
+        \ ap.macs %}\n      {% for client in ap_clients if client.qosListMac | default('') | lower ==\
+        \ mac %}\n        {% set access = client.qosListAccessType | default('') %}\n        {% set link.type\
+        \ = '\U0001F4F6 Wi-Fi 4 · 2,4 ГГц' if access == 'wifi_2G' else ('\U0001F4F6 Wi-Fi 5 · 5 ГГц' if\
+        \ access == 'wifi_5G' else '\U0001F4F6 Wi-Fi') %}\n      {% endfor %}\n    {% elif mac in repeater.macs\
+        \ %}\n      {% set link.type = '\U0001F4F6 Wi-Fi 4 · 2,4 ГГц' %}\n    {% elif interface in ['2.4g',\
+        \ '2.4ghz', 'wifi_2g'] %}\n      {% set link.type = '\U0001F4F6 Wi-Fi · 2,4 ГГц' %}\n    {% elif\
+        \ interface in ['5g', '5ghz', 'wifi_5g'] %}\n      {% set link.type = '\U0001F4F6 Wi-Fi · 5 ГГц'\
+        \ %}\n    {% elif interface in ['6g', '6ghz', 'wifi_6g'] %}\n      {% set link.type = '\U0001F4F6\
+        \ Wi-Fi 6E · 6 ГГц' %}\n    {% else %}\n      {% set link.type = connection_types.get(mac, '❔\
+        \ тип з’єднання не повідомлено') %}\n    {% endif %}\n- **{{ names.get(tracker.entity_id, tracker.name)\
+        \ }}** — `{{ ip }}` · `{{ mac | upper }}` · **{{ link.type }}** · **{{ connection }}**\n  {% endif\
+        \ %}\n{% endfor %}\n{% set irrigation_mac = '38:2c:e5:2d:5b:32' %}\n{% if states('switch.avtopoliv_kontroler_avtopoliv_klapan_1')\
+        \ not in missing\n      and irrigation_mac not in ns.seen %}\n  {% set ns.found = true %}\n  {%\
+        \ set ns.seen = ns.seen + [irrigation_mac] %}\n- **Контролер автополиву Tuya — 8 зон** — `192.168.50.221`\
+        \ · `38:2C:E5:2D:5B:32` · **\U0001F4F6 Wi-Fi · 2,4 ГГц** · **ASUS RT-AX55 · «Отаке»**\n{% endif\
+        \ %}\n{% set pump_mac = '80:64:7c:46:e8:d1' %}\n{% set pump_entity = 'switch.mini_switch_k601_2_switch_1_2'\
+        \ %}\n{% if states(pump_entity) not in missing and pump_mac not in ns.seen %}\n  {% set ns.found\
+        \ = true %}\n  {% set ns.seen = ns.seen + [pump_mac] %}\n- **Насос автополиву K601** — `192.168.50.91`\
+        \ · `80:64:7C:46:E8:D1` · **\U0001F4F6 Wi-Fi · 2,4 ГГц** · **ASUS RT-AX55 · «Отаке»**\n{% endif\
+        \ %}\n{% for client in ap_clients if client.qosListConnectType | default('') == 'wifi' and client.qosListMac\
+        \ is defined %}\n  {% set mac = client.qosListMac | lower %}\n  {% if mac not in ns.seen %}\n\
+        \    {% set ns.found = true %}\n    {% set ns.seen = ns.seen + [mac] %}\n    {% set ip = client.qosListIP\
+        \ | default('IP не отримано', true) %}\n    {% set fallback = client.qosListHostname if client.qosListHostname\
+        \ | default('Unknown') not in ['', 'Unknown'] else 'Невідомий пристрій' %}\n    {% set access\
+        \ = client.qosListAccessType | default('') %}\n    {% set link_type = '\U0001F4F6 Wi-Fi 4 · 2,4\
+        \ ГГц' if access == 'wifi_2G' else ('\U0001F4F6 Wi-Fi 5 · 5 ГГц' if access == 'wifi_5G' else '\U0001F4F6\
+        \ Wi-Fi') %}\n- **{{ ip_names.get(ip, mac_names.get(mac | upper, fallback)) }}** — `{{ ip }}`\
+        \ · `{{ mac | upper }}` · **{{ link_type }}** · **Tenda AC10 · «Промінь»**\n  {% endif %}\n{%\
+        \ endfor %}\n{% for client in repeater_clients if client.devMac is defined %}\n  {% set mac =\
+        \ client.devMac | lower %}\n  {% if mac not in ns.seen %}\n    {% set ns.found = true %}\n   \
+        \ {% set ns.seen = ns.seen + [mac] %}\n    {% set ip = client.devIp | default('IP не отримано',\
+        \ true) %}\n    {% set fallback = client.devName if client.devName | default('UnKnown') not in\
+        \ ['', 'UnKnown'] else 'Невідомий пристрій' %}\n- **{{ ip_names.get(ip, mac_names.get(mac | upper,\
+        \ fallback)) }}** — {% if ip != 'UnKnown' %}`{{ ip }}`{% else %}IP не отримано{% endif %} · `{{\
+        \ mac | upper }}` · **\U0001F4F6 Wi-Fi 4 · 2,4 ГГц** · **Tenda A9 · повторювач «Отаке»**\n  {%\
+        \ endif %}\n{% endfor %}\n{% if not ns.found %}\nНемає активних клієнтів або мережеві пристрої\
+        \ недоступні.\n{% endif %}\n"
     - type: markdown
       title: CloudMate · NAS QNAP
       grid_options:
@@ -265,7 +368,9 @@ views:
     - type: markdown
       grid_options:
         columns: full
-      content: 'Людина має стан **удома**, коли хоча б один прив''язаний телефон бачить Home Assistant або основний роутер ASUS. Точка Wi-Fi не має значення: клієнти ASUS, Tenda «Промінь» і Tenda-повторювача належать до однієї домашньої мережі.'
+      content: 'Людина має стан **удома**, коли хоча б один прив''язаний телефон бачить Home Assistant
+        або основний роутер ASUS. Точка Wi-Fi не має значення: клієнти ASUS, Tenda «Промінь» і Tenda-повторювача
+        належать до однієї домашньої мережі.'
   - type: grid
     cards:
     - type: heading
@@ -292,7 +397,16 @@ views:
       title: Підключені безпосередньо до точки доступу
       grid_options:
         columns: full
-      content: "{% set clients = state_attr('sensor.tenda_ap_clients', 'onlineList') or [] %}\n{% set wifi = clients | selectattr('qosListConnectType', 'equalto', 'wifi') | list %}\n{% set names = {\n  '1E:C0:D2:73:2C:C9': 'Samsung Galaxy S21 — бабуся Сіма',\n  'C0:35:32:C4:8A:4B': 'Ноутбук LAPTOP-U1I8PNMK'\n} %}\n{% if wifi | count == 0 %}\nНемає активних прямих Wi-Fi-клієнтів.\n{% else %}\n{% for client in wifi %}\n- **{{ names.get(client.qosListMac | upper, client.qosListHostname if client.qosListHostname not in ['', 'Unknown'] else 'Невідомий пристрій') }}**\n  — `{{ client.qosListIP }}` · `{{ client.qosListMac | upper }}` ·\n  {{ '2,4 ГГц' if client.qosListAccessType | default('') == 'wifi_2G' else ('5 ГГц' if client.qosListAccessType | default('') == 'wifi_5G' else 'Wi-Fi') }} ·\n  ↓ {{ client.qosListDownSpeed | float(0) | round(1) }} кБ/с ·\n  ↑ {{ client.qosListUpSpeed | float(0) | round(1) }} кБ/с\n{% endfor %}\n{% endif %}\n"
+      content: "{% set clients = state_attr('sensor.tenda_ap_clients', 'onlineList') or [] %}\n{% set\
+        \ wifi = clients | selectattr('qosListConnectType', 'equalto', 'wifi') | list %}\n{% set names\
+        \ = {\n  '1E:C0:D2:73:2C:C9': 'Samsung Galaxy S21 — бабуся Сіма',\n  'C0:35:32:C4:8A:4B': 'Ноутбук\
+        \ LAPTOP-U1I8PNMK'\n} %}\n{% if wifi | count == 0 %}\nНемає активних прямих Wi-Fi-клієнтів.\n\
+        {% else %}\n{% for client in wifi %}\n- **{{ names.get(client.qosListMac | upper, client.qosListHostname\
+        \ if client.qosListHostname not in ['', 'Unknown'] else 'Невідомий пристрій') }}**\n  — `{{ client.qosListIP\
+        \ }}` · `{{ client.qosListMac | upper }}` ·\n  {{ '2,4 ГГц' if client.qosListAccessType | default('')\
+        \ == 'wifi_2G' else ('5 ГГц' if client.qosListAccessType | default('') == 'wifi_5G' else 'Wi-Fi')\
+        \ }} ·\n  ↓ {{ client.qosListDownSpeed | float(0) | round(1) }} кБ/с ·\n  ↑ {{ client.qosListUpSpeed\
+        \ | float(0) | round(1) }} кБ/с\n{% endfor %}\n{% endif %}\n"
     - type: history-graph
       title: Трафік точки доступу за 3 години
       hours_to_show: 3
@@ -307,7 +421,9 @@ views:
       title: Можливості точки доступу
       grid_options:
         columns: full
-      content: '**Tenda AC10 v3 / AC1200**, режим точки доступу. Паспортна швидкість: до **300 Мбіт/с** на 2,4 ГГц і до **867 Мбіт/с** на 5 ГГц; Ethernet-порти гігабітні. Значення вище — не швидкість Wi-Fi-з''єднання, а поточний корисний трафік клієнтів, який повідомляє сама Tenda.
+      content: '**Tenda AC10 v3 / AC1200**, режим точки доступу. Паспортна швидкість: до **300 Мбіт/с**
+        на 2,4 ГГц і до **867 Мбіт/с** на 5 ГГц; Ethernet-порти гігабітні. Значення вище — не швидкість
+        Wi-Fi-з''єднання, а поточний корисний трафік клієнтів, який повідомляє сама Tenda.
 
         '
   - type: grid
@@ -332,7 +448,19 @@ views:
       title: Підключені через повторювач
       grid_options:
         columns: full
-      content: "{% set clients = state_attr('sensor.tenda_repeater_clients', 'onlineList') or [] %}\n{% set names = {\n  '192.168.50.13': 'Термостат Terneo — контур 1',\n  '192.168.50.27': 'Рекуператор Blauberg',\n  '192.168.50.36': 'Зарядна станція авто — 7,5 кВт',\n  '192.168.50.118': 'Бойлер Midea',\n  '192.168.50.157': 'Термостат Terneo — контур 2',\n  '192.168.50.164': 'SONOFF ZBBridge — Zigbee-шлюз',\n  '192.168.50.176': 'Контролер гаражних воріт — Sonoff/eWeLink',\n  '192.168.50.179': 'Інвертор Deye',\n  '192.168.50.219': 'Трифазний лічильник електроенергії будинку'\n} %}\n{% set mac_names = {\n  'DC:6A:E7:A1:09:F2': 'Xiaomi — модель не визначена',\n  '62:1A:51:F4:B2:EE': 'Samsung Galaxy A24 — Василь'\n} %}\n{% set ns = namespace(found=false) %}\n{% for client in clients if client.devIp is defined %}\n{% set ns.found = true %}\n- **{{ names.get(client.devIp, mac_names.get(client.devMac | upper, client.devName if client.devName not in ['', 'UnKnown'] else 'Невідомий пристрій')) }}**\n  — {% if client.devIp not in ['', 'UnKnown'] %}`{{ client.devIp }}`{% else %}IP не отримано{% endif %} · `{{ client.devMac | upper }}`\n{% endfor %}\n{% if not ns.found %}\nНемає активних клієнтів або повторювач недоступний.\n{% endif %}\n"
+      content: "{% set clients = state_attr('sensor.tenda_repeater_clients', 'onlineList') or [] %}\n\
+        {% set names = {\n  '192.168.50.13': 'Термостат Terneo — контур 1',\n  '192.168.50.27': 'Рекуператор\
+        \ Blauberg',\n  '192.168.50.36': 'Зарядна станція авто — 7,5 кВт',\n  '192.168.50.118': 'Бойлер\
+        \ Midea',\n  '192.168.50.157': 'Термостат Terneo — контур 2',\n  '192.168.50.164': 'SONOFF ZBBridge\
+        \ — Zigbee-шлюз',\n  '192.168.50.176': 'Контролер гаражних воріт — Sonoff/eWeLink',\n  '192.168.50.179':\
+        \ 'Інвертор Deye',\n  '192.168.50.219': 'Трифазний лічильник електроенергії будинку'\n} %}\n{%\
+        \ set mac_names = {\n  'DC:6A:E7:A1:09:F2': 'Xiaomi — модель не визначена',\n  '62:1A:51:F4:B2:EE':\
+        \ 'Samsung Galaxy A24 — Василь'\n} %}\n{% set ns = namespace(found=false) %}\n{% for client in\
+        \ clients if client.devIp is defined %}\n{% set ns.found = true %}\n- **{{ names.get(client.devIp,\
+        \ mac_names.get(client.devMac | upper, client.devName if client.devName not in ['', 'UnKnown']\
+        \ else 'Невідомий пристрій')) }}**\n  — {% if client.devIp not in ['', 'UnKnown'] %}`{{ client.devIp\
+        \ }}`{% else %}IP не отримано{% endif %} · `{{ client.devMac | upper }}`\n{% endfor %}\n{% if\
+        \ not ns.found %}\nНемає активних клієнтів або повторювач недоступний.\n{% endif %}\n"
     - type: history-graph
       title: Сигнал повторювача за 24 години
       hours_to_show: 24
@@ -345,7 +473,10 @@ views:
       title: Можливості повторювача
       grid_options:
         columns: full
-      content: '**Tenda A9 / N300**, лише 2,4 ГГц, паспортна швидкість до **300 Мбіт/с**. Прошивка не віддає фактичну швидкість з''єднання або трафік окремих клієнтів, тому тут показується реальний рівень сигналу аплінка в dBm. Значення ближче до 0 — краще; приблизно −60…−70 dBm зазвичай придатне, але запас невеликий.
+      content: '**Tenda A9 / N300**, лише 2,4 ГГц, паспортна швидкість до **300 Мбіт/с**. Прошивка не
+        віддає фактичну швидкість з''єднання або трафік окремих клієнтів, тому тут показується реальний
+        рівень сигналу аплінка в dBm. Значення ближче до 0 — краще; приблизно −60…−70 dBm зазвичай придатне,
+        але запас невеликий.
 
         ⚠️ На повторювачі зараз не встановлено пароль адміністратора.
 
@@ -404,7 +535,8 @@ views:
 
         {% set b = states(''sensor.sonoff_a4800819f3_battery'') %}
 
-        - **2 поверх — температура/вологість** — {% if t in bad %}🔴 недоступний{% else %}🟢 {{ t }} °C · {{ h }}% · батарея {{ b }}%{% endif %}
+        - **2 поверх — температура/вологість** — {% if t in bad %}🔴 недоступний{% else %}🟢 {{ t }} °C
+        · {{ h }}% · батарея {{ b }}%{% endif %}
 
 
         {% set t = states(''sensor.sonoff_a48005e8ed_temperature'') %}
@@ -413,7 +545,8 @@ views:
 
         {% set b = states(''sensor.sonoff_a48005e8ed_battery'') %}
 
-        - **Температура будинку — 2 поверх** — {% if t in bad %}🔴 недоступний{% else %}🟢 {{ t }} °C · {{ h }}% · батарея {{ b }}%{% endif %}
+        - **Температура будинку — 2 поверх** — {% if t in bad %}🔴 недоступний{% else %}🟢 {{ t }} °C ·
+        {{ h }}% · батарея {{ b }}%{% endif %}
 
 
         {% set t = states(''sensor.sonoff_a48005a66a_temperature'') %}
@@ -422,7 +555,8 @@ views:
 
         {% set b = states(''sensor.sonoff_a48005a66a_battery'') %}
 
-        - **Вулиця — балкон** — {% if t in bad %}🔴 недоступний{% else %}🟢 {{ t }} °C · {{ h }}% · батарея {{ b }}%{% endif %}
+        - **Вулиця — балкон** — {% if t in bad %}🔴 недоступний{% else %}🟢 {{ t }} °C · {{ h }}% · батарея
+        {{ b }}%{% endif %}
 
 
         {% set t = states(''sensor.sonoff_a48001c18f_temperature'') %}
@@ -431,24 +565,28 @@ views:
 
         {% set b = states(''sensor.sonoff_a48001c18f_battery'') %}
 
-        - **Гостьова — температура/вологість** — {% if t in bad %}🔴 недоступний{% else %}🟢 {{ t }} °C · {{ h }}% · батарея {{ b }}%{% endif %}
+        - **Гостьова — температура/вологість** — {% if t in bad %}🔴 недоступний{% else %}🟢 {{ t }} °C
+        · {{ h }}% · батарея {{ b }}%{% endif %}
 
 
         {% set b = states(''sensor.sonoff_a48001bcf2_battery'') %}
 
-        - **Гаражні ворота — датчик 1** — {% if b in bad %}🔴 недоступний{% else %}🟢 на зв''язку · батарея {{ b }}%{% endif %}
+        - **Гаражні ворота — датчик 1** — {% if b in bad %}🔴 недоступний{% else %}🟢 на зв''язку · батарея
+        {{ b }}%{% endif %}
 
 
         {% set b = states(''sensor.sonoff_a48005b691_battery'') %}
 
-        - **Гаражні ворота — датчик 2** — {% if b in bad %}🔴 недоступний{% else %}🟢 на зв''язку · батарея {{ b }}%{% endif %}
+        - **Гаражні ворота — датчик 2** — {% if b in bad %}🔴 недоступний{% else %}🟢 на зв''язку · батарея
+        {{ b }}%{% endif %}
 
 
         {% set motion = states(''binary_sensor.sonoff_a48001bcc7'') %}
 
         {% set b = states(''sensor.sonoff_a48001bcc7_battery'') %}
 
-        - **Датчик руху** — {% if motion == ''on'' %}🟠 виявлено рух · батарея {{ b }}%{% elif motion == ''off'' %}🟢 руху немає · батарея {{ b }}%{% else %}🔴 недоступний{% endif %}
+        - **Датчик руху** — {% if motion == ''on'' %}🟠 виявлено рух · батарея {{ b }}%{% elif motion ==
+        ''off'' %}🟢 руху немає · батарея {{ b }}%{% else %}🔴 недоступний{% endif %}
 
         '
 - title: Клімат
@@ -542,7 +680,12 @@ views:
       text_only: true
       grid_options:
         columns: full
-      content: '{% set ot = state_attr(''weather.forecast_golovna'', ''temperature'') | float(0) %} {% set lt = states(''sensor.sonoff_a48005a66a_temperature'') %} **Інтернет проти нашого датчика.** Met.no показує {{ ot | round(1) }} °C. {% if lt in [''unknown'', ''unavailable''] %} Наш SONOFF на дворі зараз без зв''язку, тому порівняти немає з чим. {% else %} SONOFF на дворі показує {{ lt | float(0) | round(1) }} °C — це на {{ (lt | float(0) - ot) | abs | round(1) }} °C {% if lt | float(0) > ot %}тепліше{% else %}холодніше{% endif %}. {% endif %}'
+      content: '{% set ot = state_attr(''weather.forecast_golovna'', ''temperature'') | float(0) %} {%
+        set lt = states(''sensor.sonoff_a48005a66a_temperature'') %} **Інтернет проти нашого датчика.**
+        Met.no показує {{ ot | round(1) }} °C. {% if lt in [''unknown'', ''unavailable''] %} Наш SONOFF
+        на дворі зараз без зв''язку, тому порівняти немає з чим. {% else %} SONOFF на дворі показує {{
+        lt | float(0) | round(1) }} °C — це на {{ (lt | float(0) - ot) | abs | round(1) }} °C {% if lt
+        | float(0) > ot %}тепліше{% else %}холодніше{% endif %}. {% endif %}'
   - type: grid
     column_span: 2
     cards:
@@ -857,7 +1000,8 @@ views:
       text_only: true
       grid_options:
         columns: full
-      content: Повне керування й облік споживання залишаються на вкладках **Тепла підлога** та **Вентиляція**. Тут — тільки те, що потрібно змінити одразу, коли побачив показник вище.
+      content: Повне керування й облік споживання залишаються на вкладках **Тепла підлога** та **Вентиляція**.
+        Тут — тільки те, що потрібно змінити одразу, коли побачив показник вище.
   - type: grid
     column_span: 2
     cards:
@@ -886,7 +1030,8 @@ views:
       text_only: true
       grid_options:
         columns: full
-      content: Це окремий **Wi-Fi Tuya-датчик** усередині Дому бабусі і дідуся. Зовнішній SONOFF «Темп. Вулиця. Балкон.» фізично стоїть на дворі й показаний у блоці «Надворі зараз».
+      content: Це окремий **Wi-Fi Tuya-датчик** усередині Дому бабусі і дідуся. Зовнішній SONOFF «Темп.
+        Вулиця. Балкон.» фізично стоїть на дворі й показаний у блоці «Надворі зараз».
     - type: custom:mini-graph-card
       name: Температура і вологість
       hours_to_show: 24
@@ -935,7 +1080,8 @@ views:
       text_only: true
       grid_options:
         columns: full
-      content: Зелена зона до 800 ppm — повітря свіже. Жовта 800–1200 ppm — варто провітрити. Червона понад 1200 ppm — задушливо, працездатність падає. Датчик CO₂ є лише в PRANA у спальні батьків.
+      content: Зелена зона до 800 ppm — повітря свіже. Жовта 800–1200 ppm — варто провітрити. Червона
+        понад 1200 ppm — задушливо, працездатність падає. Датчик CO₂ є лише в PRANA у спальні батьків.
   - type: grid
     column_span: 2
     cards:
@@ -983,7 +1129,10 @@ views:
       text_only: true
       grid_options:
         columns: full
-      content: Приглушений сірий колір і напис «Недоступно» означають, що датчик не на зв'язку — це не нуль і не нормальний показник. У кімнатах хлопців та Олесі Blauberg передає лише вологість, у **великому будинку** температурних датчиків ще немає. Відсутні показники не підміняються даними з інших кімнат.
+      content: Приглушений сірий колір і напис «Недоступно» означають, що датчик не на зв'язку — це не
+        нуль і не нормальний показник. У кімнатах хлопців та Олесі Blauberg передає лише вологість, у
+        **великому будинку** температурних датчиків ще немає. Відсутні показники не підміняються даними
+        з інших кімнат.
 - title: Інвертор Deye
   path: deye-inverter
   icon: mdi:solar-power-variant
@@ -1001,7 +1150,19 @@ views:
     - type: markdown
       grid_options:
         columns: full
-      content: "{% set missing = ['unknown', 'unavailable', 'none', ''] %}\n{% set connected = is_state('binary_sensor.inverter_connection', 'on') %}\n{% set state = states('sensor.inverter_device_state') %}\n{% set alarm = states('sensor.inverter_device_alarm') %}\n{% set fault = states('sensor.inverter_device_fault') %}\n{% if not connected or state in missing %}\n# \U0001F534 ІНВЕРТОР НЕ ВІДПОВІДАЄ\n\nПеревірте мережеве підключення Deye `192.168.50.179` та живлення пристрою.\n{% elif alarm != 'OK' or fault != 'OK'\n      or is_state('binary_sensor.inverter_battery_alarm', 'on')\n      or is_state('binary_sensor.inverter_battery_fault', 'on') %}\n# \U0001F534 ПОТРІБНА УВАГА\n\n**Стан:** {{ state }} · **аварія:** {{ alarm }} · **несправність:** {{ fault }}\n{% else %}\n# \U0001F7E2 DEYE ПРАЦЮЄ НОРМАЛЬНО\n\n**Навантаження:** {{ (states('sensor.inverter_load_power') | float(0) / 1000) | round(2) }} кВт ·\n**мережа:** {{ (states('sensor.inverter_grid_power') | float(0) / 1000) | round(2) }} кВт ·\n**акумулятор:** {{ states('sensor.inverter_battery') }}%\n{% endif %}\n\nЗв'язок: **{{ 'є' if connected else 'немає' }}** · оновлення кожні\n{{ states('sensor.inverter_update_interval') | float(0) | round(1) }} с ·\nтемпература {{ states('sensor.inverter_temperature') }} °C.\n\n[Відкрити детальну панель «Потужність»](/power-dashboard/inverter)\n"
+      content: "{% set missing = ['unknown', 'unavailable', 'none', ''] %}\n{% set connected = is_state('binary_sensor.inverter_connection',\
+        \ 'on') %}\n{% set state = states('sensor.inverter_device_state') %}\n{% set alarm = states('sensor.inverter_device_alarm')\
+        \ %}\n{% set fault = states('sensor.inverter_device_fault') %}\n{% if not connected or state in\
+        \ missing %}\n# \U0001F534 ІНВЕРТОР НЕ ВІДПОВІДАЄ\n\nПеревірте мережеве підключення Deye `192.168.50.179`\
+        \ та живлення пристрою.\n{% elif alarm != 'OK' or fault != 'OK'\n      or is_state('binary_sensor.inverter_battery_alarm',\
+        \ 'on')\n      or is_state('binary_sensor.inverter_battery_fault', 'on') %}\n# \U0001F534 ПОТРІБНА\
+        \ УВАГА\n\n**Стан:** {{ state }} · **аварія:** {{ alarm }} · **несправність:** {{ fault }}\n{%\
+        \ else %}\n# \U0001F7E2 DEYE ПРАЦЮЄ НОРМАЛЬНО\n\n**Навантаження:** {{ (states('sensor.inverter_load_power')\
+        \ | float(0) / 1000) | round(2) }} кВт ·\n**мережа:** {{ (states('sensor.inverter_grid_power')\
+        \ | float(0) / 1000) | round(2) }} кВт ·\n**акумулятор:** {{ states('sensor.inverter_battery')\
+        \ }}%\n{% endif %}\n\nЗв'язок: **{{ 'є' if connected else 'немає' }}** · оновлення кожні\n{{ states('sensor.inverter_update_interval')\
+        \ | float(0) | round(1) }} с ·\nтемпература {{ states('sensor.inverter_temperature') }} °C.\n\n\
+        [Відкрити детальну панель «Потужність»](/power-dashboard/inverter)\n"
     - type: custom:sunsynk-power-flow-card
       cardstyle: lite
       panel_mode: false
@@ -1232,7 +1393,8 @@ views:
 
         **Розклад Time of Use:** {{ states(''select.inverter_time_of_use'') }}<br>
 
-        **Заряджання від мережі:** {{ ''увімкнене'' if is_state(''switch.inverter_battery_grid_charging'', ''on'') else ''вимкнене'' }}
+        **Заряджання від мережі:** {{ ''увімкнене'' if is_state(''switch.inverter_battery_grid_charging'',
+        ''on'') else ''вимкнене'' }}
 
 
         Ця вкладка призначена для безпечного спостереження. Кнопки вимкнення,
@@ -1322,7 +1484,12 @@ views:
       title: Як рахується
       grid_options:
         columns: full
-      content: 'Бойлер не має вбудованого лічильника енергії, тому споживання оцінюється. Апарат повідомляє прапорець `heating` (тен працює) і поле `heating_power`, яке дорівнює 2200 Вт лише коли увімкнений верхній тен; коли гріє лише нижній, воно дорівнює нулю. Тому формула бере `heating_power`, а якщо той нульовий при активному нагріві - підставляє 800 Вт. Обидві цифри звірені зі стрибком загального лічильника будинку: вимкнення верхнього тена давало -2.18 і -1.92 кВт, нижнього - близько -0.75 кВт. Похибка очікується в межах 10-15 %.
+      content: 'Бойлер не має вбудованого лічильника енергії, тому споживання оцінюється. Апарат повідомляє
+        прапорець `heating` (тен працює) і поле `heating_power`, яке дорівнює 2200 Вт лише коли увімкнений
+        верхній тен; коли гріє лише нижній, воно дорівнює нулю. Тому формула бере `heating_power`, а якщо
+        той нульовий при активному нагріві - підставляє 800 Вт. Обидві цифри звірені зі стрибком загального
+        лічильника будинку: вимкнення верхнього тена давало -2.18 і -1.92 кВт, нижнього - близько -0.75
+        кВт. Похибка очікується в межах 10-15 %.
 
         '
 - title: Тепла підлога
@@ -1436,18 +1603,19 @@ views:
       title: Як рахується
       grid_options:
         columns: full
-      content: 'На відміну від бойлера, тут нічого оцінювати не треба - термостат Terneo сам віддає `heating_energy` у кВт-год. Але це теж не вимір: всередині немає лічильника, і термостат рахує енергію з часу замикання реле, помноженого на задану потужність контуру. Якщо реальна потужність кабелю відрізняється від тієї, що прошита в термостаті, цифра поїде пропорційно.
+      content: 'На відміну від бойлера, тут нічого оцінювати не треба - термостат Terneo сам віддає `heating_energy`
+        у кВт-год. Але це теж не вимір: всередині немає лічильника, і термостат рахує енергію з часу замикання
+        реле, помноженого на задану потужність контуру. Якщо реальна потужність кабелю відрізняється від
+        тієї, що прошита в термостаті, цифра поїде пропорційно.
 
-        Контур 2 фізично не ввімкнений, тому всі його сутності показують `unavailable`. Ніяких дій для нього робити не треба - він уже доданий і в цей дашборд, і в Energy-дашборд, і почне рахувати сам, щойно на нього подадуть живлення.
+        Контур 2 фізично не ввімкнений, тому всі його сутності показують `unavailable`. Ніяких дій для
+        нього робити не треба - він уже доданий і в цей дашборд, і в Energy-дашборд, і почне рахувати
+        сам, щойно на нього подадуть живлення.
 
         '
 - title: Камера і рух
   path: motion
   icon: mdi:cctv
-  # panel: true renders one card across the whole page, which is the only way
-  # to get the gallery wider than a masonry column. Everything therefore lives
-  # in one vertical-stack. Do not convert this to type: sections - that grid
-  # paints one card out of four on this frontend build.
   panel: true
   cards:
   - type: vertical-stack
@@ -1500,10 +1668,16 @@ views:
       content: '### {{ states(''input_text.poliv_ostannie_rishennia'') }}
 
 
-        {% set lt = state_attr(''automation.poliv_rozklad_za_chasom_i_dniami_tizhnia'', ''last_triggered'') %} Останній розгляд розкладу: {{ (lt | as_datetime | as_local).strftime(''%d.%m.%Y о %H:%M'') if lt else ''ще не було'' }}.
+        {% set lt = state_attr(''automation.poliv_rozklad_za_chasom_i_dniami_tizhnia'', ''last_triggered'')
+        %} Останній розгляд розкладу: {{ (lt | as_datetime | as_local).strftime(''%d.%m.%Y о %H:%M'')
+        if lt else ''ще не було'' }}.
 
 
-        Розумний полив зараз просить: зона 1 — {{ (states(''sensor.smart_irrigation_zona1'') | float(0) / 60) | round(0) }} хв, зона 2 — {{ (states(''sensor.smart_irrigation_zona2'') | float(0) / 60) | round(0) }} хв. Баланс води зони 1: {{ states(''sensor.smart_irrigation_zona1_bucket'') }} мм ({{ ''дефіцит, ґрунт сухий'' if states(''sensor.smart_irrigation_zona1_bucket'') | float(0) < 0 else ''запас після дощу або поливу'' }}).'
+        Розумний полив зараз просить: зона 1 — {{ (states(''sensor.smart_irrigation_zona1'') | float(0)
+        / 60) | round(0) }} хв, зона 2 — {{ (states(''sensor.smart_irrigation_zona2'') | float(0) / 60)
+        | round(0) }} хв. Баланс води зони 1: {{ states(''sensor.smart_irrigation_zona1_bucket'') }} мм
+        ({{ ''дефіцит, ґрунт сухий'' if states(''sensor.smart_irrigation_zona1_bucket'') | float(0) <
+        0 else ''запас після дощу або поливу'' }}).'
     - type: tile
       entity: input_boolean.poliv_propustyty_zavtra
       name: Пропустити завтрашній ранок
@@ -1518,7 +1692,9 @@ views:
       content: '### Як приймається рішення
 
 
-        Питання про дощ ставиться **звечора о 21:00**, коли ти ще не спиш, а не о пів на п''яту ранку. Увечері система дивиться прогноз саме на завтрашній ранок (з 03:00 до 09:00) і, якщо очікує дощ, питає, чи пропустити полив.
+        Питання про дощ ставиться **звечора о 21:00**, коли ти ще не спиш, а не о пів на п''яту ранку.
+        Увечері система дивиться прогноз саме на завтрашній ранок (з 03:00 до 09:00) і, якщо очікує дощ,
+        питає, чи пропустити полив.
 
 
         - Натиснув «Пропустити» → вмикається прапорець нижче, і вранці поливу не буде.
@@ -1526,22 +1702,31 @@ views:
         - Натиснув «Поливати» або нічого не натиснув → полив іде як звичайно.
 
 
-        **Мовчання означає «поливати».** Це навмисно: якщо ввечері ніхто не відповів, або Home Assistant був вимкнений, або прогноз не справдився — полив не має тихо зникнути.
+        **Мовчання означає «поливати».** Це навмисно: якщо ввечері ніхто не відповів, або Home Assistant
+        був вимкнений, або прогноз не справдився — полив не має тихо зникнути.
 
 
-        Вранці полив скасовує лише дві речі: увімкнений прапорець «пропустити завтрашній ранок» і **фактичний дощ у момент старту**. Прогноз уранці вже нічого не вирішує, і ніяких 30 хвилин очікування відповіді немає.
+        Вранці полив скасовує лише дві речі: увімкнений прапорець «пропустити завтрашній ранок» і **фактичний
+        дощ у момент старту**. Прогноз уранці вже нічого не вирішує, і ніяких 30 хвилин очікування відповіді
+        немає.
 
 
         ### Два різні механізми, які легко переплутати
 
 
-        **Скільки поливати — Розумний полив.** Щодня о 19:55 перераховує баланс води в ґрунті: випарувалося мінус випало дощу, і з цього виводить тривалість. Він **ніколи не скасовує** полив — максимум видає нуль. Дощ, який іде просто зараз, він побачить аж на перерахунку о 19:55.
+        **Скільки поливати — Розумний полив.** Щодня о 19:55 перераховує баланс води в ґрунті: випарувалося
+        мінус випало дощу, і з цього виводить тривалість. Він **ніколи не скасовує** полив — максимум
+        видає нуль. Дощ, який іде просто зараз, він побачить аж на перерахунку о 19:55.
 
 
-        **Чи поливати взагалі — автоматизація розкладу.** За 1 годину 15 хвилин до сходу сонця запитує погодинний прогноз Met.no і перевіряє дві речі: чи йде дощ у цю хвилину і чи прогнозують понад 0,2 мм опадів у найближчі 6 годин.
+        **Чи поливати взагалі — автоматизація розкладу.** За 1 годину 15 хвилин до сходу сонця запитує
+        погодинний прогноз Met.no і перевіряє дві речі: чи йде дощ у цю хвилину і чи прогнозують понад
+        0,2 мм опадів у найближчі 6 годин.
 
 
-        **Дощ визначається за прогнозом Met.no з інтернету, а не за датчиком у дворі** — власного датчика дощу немає. Тому «дощу не було, а полив скасовано» — очікувана ситуація: скасовує прогноз, а не факт.'
+        **Дощ визначається за прогнозом Met.no з інтернету, а не за датчиком у дворі** — власного датчика
+        дощу немає. Тому «дощу не було, а полив скасовано» — очікувана ситуація: скасовує прогноз, а не
+        факт.'
   - type: grid
     column_span: 2
     cards:
@@ -1552,7 +1737,10 @@ views:
     - type: markdown
       grid_options:
         columns: full
-      content: "**Автоматичний старт:** за 1 год 15 хв до сходу сонця, щоб полив закінчився приблизно на схід.\n**Наступний запуск:** {% set nr = state_attr('sun.sun', 'next_rising') %} {{ (as_timestamp(nr) - 4500) | timestamp_custom('%d.%m.%Y %H:%M', true)\n   if nr else 'дані про схід сонця ще завантажуються' }}"
+      content: "**Автоматичний старт:** за 1 год 15 хв до сходу сонця, щоб полив закінчився приблизно\
+        \ на схід.\n**Наступний запуск:** {% set nr = state_attr('sun.sun', 'next_rising') %} {{ (as_timestamp(nr)\
+        \ - 4500) | timestamp_custom('%d.%m.%Y %H:%M', true)\n   if nr else 'дані про схід сонця ще завантажуються'\
+        \ }}"
     - type: entities
       grid_options:
         columns: full
@@ -1578,13 +1766,15 @@ views:
       - entity: input_boolean.poliv_zona_1_vkl
         name: Зона 1
       - entity: input_number.poliv_zona_1_hvylyn
-        name:     хвилин
+        name: '    хвилин, якщо розрахунку немає'
       - entity: input_boolean.poliv_zona_2_vkl
         name: Зона 2
       - entity: input_number.poliv_zona_2_hvylyn
-        name:     хвилин
-      - entity: input_number.poliv_zona_3_hvylyn
-        name:     хвилин
+        name: '    хвилин, якщо розрахунку немає'
+      - entity: input_boolean.poliv_zona_5_vkl
+        name: Зона 5
+      - entity: input_number.poliv_zona_5_hvylyn
+        name: '    хвилин, якщо розрахунку немає'
     - type: entities
       title: Автоматизація розкладу
       grid_options:
@@ -1671,7 +1861,7 @@ views:
   - type: grid
     cards:
     - type: heading
-      heading: Зона 1
+      heading: Зона 1 · 200 м²
       grid_options:
         columns: full
     - type: tile
@@ -1686,21 +1876,23 @@ views:
       grid_options:
         columns: full
       entities:
+      - entity: switch.avtopoliv_kontroler_avtopoliv_klapan_1
+        name: Клапан
       - entity: binary_sensor.irrigation_unlimited_c1_z1
-        name: Стан поливу зони 1
+        name: Стан поливу
       - entity: timer.poliv_zoni_1
         name: Залишилось поливати
+      - entity: sensor.smart_irrigation_zona1
+        name: Розрахунок Розумного поливу
     - type: markdown
       grid_options:
         columns: full
-      content: '**Фізичний клапан:** {{ ''🟢 відкритий'' if is_state(''switch.avtopoliv_kontroler_avtopoliv_klapan_1'', ''on'') else (''🔴 закритий'' if is_state(''switch.avtopoliv_kontroler_avtopoliv_klapan_1'', ''off'') else ''🟡 зв’язок відсутній'') }}
+      content: '**Площа:** 200 м² · **полив за розкладом:** тривалість рахує Розумний полив, нуль означає,
+        що поливати не треба.
 
 
-        Для ручного поливу задайте тривалість вище та натисніть **«Ручний старт»**.
-
-        Клапаном і насосом безпечно керує Irrigation Unlimited.
-
-        '
+        Для ручного поливу задайте тривалість вище і натисніть **«Ручний старт»**. Клапаном і насосом
+        керує Irrigation Unlimited: клапан відкривається першим, насос зупиняється першим.'
     - type: button
       name: Ручний старт
       icon: mdi:play
@@ -1720,7 +1912,7 @@ views:
   - type: grid
     cards:
     - type: heading
-      heading: Зона 2
+      heading: Зона 2 · 200 м²
       grid_options:
         columns: full
     - type: tile
@@ -1735,21 +1927,23 @@ views:
       grid_options:
         columns: full
       entities:
+      - entity: switch.avtopoliv_kontroler_avtopoliv_klapan_2
+        name: Клапан
       - entity: binary_sensor.irrigation_unlimited_c1_z2
-        name: Стан поливу зони 2
+        name: Стан поливу
       - entity: timer.poliv_zoni_2
         name: Залишилось поливати
+      - entity: sensor.smart_irrigation_zona2
+        name: Розрахунок Розумного поливу
     - type: markdown
       grid_options:
         columns: full
-      content: '**Фізичний клапан:** {{ ''🟢 відкритий'' if is_state(''switch.avtopoliv_kontroler_avtopoliv_klapan_2'', ''on'') else (''🔴 закритий'' if is_state(''switch.avtopoliv_kontroler_avtopoliv_klapan_2'', ''off'') else ''🟡 зв’язок відсутній'') }}
+      content: '**Площа:** 200 м² · **полив за розкладом:** тривалість рахує Розумний полив, нуль означає,
+        що поливати не треба.
 
 
-        Для ручного поливу задайте тривалість вище та натисніть **«Ручний старт»**.
-
-        Клапаном і насосом безпечно керує Irrigation Unlimited.
-
-        '
+        Для ручного поливу задайте тривалість вище і натисніть **«Ручний старт»**. Клапаном і насосом
+        керує Irrigation Unlimited: клапан відкривається першим, насос зупиняється першим.'
     - type: button
       name: Ручний старт
       icon: mdi:play
@@ -1787,11 +1981,19 @@ views:
       - entity: switch.avtopoliv_kontroler_avtopoliv_klapan_3
         name: Клапан
       - entity: binary_sensor.irrigation_unlimited_c1_z3
-        name: Стан поливу зони 3
+        name: Стан поливу
       - entity: timer.poliv_zoni_3
         name: Залишилось поливати
+    - type: markdown
+      grid_options:
+        columns: full
+      content: '**Площа:** не заміряна · **за розкладом не поливається** — тільки вручну звідси.
+
+
+        Для ручного поливу задайте тривалість вище і натисніть **«Ручний старт»**. Клапаном і насосом
+        керує Irrigation Unlimited: клапан відкривається першим, насос зупиняється першим.'
     - type: button
-      name: Старт
+      name: Ручний старт
       icon: mdi:play
       grid_options:
         columns: 6
@@ -1826,12 +2028,18 @@ views:
       entities:
       - entity: switch.avtopoliv_kontroler_avtopoliv_klapan_4
         name: Клапан
-      - entity: script.poliv_zona_4
-        name: Йде полив
       - entity: timer.poliv_zoni_4
         name: Залишилось поливати
+    - type: markdown
+      grid_options:
+        columns: full
+      content: '**Площа:** не заміряна · **за розкладом не поливається** — тільки вручну звідси.
+
+
+        Для ручного поливу задайте тривалість вище і натисніть **«Ручний старт»**. Клапаном і насосом
+        керує Irrigation Unlimited: клапан відкривається першим, насос зупиняється першим.'
     - type: button
-      name: Старт
+      name: Ручний старт
       icon: mdi:play
       grid_options:
         columns: 6
@@ -1849,7 +2057,7 @@ views:
   - type: grid
     cards:
     - type: heading
-      heading: Зона 5
+      heading: Зона 5 · 100 м²
       grid_options:
         columns: full
     - type: tile
@@ -1866,12 +2074,23 @@ views:
       entities:
       - entity: switch.avtopoliv_kontroler_avtopoliv_klapan_5
         name: Клапан
-      - entity: script.poliv_zona_5
-        name: Йде полив
+      - entity: binary_sensor.irrigation_unlimited_c1_z4
+        name: Стан поливу
       - entity: timer.poliv_zoni_5
         name: Залишилось поливати
+      - entity: sensor.smart_irrigation_zona5
+        name: Розрахунок Розумного поливу
+    - type: markdown
+      grid_options:
+        columns: full
+      content: '**Площа:** 100 м² · **полив за розкладом:** тривалість рахує Розумний полив, нуль означає,
+        що поливати не треба.
+
+
+        Для ручного поливу задайте тривалість вище і натисніть **«Ручний старт»**. Клапаном і насосом
+        керує Irrigation Unlimited: клапан відкривається першим, насос зупиняється першим.'
     - type: button
-      name: Старт
+      name: Ручний старт
       icon: mdi:play
       grid_options:
         columns: 6
@@ -1959,11 +2178,18 @@ views:
       title: Як рахується
       grid_options:
         columns: full
-      content: 'Реле Tuya Mini switch K601, яким керується насос, лічильника енергії не має - воно вміє лише вмикати і вимикати. Тому споживання рахується як час роботи реле, помножений на потужність із поля вище.
+      content: 'Реле Tuya Mini switch K601, яким керується насос, лічильника енергії не має - воно вміє
+        лише вмикати і вимикати. Тому споживання рахується як час роботи реле, помножений на потужність
+        із поля вище.
 
-        Потужність 1100 Вт виміряна 2026-08-03 по стрибку загального лічильника будинку: контрольований запуск дав 994 Вт, два реальні пуски о 19:11 і 19:13 - 1119 і 1426 Вт. Взято медіану. Якщо захочеш уточнити - зміни значення у полі вище, графіки перерахуються від моменту зміни.
+        Потужність 1100 Вт виміряна 2026-08-03 по стрибку загального лічильника будинку: контрольований
+        запуск дав 994 Вт, два реальні пуски о 19:11 і 19:13 - 1119 і 1426 Вт. Взято медіану. Якщо захочеш
+        уточнити - зміни значення у полі вище, графіки перерахуються від моменту зміни.
 
-        Насос присутній у системі двічі - через хмару Tuya і локально (LocalTuya). Головною є ЛОКАЛЬНА сутність: поки вона віддає on або off, рішення приймається лише за нею. Хмарна працює резервом і враховується тільки тоді, коли локальна недоступна. Якщо мовчать обидві - потужність вважається нульовою, щоб не нараховувати вигадане споживання.
+        Насос присутній у системі двічі - через хмару Tuya і локально (LocalTuya). Головною є ЛОКАЛЬНА
+        сутність: поки вона віддає on або off, рішення приймається лише за нею. Хмарна працює резервом
+        і враховується тільки тоді, коли локальна недоступна. Якщо мовчать обидві - потужність вважається
+        нульовою, щоб не нараховувати вигадане споживання.
 
         '
 - title: Заряджання авто
@@ -1983,9 +2209,15 @@ views:
     - type: markdown
       grid_options:
         columns: full
-      content: '{% set power = states(''sensor.zariadka_7_5kvt_device_kw'') | float(0) %} {% set voltage = states(''sensor.zariadka_7_5kvt_voltage_a'') | float(0) %} {% set device_state = states(''sensor.zariadka_7_5kvt_device_state'') | lower %} {% if is_state(''binary_sensor.zariadka_7_5kvt_fault'', ''on'') %} # 🔴 НЕСПРАВНІСТЬ ЗАРЯДНОЇ СТАНЦІЇ {% elif power > 0.1 or device_state in [''charing'', ''charging''] %} # 🟢 ЗАРЯДЖАННЯ ТРИВАЄ {% elif is_state(''switch.zariadka_7_5kvt'', ''off'') %} # ⚪ ЗАРЯДНУ СТАНЦІЮ ВИМКНЕНО {% else %} # 🟡 ПІДКЛЮЧЕНО, ОЧІКУЄ АВТОМОБІЛЬ {% endif %}
+      content: '{% set power = states(''sensor.zariadka_7_5kvt_device_kw'') | float(0) %} {% set voltage
+        = states(''sensor.zariadka_7_5kvt_voltage_a'') | float(0) %} {% set device_state = states(''sensor.zariadka_7_5kvt_device_state'')
+        | lower %} {% if is_state(''binary_sensor.zariadka_7_5kvt_fault'', ''on'') %} # 🔴 НЕСПРАВНІСТЬ
+        ЗАРЯДНОЇ СТАНЦІЇ {% elif power > 0.1 or device_state in [''charing'', ''charging''] %} # 🟢 ЗАРЯДЖАННЯ
+        ТРИВАЄ {% elif is_state(''switch.zariadka_7_5kvt'', ''off'') %} # ⚪ ЗАРЯДНУ СТАНЦІЮ ВИМКНЕНО {%
+        else %} # 🟡 ПІДКЛЮЧЕНО, ОЧІКУЄ АВТОМОБІЛЬ {% endif %}
 
-        **Зараз:** {{ power | round(2) }} кВт · {{ voltage | round(1) }} В {% if power > 0 and voltage > 0 %} · приблизно {{ (power * 1000 / voltage) | round(1) }} А{% endif %}
+        **Зараз:** {{ power | round(2) }} кВт · {{ voltage | round(1) }} В {% if power > 0 and voltage
+        > 0 %} · приблизно {{ (power * 1000 / voltage) | round(1) }} А{% endif %}
 
         **Температура станції:** {{ states(''sensor.zariadka_7_5kvt_device_temperature'') }} °C'
     - type: tile
@@ -2038,7 +2270,9 @@ views:
       title: Безпечне керування
       grid_options:
         columns: full
-      content: Коротке натискання лише відкриває деталі. Щоб увімкнути або вимкнути станцію, **утримуйте** плитку «Живлення зарядної станції» і підтвердьте дію. Так заряджання не зупиниться від випадкового дотику.
+      content: Коротке натискання лише відкриває деталі. Щоб увімкнути або вимкнути станцію, **утримуйте**
+        плитку «Живлення зарядної станції» і підтвердьте дію. Так заряджання не зупиниться від випадкового
+        дотику.
   - type: grid
     cards:
     - type: heading
@@ -2093,9 +2327,13 @@ views:
       title: Як рахується електроенергія
       grid_options:
         columns: full
-      content: '`sensor.zariadka_avto_spozhito` інтегрує фактичну потужність `sensor.zariadka_7_5kvt_device_kw` у часі. Стовпчики показують приріст цього накопичувального лічильника за кожну добу; графік живлення та потужності показує частоту і тривалість сесій.
+      content: '`sensor.zariadka_avto_spozhito` інтегрує фактичну потужність `sensor.zariadka_7_5kvt_device_kw`
+        у часі. Стовпчики показують приріст цього накопичувального лічильника за кожну добу; графік живлення
+        та потужності показує частоту і тривалість сесій.
 
-        Датчик струму самої інтеграції зараз має неправильний масштаб та навіть помилкову одиницю «V», тому на головній картці струм обчислюється як `потужність × 1000 / напруга` і явно позначений як приблизний.'
+        Датчик струму самої інтеграції зараз має неправильний масштаб та навіть помилкову одиницю «V»,
+        тому на головній картці струм обчислюється як `потужність × 1000 / напруга` і явно позначений
+        як приблизний.'
   - type: grid
     cards:
     - type: heading
@@ -2140,14 +2378,19 @@ views:
       title: Що означають налаштування
       grid_options:
         columns: full
-      content: '**Максимальний струм** задає межу навантаження; для цієї однофазної станції пристрій повідомляє апаратну межу 32 А. **Відкладений старт** — через скільки годин почати заряджання. **Обмеження тривалості** — скільки годин дозволено заряджати після старту; нуль означає, що таймер не задано.
+      content: '**Максимальний струм** задає межу навантаження; для цієї однофазної станції пристрій повідомляє
+        апаратну межу 32 А. **Відкладений старт** — через скільки годин почати заряджання. **Обмеження
+        тривалості** — скільки годин дозволено заряджати після старту; нуль означає, що таймер не задано.
 
-        Зміни застосовуються безпосередньо до зарядної станції. Не змінюйте їх посеред активної сесії без потреби.'
+        Зміни застосовуються безпосередньо до зарядної станції. Не змінюйте їх посеред активної сесії
+        без потреби.'
     - type: markdown
       title: Майбутні зарядні станції
       grid_options:
         columns: full
-      content: Ця колонка свідомо названа «Станція 1». Кожну наступну зарядну станцію буде додано окремою колонкою з власними станом, лічильником, графіками та налаштуваннями — без змішування статистики між автомобілями або станціями.
+      content: Ця колонка свідомо названа «Станція 1». Кожну наступну зарядну станцію буде додано окремою
+        колонкою з власними станом, лічильником, графіками та налаштуваннями — без змішування статистики
+        між автомобілями або станціями.
 - title: Вентиляція
   path: ventilation
   icon: mdi:hvac
@@ -2337,7 +2580,9 @@ views:
     - type: markdown
       grid_options:
         columns: full
-      content: 'Локальна адреса: `192.168.50.27`. Рекуператор встановлений у **кімнаті хлопців**. Скидання попередження фільтра навмисно не винесене на головну картку — його слід натискати лише після обслуговування фільтра.'
+      content: 'Локальна адреса: `192.168.50.27`. Рекуператор встановлений у **кімнаті хлопців**. Скидання
+        попередження фільтра навмисно не винесене на головну картку — його слід натискати лише після обслуговування
+        фільтра.'
   - type: grid
     cards:
     - type: heading
@@ -2411,7 +2656,8 @@ views:
     - type: markdown
       grid_options:
         columns: full
-      content: 'Локальна адреса: `192.168.50.123`. Рекуператор встановлений у **кімнаті Олесі**. Картка дозволяє вмикати рекуператор, задавати швидкість, режим, напрямок потоку та чергування напрямків.'
+      content: 'Локальна адреса: `192.168.50.123`. Рекуператор встановлений у **кімнаті Олесі**. Картка
+        дозволяє вмикати рекуператор, задавати швидкість, режим, напрямок потоку та чергування напрямків.'
   - type: grid
     cards:
     - type: heading
@@ -2422,9 +2668,16 @@ views:
     - type: markdown
       grid_options:
         columns: full
-      content: '**Приплив** подає свіже повітря, **витяжка** видаляє відпрацьоване. Швидкість кожного вентилятора можна змінювати окремо. Режим **«Синхронізувати приплив і витяжку»** зв''язує їхні швидкості. **Автоматичний режим** керує вентиляцією за датчиками PRANA, а **розширений автоматичний режим** використовує посилений алгоритм пристрою. Підігрів і зимовий режим вмикайте за потреби в холодний період.
+      content: '**Приплив** подає свіже повітря, **витяжка** видаляє відпрацьоване. Швидкість кожного
+        вентилятора можна змінювати окремо. Режим **«Синхронізувати приплив і витяжку»** зв''язує їхні
+        швидкості. **Автоматичний режим** керує вентиляцією за датчиками PRANA, а **розширений автоматичний
+        режим** використовує посилений алгоритм пристрою. Підігрів і зимовий режим вмикайте за потреби
+        в холодний період.
 
-        Рекуператори **Blauberg** підключені локально, без хмарного сервісу. На їхніх картках доступні живлення, швидкість, автоматичний, ручний, посилений і нічний режими, напрямок повітря та чергування напрямків. Вологість, оберти, аварійний стан, таймери й версія прошивки відображаються окремо; історія вологості та обертів зберігається у Home Assistant.'
+        Рекуператори **Blauberg** підключені локально, без хмарного сервісу. На їхніх картках доступні
+        живлення, швидкість, автоматичний, ручний, посилений і нічний режими, напрямок повітря та чергування
+        напрямків. Вологість, оберти, аварійний стан, таймери й версія прошивки відображаються окремо;
+        історія вологості та обертів зберігається у Home Assistant.'
 - title: Присутність
   path: presence
   icon: mdi:map-marker-account
@@ -2493,8 +2746,14 @@ views:
       title: Що мапа показує, а що ні
       grid_options:
         columns: full
-      content: 'На мапі видно лише тих, у кого є координати - тобто лише телефони з встановленим застосунком Home Assistant (зараз це один SM-S918B). Решта телефонів визначаються роутером і мають лише два стани: вдома або ні. Роутер бачить факт підключення до Wi-Fi, а не місце, тому поставити їх на мапу неможливо в принципі.
+      content: 'На мапі видно лише тих, у кого є координати - тобто лише телефони з встановленим застосунком
+        Home Assistant (зараз це один SM-S918B). Решта телефонів визначаються роутером і мають лише два
+        стани: вдома або ні. Роутер бачить факт підключення до Wi-Fi, а не місце, тому поставити їх на
+        мапу неможливо в принципі.
 
-        **ASUS RT-AX55** (`192.168.50.1`) — основний роутер і DHCP-сервер мережі **«Отаке»**. **Tenda AC10** (`192.168.50.2`) працює точкою доступу **«Промінь»**, а **Tenda A9** (`192.168.50.102`) повторює «Отаке». Це одна підмережа `192.168.50.0/24`, тому присутність людини має враховувати телефон незалежно від конкретної точки Wi-Fi.
+        **ASUS RT-AX55** (`192.168.50.1`) — основний роутер і DHCP-сервер мережі **«Отаке»**. **Tenda
+        AC10** (`192.168.50.2`) працює точкою доступу **«Промінь»**, а **Tenda A9** (`192.168.50.102`)
+        повторює «Отаке». Це одна підмережа `192.168.50.0/24`, тому присутність людини має враховувати
+        телефон незалежно від конкретної точки Wi-Fi.
 
         '
