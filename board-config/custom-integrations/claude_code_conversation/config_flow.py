@@ -14,8 +14,10 @@ from homeassistant.helpers.selector import TemplateSelector
 
 from .const import (
     CLAUDE_PATH,
+    CONF_ALLOW_CONTROL,
     CONF_MAX_HISTORY,
     CONF_TIMEOUT,
+    DEFAULT_ALLOW_CONTROL,
     DEFAULT_MAX_HISTORY,
     DEFAULT_MODEL,
     DEFAULT_NAME,
@@ -91,6 +93,12 @@ class ClaudeCodeConversationConfigFlow(
                 vol.Required(CONF_TIMEOUT, default=DEFAULT_TIMEOUT): vol.All(
                     vol.Coerce(int), vol.Range(min=30, max=300)
                 ),
+                # Керування вимкнене за замовчуванням: увімкнення дає агенту
+                # право змінювати стан сутностей, відкритих у Assist. Полив,
+                # насос і зарядка авто до цього переліку не входять навмисно.
+                vol.Required(
+                    CONF_ALLOW_CONTROL, default=DEFAULT_ALLOW_CONTROL
+                ): bool,
             }
         )
         return self.async_show_form(

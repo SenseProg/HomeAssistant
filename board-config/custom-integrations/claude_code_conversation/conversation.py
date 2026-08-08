@@ -14,6 +14,8 @@ from homeassistant.components.recorder import get_instance
 from homeassistant.components.recorder import history as recorder_history
 from homeassistant.const import CONF_MODEL, CONF_PROMPT, MATCH_ALL
 from homeassistant.core import HomeAssistant, State
+from homeassistant.exceptions import HomeAssistantError
+from homeassistant.helpers import llm
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 from homeassistant.util import dt as dt_util
 
@@ -22,8 +24,10 @@ from . import stream_bus
 from .const import (
     CLAUDE_PATH,
     CLAUDE_WORKING_DIRECTORY,
+    CONF_ALLOW_CONTROL,
     CONF_MAX_HISTORY,
     CONF_TIMEOUT,
+    DEFAULT_ALLOW_CONTROL,
     DEFAULT_MAX_HISTORY,
     DEFAULT_MODEL,
     DEFAULT_PROMPT,
@@ -33,6 +37,7 @@ from .const import (
     HISTORY_MAX_CHARS,
     HISTORY_MAX_ENTITIES,
     HISTORY_MAX_LOOKBACK_DAYS,
+    MAX_TOOL_ROUNDS,
 )
 from .history_store import async_append_exchange, async_recent_records
 from .memory_store import (
@@ -42,6 +47,12 @@ from .memory_store import (
     rank_memories,
 )
 from .system_context import async_system_snapshot
+from .tool_protocol import (
+    format_tool_result,
+    looks_like_tool_call,
+    parse_tool_call,
+    tool_instructions,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -490,6 +501,55 @@ class ClaudeCodeConversationEntity(
         self.entry = entry
         self._attr_name = entry.title
         self._attr_unique_id = entry.entry_id
+        if entry.data.get(CONF_ALLOW_CONTROL, DEFAULT_ALLOW_CONTROL):
+            self._attr_supported_features = (
+                conversation.ConversationEntityFeature.CONTROL
+            )
+
+    async def _async_run_round(
+        self,
+        *,
+        model: str,
+        system_prompt: str,
+        prompt: str,
+        timeout: int,
+        conversation_id: str | None,
+        emit,
+    ) -> tuple[str, dict[str, object] | None]:
+        """Run one CLI round, streaming plain text but withholding tool JSON.
+
+        Повертає (видимий_текст, виклик_інструмента). Поки перші символи ще
+        можуть виявитися JSON-обгорткою `{"tool_call"…`, дельти не показуємо:
+        інакше користувач побачив би службовий рядок замість відповіді.
+        """
+        buffer = ""
+        visible_sent = False
+        withholding = True
+        async for piece in _async_claude_stream(
+            model=model,
+            system_prompt=system_prompt,
+            prompt=prompt,
+            timeout=timeout,
+        ):
+            buffer += piece
+            if withholding:
+                if looks_like_tool_call(buffer):
+                    continue
+                withholding = False
+                if buffer:
+                    await emit(buffer)
+                    visible_sent = True
+                continue
+            await emit(piece)
+            visible_sent = True
+
+        call = parse_tool_call(buffer)
+        if call is not None:
+            return "", call
+        if not visible_sent and buffer:
+            # Текст виявився не викликом інструмента лише в кінці генерації.
+            await emit(buffer)
+        return buffer, None
 
     def _memory(self) -> MemoryStore:
         runtime = self.entry.runtime_data
@@ -641,11 +701,14 @@ class ClaudeCodeConversationEntity(
             _LOGGER.exception("Unable to collect read-only board diagnostics")
             system_snapshot = "- Діагностика операційної системи тимчасово недоступна."
 
+        allow_control = settings.get(CONF_ALLOW_CONTROL, DEFAULT_ALLOW_CONTROL)
+        llm_api_id = llm.LLM_API_ASSIST if allow_control else None
+
         answer_parts: list[str] = []
         try:
             await chat_log.async_provide_llm_data(
                 user_input.as_llm_context(DOMAIN),
-                None,
+                llm_api_id,
                 system_prompt,
                 user_input.extra_system_prompt,
             )
@@ -656,6 +719,9 @@ class ClaudeCodeConversationEntity(
                 + "\n\n"
                 + _RUNTIME_SYSTEM_POLICY
             )
+            llm_api = chat_log.llm_api if allow_control else None
+            if llm_api is not None and llm_api.tools:
+                rendered_system_prompt += tool_instructions(list(llm_api.tools))
             transcript = _conversation_transcript(
                 persisted_records,
                 user_text,
@@ -682,26 +748,88 @@ class ClaudeCodeConversationEntity(
                 "Дай відповідь на останнє повідомлення користувача."
             )
 
+            queue: asyncio.Queue[str | None] = asyncio.Queue()
+
+            async def _emit(text: str) -> None:
+                answer_parts.append(text)
+                stream_bus.broadcast(
+                    conversation_id, {"event": "delta", "text": text}
+                )
+                await queue.put(text)
+
+            async def _conversation_turns() -> None:
+                """Run CLI rounds, executing at most MAX_TOOL_ROUNDS tools."""
+                prompt = request
+                try:
+                    for round_index in range(MAX_TOOL_ROUNDS + 1):
+                        _text, call = await self._async_run_round(
+                            model=settings.get(CONF_MODEL, DEFAULT_MODEL),
+                            system_prompt=rendered_system_prompt,
+                            prompt=prompt,
+                            timeout=settings.get(CONF_TIMEOUT, DEFAULT_TIMEOUT),
+                            conversation_id=conversation_id,
+                            emit=_emit,
+                        )
+                        if call is None:
+                            return
+                        if llm_api is None or round_index == MAX_TOOL_ROUNDS:
+                            await _emit(
+                                "Не можу виконати дію: вичерпано ліміт кроків "
+                                "інструментів для одного повідомлення."
+                            )
+                            return
+                        stream_bus.broadcast(
+                            conversation_id,
+                            {"event": "tool", "name": call["name"]},
+                        )
+                        _LOGGER.info(
+                            "Claude requested tool %s with %s",
+                            call["name"],
+                            call["arguments"],
+                        )
+                        tool_input = llm.ToolInput(
+                            tool_name=call["name"],
+                            tool_args=call["arguments"],
+                        )
+                        try:
+                            result = await llm_api.async_call_tool(tool_input)
+                            outcome = format_tool_result(call["name"], result)
+                        except (HomeAssistantError, ValueError, KeyError) as err:
+                            outcome = format_tool_result(
+                                call["name"], None, error=str(err)
+                            )
+                            _LOGGER.warning(
+                                "Claude tool %s failed: %s", call["name"], err
+                            )
+                        prompt = (
+                            f"{prompt}\n\n"
+                            f"Ти попросив інструмент {call['name']}. Ось результат "
+                            "його виконання Home Assistant:\n"
+                            f"{outcome}\n\n"
+                            "Тепер відповідай користувачеві звичайним текстом "
+                            "українською. Не повертай більше JSON."
+                        )
+                finally:
+                    await queue.put(None)
+
             async def _delta_stream():
                 yield {"role": "assistant"}
-                async for piece in _async_claude_stream(
-                    model=settings.get(CONF_MODEL, DEFAULT_MODEL),
-                    system_prompt=rendered_system_prompt,
-                    prompt=request,
-                    timeout=settings.get(CONF_TIMEOUT, DEFAULT_TIMEOUT),
-                ):
-                    answer_parts.append(piece)
-                    stream_bus.broadcast(
-                        conversation_id, {"event": "delta", "text": piece}
-                    )
+                while True:
+                    piece = await queue.get()
+                    if piece is None:
+                        break
                     yield {"content": piece}
 
             async with self.entry.runtime_data.claude_lock:
                 stream_bus.broadcast(conversation_id, {"event": "start"})
-                async for _content in chat_log.async_add_delta_content_stream(
-                    user_input.agent_id, _delta_stream()
-                ):
-                    pass
+                turns = self.hass.async_create_task(_conversation_turns())
+                try:
+                    async for _content in chat_log.async_add_delta_content_stream(
+                        user_input.agent_id, _delta_stream()
+                    ):
+                        pass
+                finally:
+                    await turns
             answer = "".join(answer_parts).strip()
             if not answer:
                 raise RuntimeError("Claude Code returned no text result")
