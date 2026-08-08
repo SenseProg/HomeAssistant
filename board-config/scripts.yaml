@@ -10,7 +10,7 @@ poliv_zona_1:
       duration: '{{ ''%02d:%02d:00'' | format(minutes // 60, minutes % 60) }}'
   - action: localtuya.set_dp
     data:
-      device_id: bf9f1d7fc7c912452cndy4
+      device_id: bfb2143124def1078b549a
       value:
         '1': true
         '13': '{{ seconds }}'
@@ -26,7 +26,7 @@ poliv_zona_1:
     default:
     - action: localtuya.set_dp
       data:
-        device_id: bf9f1d7fc7c912452cndy4
+        device_id: bfb2143124def1078b549a
         value:
           '1': false
           '13': 0
@@ -44,7 +44,7 @@ poliv_zona_1:
       queue: false
   - action: localtuya.set_dp
     data:
-      device_id: bf9f1d7fc7c912452cndy4
+      device_id: bfb2143124def1078b549a
       dp: 13
       value: '{{ seconds }}'
   - action: timer.start
@@ -64,7 +64,7 @@ poliv_zona_2:
       duration: '{{ ''%02d:%02d:00'' | format(minutes // 60, minutes % 60) }}'
   - action: localtuya.set_dp
     data:
-      device_id: bf9f1d7fc7c912452cndy4
+      device_id: bfb2143124def1078b549a
       value:
         '2': true
         '14': '{{ seconds }}'
@@ -80,7 +80,7 @@ poliv_zona_2:
     default:
     - action: localtuya.set_dp
       data:
-        device_id: bf9f1d7fc7c912452cndy4
+        device_id: bfb2143124def1078b549a
         value:
           '2': false
           '14': 0
@@ -98,7 +98,7 @@ poliv_zona_2:
       queue: false
   - action: localtuya.set_dp
     data:
-      device_id: bf9f1d7fc7c912452cndy4
+      device_id: bfb2143124def1078b549a
       dp: 14
       value: '{{ seconds }}'
   - action: timer.start
@@ -118,7 +118,7 @@ poliv_zona_3:
       duration: '{{ ''%02d:%02d:00'' | format(minutes // 60, minutes % 60) }}'
   - action: localtuya.set_dp
     data:
-      device_id: bf9f1d7fc7c912452cndy4
+      device_id: bfb2143124def1078b549a
       value:
         '3': true
         '15': '{{ seconds }}'
@@ -134,7 +134,7 @@ poliv_zona_3:
     default:
     - action: localtuya.set_dp
       data:
-        device_id: bf9f1d7fc7c912452cndy4
+        device_id: bfb2143124def1078b549a
         value:
           '3': false
           '15': 0
@@ -152,7 +152,7 @@ poliv_zona_3:
       queue: false
   - action: localtuya.set_dp
     data:
-      device_id: bf9f1d7fc7c912452cndy4
+      device_id: bfb2143124def1078b549a
       dp: 15
       value: '{{ seconds }}'
   - action: timer.start
@@ -260,7 +260,7 @@ poliv_zona_4:
       duration: '{{ ''%02d:%02d:00'' | format(minutes // 60, minutes % 60) }}'
   - action: localtuya.set_dp
     data:
-      device_id: bf9f1d7fc7c912452cndy4
+      device_id: bfb2143124def1078b549a
       value:
         '4': true
         '16': '{{ seconds }}'
@@ -276,7 +276,7 @@ poliv_zona_4:
     default:
     - action: localtuya.set_dp
       data:
-        device_id: bf9f1d7fc7c912452cndy4
+        device_id: bfb2143124def1078b549a
         value:
           '4': false
           '16': 0
@@ -320,7 +320,7 @@ poliv_zona_5:
       duration: '{{ ''%02d:%02d:00'' | format(minutes // 60, minutes % 60) }}'
   - action: localtuya.set_dp
     data:
-      device_id: bf9f1d7fc7c912452cndy4
+      device_id: bfb2143124def1078b549a
       value:
         '5': true
         '17': '{{ seconds }}'
@@ -336,7 +336,7 @@ poliv_zona_5:
     default:
     - action: localtuya.set_dp
       data:
-        device_id: bf9f1d7fc7c912452cndy4
+        device_id: bfb2143124def1078b549a
         value:
           '5': false
           '17': 0
@@ -354,7 +354,7 @@ poliv_zona_5:
       queue: false
   - action: localtuya.set_dp
     data:
-      device_id: bf9f1d7fc7c912452cndy4
+      device_id: bfb2143124def1078b549a
       dp: 17
       value: '{{ seconds }}'
   - action: timer.start

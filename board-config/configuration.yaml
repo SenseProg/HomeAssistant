@@ -518,4 +518,8 @@ command_line:
       icon: mdi:cctv
 
 shell_command:
+  # Keep the clip folder bounded. It lives on the NAS, but an unbounded
+  # folder is still bad manners - and if the mount ever silently fell away
+  # this would be running against the board's own disk.
+  prune_motion_clips: "cd /userdata/hass/config/media/video/ha-motion && ls -t ruh_*.mp4 2>/dev/null | tail -n +201 | xargs -r rm --"
   update_motion_snapshot: "cd /userdata/hass/config/www/motion && ls -t motion_*.jpg 2>/dev/null | head -1 | xargs -I{} cp {} latest.jpg && ls -t motion_*.jpg 2>/dev/null | tail -n +31 | xargs -r rm --"
