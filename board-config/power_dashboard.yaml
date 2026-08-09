@@ -637,12 +637,17 @@ views:
         {% set ns = namespace(rows=[], total=0.0) %}
         {% for name, ent in items %}{% set v = states(ent) | float(0) %}{% set ns.rows = ns.rows + [(v, name)] %}{% set ns.total = ns.total + v %}{% endfor %}
 
-        | Споживач | Витрачено | Частка |
-        |---|---|---|
-        {% for v, name in ns.rows | sort(reverse=true) -%}
-        | {{ name }} | {{ v | round(2) }} грн | {{ (100 * v / ns.total) | round(0) | int if ns.total > 0 else 0 }} % |
-        {% endfor -%}
-        | **Разом** | **{{ ns.total | round(2) }} грн** | 100 % |
+        {# Смуги малюються кольоровими емодзі-квадратами: Home Assistant вирізає з
+           markdown увесь HTML зі стилями, тому справжні смуги без card-mod
+           неможливі, а символи ░ ▓ рендеряться строкато. #}
+        {% set bars = ['🟧', '🟦', '🟩', '🟪', '🟨', '🟥'] %}
+        {% for v, name in ns.rows | sort(reverse=true) %}
+        {%- set pct = (100 * v / ns.total) if ns.total > 0 else 0 -%}
+        {%- set filled = (pct / 100 * 20) | round(0) | int -%}
+        **{{ name }}** — {{ v | round(2) }} грн · {{ pct | round(0) | int }} %
+        {{ bars[loop.index0 % 6] * filled }}{{ '⬛' * (20 - filled) }}
+        {% endfor %}
+        **Разом — {{ ns.total | round(2) }} грн**
 
         {% set other = states('sensor.vitrati_inshe_bez_lichilnika') | float(0) %}
         {% if ns.total > 0 and (100 * other / ns.total) > 50 %}
@@ -663,7 +668,7 @@ views:
         columns: full
     - type: statistics-graph
       title: Гривні за добу · день проти ночі
-      days_to_show: 30
+      days_to_show: 14
       period: day
       stat_types:
       - change
@@ -677,7 +682,7 @@ views:
         name: Уночі
     - type: statistics-graph
       title: Гривні за добу по пристроях
-      days_to_show: 30
+      days_to_show: 14
       period: day
       stat_types:
       - change
@@ -708,7 +713,7 @@ views:
         columns: full
     - type: statistics-graph
       title: Спожито з мережі
-      days_to_show: 400
+      days_to_show: 366
       period: month
       stat_types:
       - change
@@ -720,7 +725,7 @@ views:
         name: З мережі
     - type: statistics-graph
       title: Гривні · день проти ночі
-      days_to_show: 400
+      days_to_show: 366
       period: month
       stat_types:
       - change
