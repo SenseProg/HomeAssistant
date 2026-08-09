@@ -697,7 +697,14 @@ logger:
     # Temporary 2026-08-05: capture the exact Tuya QR-login error code/message.
     # Remove once the cloud re-authentication succeeds.
     homeassistant.components.tuya: debug
-    tuya_sharing: debug
+    # ЗНИЖЕНО 2026-08-09 після аварії: на рівні debug ця бібліотека пише КОЖЕН
+    # MQTT-пакет хмари Tuya (кілька разів на секунду). За чотири доби лог виріс
+    # до 74 МБ і разом із базою recorder заповнив розділ /userdata на 100%.
+    # Home Assistant після цього не міг навіть створити файл блокування і падав
+    # у циклі рестартів з OSError: [Errno 28] No space left on device.
+    # Діагностика QR-логіну лишається на homeassistant.components.tuya вище -
+    # вона на порядки менш балакуча.
+    tuya_sharing: warning
 
 # --- Per-device energy accounting (added 2026-08-03) ---
 #

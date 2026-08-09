@@ -24,6 +24,37 @@
   the durable log/config path; do not silently raise the cap without checking
   free root space.
 
+### `/userdata` is only 2.5 GB and it has already filled up once
+
+On 2026-08-09 the partition hit 100% and Home Assistant entered a restart loop:
+it could not even create its lock file and died with
+`OSError: [Errno 28] No space left on device`, eleven times in a row. Nothing
+in the UI explains this — the service reports `activating (auto-restart)` and
+the HTTP port never opens.
+
+What consumed the space:
+
+- `home-assistant.log` — **74 MB**, because `tuya_sharing: debug` had been left
+  on since 2026-08-05 and logs every cloud MQTT packet, several per second;
+- `home-assistant_v2.db` **894 MB** plus `home-assistant_v2.db-wal` **571 MB**.
+  The WAL is the trap: it grows separately from the database, and an unclean
+  shutdown leaves it behind.
+
+Recovery sequence that worked, in this order:
+
+1. Truncate the log, keeping a tail for diagnosis
+   (`tail -n 3000 … > /tmp/x && cat /tmp/x > home-assistant.log`), delete
+   `home-assistant.log.1`. Frees tens of MB — enough for the next step.
+2. Stop Home Assistant, then checkpoint the WAL into the database:
+   `python -c "import sqlite3; sqlite3.connect(PATH, timeout=60).execute('PRAGMA wal_checkpoint(TRUNCATE)')"`.
+   This freed 571 MB while the database itself grew only ~20 MB. Never delete
+   `-wal` or `-shm` by hand — that risks the database.
+3. Remove the cause before starting again, otherwise the log refills within days.
+
+Prevention: keep debug logging strictly temporary and prefer a narrower logger
+target; watch `df -h /userdata` whenever the database is near 900 MB, since
+`purge_keep_days: 14` alone does not bound the WAL.
+
 ## Backup meaning and location
 
 In this project, **backup** means a copy stored outside the MB35x8 board on the
