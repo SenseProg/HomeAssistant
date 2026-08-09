@@ -1,317 +1,360 @@
 views:
+# ============================================================================
+# Дашборд «Енергія» — реалізація затверджених макетів (09.08.2026).
+# Вісім вкладок зведено в п'ять: «3 години», «Місяць», «Пів року» і «Вибір
+# періоду» відрізнялися лише глибиною тих самих чотирьох графіків, тому стали
+# однією «Історією» з вибором періоду. «Тариф» переїхав у «Витрати», бо ставки —
+# це вхідні дані для грошей. url_path лишився power-dashboard, а шляхи power,
+# cost та inverter збережені, щоб не ламати наявні посилання.
+# ============================================================================
 - title: Зараз
   path: power
   icon: mdi:flash
-  cards:
-  - type: gauge
-    entity: sensor.zagalne_navantazhennia
-    name: Навантаження зараз
-    unit: kW
-    min: 0
-    max: 15
-    needle: true
-    severity:
-      green: 0
-      yellow: 6
-      red: 11
-  - type: markdown
-    title: Хто бере потужність зараз
-    content: "{% set loads = [\n            ('Зарядка авто','sensor.zariadka_7_5kvt_device_kw',1),\n \
-      \           ('Бойлер','sensor.boiler_potuzhnist',0.001),\n            ('Насос поливу','sensor.nasos_polivu_potuzhnist_zaraz',0.001),\n\
-      \            ('Тепла підлога 1','sensor.terneo_1_current_power',0.001),\n            ('Тепла підлога\
-      \ 2','sensor.terneo_2_current_power',0.001)] %}\n          {% set total = states('sensor.zagalne_navantazhennia')\
-      \ | float(0) %}\n          {% set ns = namespace(rows=[], known=0.0) %}\n          {% for name,\
-      \ ent, k in loads %}\n            {% set v = (states(ent) | float(0)) * k %}\n            {% if\
-      \ v > 0.05 %}{% set ns.rows = ns.rows + [(v, name)] %}\n            {% set ns.known = ns.known +\
-      \ v %}{% endif %}\n          {% endfor %}\n          {% set other = total - ns.known %}\n      \
-      \    {% if other > 0.05 %}{% set ns.rows = ns.rows + [(other,'Інше (не враховане)')] %}{% endif\
-      \ %}\n          {% if ns.rows | length == 0 %}\n          Зараз нічого суттєвого не працює — **{{\
-      \ total | round(2) }} кВт**.\n          {% else %}\n          {% for v, name in ns.rows | sort(reverse=true)\
-      \ %}\n          **{{ name }}** — {{ v | round(2) }} кВт&nbsp;&nbsp;({{ (100 * v / total) | round(0)\
-      \ | int if total > 0 else 0 }}%)\n          {% endfor %}\n          ---\n          Разом **{{ total\
-      \ | round(2) }} кВт** · тариф {{ states('sensor.tarif_elektroenergii_zaraz') }} грн/кВт·год\n  \
-      \        {% endif %}"
-  - type: tile
-    entity: sensor.naibilshii_spozhivach_zaraz
-    name: Найбільший споживач
-  - type: entities
-    title: Миттєві показники (локально, опитування 5 с)
-    entities:
-    - entity: sensor.zagalne_navantazhennia
-      name: Загальна потужність
-    - entity: sensor.zagalnii_strum
-      name: Загальний струм
-    - type: divider
-    - entity: sensor.energy_meter_phase_a_power_2
-      name: Фаза A - потужність
-    - entity: sensor.energy_meter_phase_b_power_2
-      name: Фаза B - потужність
-    - entity: sensor.energy_meter_phase_c_power_2
-      name: Фаза C - потужність
-    - type: divider
-    - entity: sensor.energy_meter_phase_a_voltage_2
-      name: Фаза A - напруга
-    - entity: sensor.energy_meter_phase_b_voltage_2
-      name: Фаза B - напруга
-    - entity: sensor.energy_meter_phase_c_voltage_2
-      name: Фаза C - напруга
-  - type: custom:mini-graph-card
-    name: Потужність за останню годину
-    hours_to_show: 1
-    points_per_hour: 60
-    update_interval: 10
-    line_width: 3
-    animate: true
-    show:
-      labels: true
-      points: false
-    entities:
-    - entity: sensor.zagalne_navantazhennia
-      name: Разом
-  - type: statistics-graph
-    title: Потужність - 5-хвилинні зрізи за добу
-    days_to_show: 1
-    period: 5minute
-    stat_types:
-    - mean
-    - max
-    chart_type: line
-    entities:
-    - sensor.zagalne_navantazhennia
-- title: 3 години
-  path: last-3h
-  icon: mdi:clock-time-three-outline
-  cards:
-  - type: custom:mini-graph-card
-    name: Загальна потужність за 3 години
-    hours_to_show: 3
-    points_per_hour: 20
-    update_interval: 10
-    line_width: 3
-    animate: true
-    show:
-      labels: true
-      points: false
-    entities:
-    - entity: sensor.zagalne_navantazhennia
-      name: Разом
-  - type: custom:mini-graph-card
-    name: Потужність фаз за 3 години
-    hours_to_show: 3
-    points_per_hour: 20
-    update_interval: 10
-    line_width: 3
-    animate: true
-    show:
-      labels: true
-      points: false
-    entities:
-    - entity: sensor.energy_meter_phase_a_power_2
-      name: Фаза A
-    - entity: sensor.energy_meter_phase_b_power_2
-      name: Фаза B
-    - entity: sensor.energy_meter_phase_c_power_2
-      name: Фаза C
-  - type: custom:mini-graph-card
-    name: Струм за 3 години
-    hours_to_show: 3
-    points_per_hour: 20
-    update_interval: 10
-    line_width: 3
-    animate: true
-    show:
-      labels: true
-      points: false
-    entities:
-    - entity: sensor.zagalnii_strum
-      name: Разом
-    - entity: sensor.energy_meter_phase_a_current_2
-      name: Фаза A
-    - entity: sensor.energy_meter_phase_b_current_2
-      name: Фаза B
-    - entity: sensor.energy_meter_phase_c_current_2
-      name: Фаза C
-  - type: custom:mini-graph-card
-    name: Напруга за 3 години
-    hours_to_show: 3
-    points_per_hour: 20
-    update_interval: 10
-    line_width: 3
-    animate: true
-    show:
-      labels: true
-      points: false
-    entities:
-    - entity: sensor.energy_meter_phase_a_voltage_2
-      name: Фаза A
-    - entity: sensor.energy_meter_phase_b_voltage_2
-      name: Фаза B
-    - entity: sensor.energy_meter_phase_c_voltage_2
-      name: Фаза C
-- title: Місяць
-  path: month
-  icon: mdi:calendar-month
-  cards:
-  - type: statistics-graph
-    title: Загальна потужність за місяць (погодинно)
-    days_to_show: 31
-    period: hour
-    stat_types:
-    - mean
-    - max
-    chart_type: line
-    entities:
-    - entity: sensor.zagalne_navantazhennia
-      name: Разом
-  - type: statistics-graph
-    title: Потужність фаз за місяць (погодинно)
-    days_to_show: 31
-    period: hour
-    stat_types:
-    - mean
-    chart_type: line
-    entities:
-    - entity: sensor.energy_meter_phase_a_power_2
-      name: Фаза A
-    - entity: sensor.energy_meter_phase_b_power_2
-      name: Фаза B
-    - entity: sensor.energy_meter_phase_c_power_2
-      name: Фаза C
-  - type: statistics-graph
-    title: Напруга за місяць (мін/сер/макс)
-    days_to_show: 31
-    period: hour
-    stat_types:
-    - min
-    - mean
-    - max
-    chart_type: line
-    entities:
-    - entity: sensor.energy_meter_phase_a_voltage_2
-      name: Фаза A
-    - entity: sensor.energy_meter_phase_b_voltage_2
-      name: Фаза B
-    - entity: sensor.energy_meter_phase_c_voltage_2
-      name: Фаза C
-  - type: statistics-graph
-    title: Струм за місяць (погодинно)
-    days_to_show: 31
-    period: hour
-    stat_types:
-    - mean
-    - max
-    chart_type: line
-    entities:
-    - entity: sensor.zagalnii_strum
-      name: Разом
-- title: Пів року
-  path: half-year
-  icon: mdi:calendar-range
-  cards:
-  - type: statistics-graph
-    title: Загальна потужність за пів року (по днях)
-    days_to_show: 183
-    period: day
-    stat_types:
-    - mean
-    - max
-    chart_type: line
-    entities:
-    - entity: sensor.zagalne_navantazhennia
-      name: Разом
-  - type: statistics-graph
-    title: Потужність фаз за пів року (по днях)
-    days_to_show: 183
-    period: day
-    stat_types:
-    - mean
-    chart_type: line
-    entities:
-    - entity: sensor.energy_meter_phase_a_power_2
-      name: Фаза A
-    - entity: sensor.energy_meter_phase_b_power_2
-      name: Фаза B
-    - entity: sensor.energy_meter_phase_c_power_2
-      name: Фаза C
-  - type: statistics-graph
-    title: Напруга за пів року (мін/сер/макс, по днях)
-    days_to_show: 183
-    period: day
-    stat_types:
-    - min
-    - mean
-    - max
-    chart_type: line
-    entities:
-    - entity: sensor.energy_meter_phase_a_voltage_2
-      name: Фаза A
-    - entity: sensor.energy_meter_phase_b_voltage_2
-      name: Фаза B
-    - entity: sensor.energy_meter_phase_c_voltage_2
-      name: Фаза C
-- title: Вибір періоду
-  path: period
-  icon: mdi:calendar-search
   type: sections
   max_columns: 4
   dense_section_placement: true
   sections:
+  # --- Секція 1 · Hero ---
   - type: grid
+    column_span: 4
     cards:
+    - type: markdown
+      grid_options:
+        columns: full
+      content: |-
+        {% set p = states('sensor.zagalne_navantazhennia') | float(0) %}
+        {% set rate = states('sensor.tarif_elektroenergii_zaraz') | float(0) %}
+        {% set day = states('input_number.tarif_den_07_00_22_59') | float(0) %}
+        {% set loads = [
+             ('бойлер', 'sensor.boiler_potuzhnist', 0.001),
+             ('зарядка авто', 'sensor.zariadka_7_5kvt_device_kw', 1),
+             ('тепла підлога 1', 'sensor.terneo_1_current_power', 0.001),
+             ('тепла підлога 2', 'sensor.terneo_2_current_power', 0.001),
+             ('насос поливу', 'sensor.nasos_polivu_potuzhnist_zaraz', 0.001)
+           ] %}
+        {% set ns = namespace(known=0.0, active=[]) %}
+        {% for name, ent, k in loads %}{% set v = (states(ent) | float(0)) * k %}{% if v > 0.05 %}{% set ns.known = ns.known + v %}{% set ns.active = ns.active + [name] %}{% endif %}{% endfor %}
+        {% if p > 6 %}
+        ## 🟠 Будинок бере {{ p | round(2) }} кВт
+        {% elif p > 0 %}
+        ## 🟢 Будинок бере {{ p | round(2) }} кВт
+        {% else %}
+        ## ⚪ Споживання не вимірюється
+        {% endif %}
+
+        {% if ns.active | count > 0 %}
+        Причина: працює {{ ns.active | join(', ') }} — разом {{ ns.known | round(2) }} кВт із {{ p | round(2) }}.
+        {% else %}
+        Причина: великі споживачі вимкнені — бойлер, зарядка авто, обидві підлоги й насос стоять.
+        Це фонове споживання дому.
+        {% endif %}
+        За поточним{{ ' денним' if rate == day else ' нічним' }} тарифом {{ rate | round(2) }} грн це коштує близько
+        **{{ (p * rate) | round(2) }} грн за годину**.
+    - type: tile
+      entity: sensor.zagalne_navantazhennia
+      name: Потужність зараз
+      icon: mdi:flash
+      color: amber
+      grid_options:
+        columns: 12
+        rows: 1
+    - type: tile
+      entity: sensor.zagalnii_strum
+      name: Струм сумарно
+      icon: mdi:current-ac
+      grid_options:
+        columns: 12
+        rows: 1
+    - type: tile
+      entity: sensor.tarif_elektroenergii_zaraz
+      name: Тариф зараз
+      icon: mdi:cash-clock
+      color: purple
+      grid_options:
+        columns: 12
+        rows: 1
+    - type: tile
+      entity: sensor.inverter_battery
+      name: Батарея
+      icon: mdi:battery-high
+      color: green
+      grid_options:
+        columns: 12
+        rows: 1
+  # --- Секція 2 · Хто бере потужність ---
+  - type: grid
+    column_span: 2
+    cards:
+    - type: heading
+      heading: Хто бере потужність
+      icon: mdi:devices
+      grid_options:
+        columns: full
+    - type: markdown
+      grid_options:
+        columns: full
+      content: |-
+        {% set total = states('sensor.zagalne_navantazhennia') | float(0) %}
+        {% set loads = [
+             ('Бойлер', 'sensor.boiler_potuzhnist', 0.001),
+             ('Зарядка авто', 'sensor.zariadka_7_5kvt_device_kw', 1),
+             ('Тепла підлога 1', 'sensor.terneo_1_current_power', 0.001),
+             ('Тепла підлога 2', 'sensor.terneo_2_current_power', 0.001),
+             ('Насос поливу', 'sensor.nasos_polivu_potuzhnist_zaraz', 0.001)
+           ] %}
+        {% set ns = namespace(rows=[], known=0.0) %}
+        {% for name, ent, k in loads %}{% set v = (states(ent) | float(0)) * k %}{% if v > 0.05 %}{% set ns.rows = ns.rows + [(v, name)] %}{% set ns.known = ns.known + v %}{% endif %}{% endfor %}
+        {% set other = total - ns.known %}
+        {% if other > 0.05 %}{% set ns.rows = ns.rows + [(other, 'Інше — без власного лічильника')] %}{% endif %}
+
+        | Споживач | Потужність | Частка |
+        |---|---|---|
+        {% for v, name in ns.rows | sort(reverse=true) -%}
+        | {{ name }} | {{ v | round(2) }} кВт | {{ (100 * v / total) | round(0) | int if total > 0 else 0 }} % |
+        {% endfor -%}
+        {% if ns.rows | count == 0 %}
+        | Нічого суттєвого не працює | {{ total | round(2) }} кВт | 100 % |
+        {% endif %}
+
+        {% if ns.known < 0.05 and total > 0.05 %}
+        Зараз усе споживання фонове: холодильник, мережеве обладнання, освітлення,
+        чергові режими техніки. Окремих лічильників на них немає, тому вони йдуть
+        одним рядком «Інше».
+        {% endif %}
+    - type: tile
+      entity: sensor.naibilshii_spozhivach_zaraz
+      name: Найбільший споживач
+      icon: mdi:trending-up
+      grid_options:
+        columns: full
+        rows: 1
+  # --- Секція 3 · Розподіл по фазах ---
+  - type: grid
+    column_span: 2
+    cards:
+    - type: heading
+      heading: Розподіл по фазах
+      icon: mdi:sine-wave
+      grid_options:
+        columns: full
+    - type: markdown
+      grid_options:
+        columns: full
+      content: |-
+        {% set pa = states('sensor.energy_meter_phase_a_power_2') | float(0) %}
+        {% set pb = states('sensor.energy_meter_phase_b_power_2') | float(0) %}
+        {% set pc = states('sensor.energy_meter_phase_c_power_2') | float(0) %}
+        {% set va = states('sensor.energy_meter_phase_a_voltage_2') | float(0) %}
+        {% set vb = states('sensor.energy_meter_phase_b_voltage_2') | float(0) %}
+        {% set vc = states('sensor.energy_meter_phase_c_voltage_2') | float(0) %}
+        {% set sum = pa + pb + pc %}
+        {% set vmin = [va, vb, vc] | min %}
+        {% set vmax = [va, vb, vc] | max %}
+
+        | Фаза | Потужність | Струм | Напруга |
+        |---|---|---|---|
+        | A | {{ pa | round(3) }} кВт{{ ' · ' ~ (100 * pa / sum) | round(0) | int ~ ' %' if sum > 0 else '' }} | {{ states('sensor.energy_meter_phase_a_current_2') }} А | {{ va | round(1) }} В |
+        | B | {{ pb | round(3) }} кВт{{ ' · ' ~ (100 * pb / sum) | round(0) | int ~ ' %' if sum > 0 else '' }} | {{ states('sensor.energy_meter_phase_b_current_2') }} А | {{ vb | round(1) }} В |
+        | C | {{ pc | round(3) }} кВт{{ ' · ' ~ (100 * pc / sum) | round(0) | int ~ ' %' if sum > 0 else '' }} | {{ states('sensor.energy_meter_phase_c_current_2') }} А | {{ vc | round(1) }} В |
+
+        {% if vmin < 207 or vmax > 253 %}
+        🔴 **Напруга вийшла за допустимі 207…253 В** ({{ vmin | round(1) }}…{{ vmax | round(1) }} В).
+        Причина: проблема на боці мережі — це не налаштування дому.
+        {% elif (vmax - vmin) > 20 %}
+        🟠 **Перекіс фаз:** різниця напруг {{ (vmax - vmin) | round(1) }} В ({{ vmin | round(1) }}…{{ vmax | round(1) }} В),
+        а найнавантаженіша фаза несе {{ (100 * [pa, pb, pc] | max / sum) | round(0) | int if sum > 0 else 0 }} % потужності.
+        Причина: великі споживачі підключені переважно до однієї фази.
+        {% else %}
+        🟢 Фази навантажені рівномірно, напруга в межах 207…253 В.
+        {% endif %}
+  # --- Секція 4 · Історія за годину і за три ---
+  - type: grid
+    column_span: 4
+    cards:
+    - type: heading
+      heading: Найближча історія
+      icon: mdi:chart-line
+      grid_options:
+        columns: full
+    - type: custom:mini-graph-card
+      name: Потужність за останню годину
+      hours_to_show: 1
+      points_per_hour: 60
+      update_interval: 10
+      line_width: 3
+      animate: true
+      show:
+        labels: true
+        points: false
+      grid_options:
+        columns: 24
+      entities:
+      - entity: sensor.zagalne_navantazhennia
+        name: Разом
+    - type: custom:mini-graph-card
+      name: Потужність за 3 години
+      hours_to_show: 3
+      points_per_hour: 20
+      update_interval: 10
+      line_width: 3
+      animate: true
+      show:
+        labels: true
+        points: false
+      grid_options:
+        columns: 24
+      entities:
+      - entity: sensor.zagalne_navantazhennia
+        name: Разом
+    - type: markdown
+      grid_options:
+        columns: full
+      content: |-
+        Глибша історія — на вкладці **«Історія»**: там один вибір періоду керує
+        графіками потужності, фаз, напруги і струму. Причина розділення: механізм
+        вибору періоду в Home Assistant працює з добами й довшими проміжками,
+        коротші за добу інтервали він не вміє.
+  # --- Секція 5 · Довідка ---
+  - type: grid
+    column_span: 4
+    cards:
+    - type: heading
+      heading: Довідка
+      icon: mdi:information-outline
+      grid_options:
+        columns: full
+    - type: markdown
+      grid_options:
+        columns: full
+      content: |-
+        <details><summary>Що таке «Інше» і чому воно найбільше</summary>
+
+        Власні лічильники стоять лише на бойлері, зарядній станції, двох контурах
+        теплої підлоги й насосі поливу. Усе решта — холодильник, освітлення,
+        мережеве обладнання, дрібна техніка, чергові режими — вимірюється тільки
+        загальним трифазним лічильником. Різниця між ним і сумою відомих пристроїв
+        і є «Інше».
+
+        Зменшити цей рядок можна лише одним способом: додати лічильники на
+        конкретні лінії або розетки.
+
+        </details>
+
+        <details><summary>Перекіс фаз: коли це проблема, а коли ні</summary>
+
+        Будинок підключений трифазно, і кожна фаза живить свою групу ліній.
+        Нерівномірність сама по собі не аварія — вона стає проблемою, коли одна
+        фаза стабільно перевантажена: на ній сильніше просідає напруга, більше
+        гріється проводка, і саме на ній першою спрацює автомат.
+
+        Допустимий діапазон напруги — 207…253 В (230 В ±10 %). Різниця понад
+        20 В між фазами вказує, що навантаження варто перерозподілити.
+
+        </details>
+
+        <details><summary>Звідки беруться числа</summary>
+
+        Миттєва потужність, струм і напруга — з трифазного лічильника
+        `192.168.50.219`, опитування кожні 5 секунд локально. Накопичувальний
+        імпорт із мережі й батарея — з інвертора Deye. Ці два джерела можуть
+        трохи різнитися, бо інвертор рахує ще й заряджання та розряджання
+        акумулятора.
+
+        </details>
+- title: Історія
+  path: history
+  icon: mdi:chart-timeline-variant
+  type: sections
+  max_columns: 4
+  dense_section_placement: true
+  sections:
+  # --- Секція 1 · Вибір періоду ---
+  - type: grid
+    column_span: 4
+    cards:
+    - type: heading
+      heading: Період
+      icon: mdi:calendar-search
+      grid_options:
+        columns: full
     - type: energy-date-selection
       grid_options:
         columns: full
     - type: markdown
-      title: Стан обліку Energy
       grid_options:
         columns: full
-      content: |
+      content: |-
+        Один вибір угорі керує всіма графіками на цій вкладці. Ця вкладка замінила
+        три попередні — «3 години», «Місяць» і «Пів року», — які показували ті самі
+        чотири графіки, лише з різною глибиною.
+
+        Причина, чому «3 години» тут немає: перемикач періоду працює з добами й
+        довшими проміжками. Коротші інтервали живуть на вкладці **«Зараз»**.
+  # --- Секція 2 · Стан обліку ---
+  - type: grid
+    column_span: 4
+    cards:
+    - type: markdown
+      grid_options:
+        columns: full
+      content: |-
         {% set source = 'sensor.inverter_total_energy_import' %}
         {% set missing = ['unknown', 'unavailable', 'none', ''] %}
         {% if states(source) in missing %}
-        ## ⚠️ Дані про енергію зараз не надходять
-
-        Основне джерело `{{ source }}` має стан **{{ states(source) }}**. Поки
-        лічильник недоступний, Home Assistant не може додати нові значення на
-        графік за сьогодні.
+        ### ⚠️ Дані про енергію зараз не надходять
+        Основне джерело `{{ source }}` має стан **{{ states(source) }}**.
+        Причина: поки лічильник недоступний, Home Assistant не додає нові значення
+        на графіки за сьогодні.
         {% else %}
-        ## ✅ Облік працює
-
-        **З мережі сьогодні:** {{ states('sensor.inverter_today_energy_import') }} кВт·год  
-        **Навантаження будинку сьогодні:** {{ states('sensor.inverter_today_load_consumption') }} кВт·год
-
-        Офіційна панель «Енергія» бере імпорт із
-        `sensor.inverter_total_energy_import`. Графік будується з погодинної
-        довгострокової статистики, тому остання неповна година може з'явитися із
-        затримкою до однієї години. Імпорт із мережі та навантаження будинку
-        можуть відрізнятися через заряджання або розряджання акумулятора.
+        ### ✅ Облік працює
+        З мережі сьогодні **{{ states('sensor.inverter_today_energy_import') }} кВт·год** ·
+        навантаження будинку **{{ states('sensor.inverter_today_load_consumption') }} кВт·год**.
+        Причина розбіжності між ними: частина енергії йде на заряджання акумулятора
+        або, навпаки, надходить із нього.
         {% endif %}
-
         {% if states('sensor.energy_meter_total_energy') in missing %}
-        > Хмарний лічильник Tuya зараз **{{ states('sensor.energy_meter_total_energy') }}**.
-        > Саме він був причиною порожнього графіка 5 серпня; тепер це резервне
-        > джерело й на основний облік не впливає.
+
+        Хмарний лічильник Tuya зараз **{{ states('sensor.energy_meter_total_energy') }}**.
+        Це резервне джерело, на основний облік воно не впливає.
         {% endif %}
+  # --- Секція 3 · Загальна потужність ---
+  - type: grid
+    column_span: 4
+    cards:
+    - type: heading
+      heading: Загальна потужність
+      icon: mdi:flash
+      grid_options:
+        columns: full
     - type: statistics-graph
-      title: Загальна потужність за вибраний період
       period: hour
       energy_date_selection: true
       stat_types:
       - mean
       - max
       chart_type: line
+      grid_options:
+        columns: full
       entities:
       - entity: sensor.zagalne_navantazhennia
         name: Разом
+  # --- Секція 4 · Потужність фаз ---
+  - type: grid
+    column_span: 2
+    cards:
+    - type: heading
+      heading: Потужність по фазах
+      icon: mdi:sine-wave
       grid_options:
         columns: full
     - type: statistics-graph
-      title: Потужність фаз за вибраний період
       period: hour
       energy_date_selection: true
       stat_types:
       - mean
       chart_type: line
+      grid_options:
+        columns: full
       entities:
       - entity: sensor.energy_meter_phase_a_power_2
         name: Фаза A
@@ -319,10 +362,43 @@ views:
         name: Фаза B
       - entity: sensor.energy_meter_phase_c_power_2
         name: Фаза C
+  # --- Секція 5 · Струм ---
+  - type: grid
+    column_span: 2
+    cards:
+    - type: heading
+      heading: Струм
+      icon: mdi:current-ac
       grid_options:
         columns: full
     - type: statistics-graph
-      title: Напруга за вибраний період (мін/сер/макс)
+      period: hour
+      energy_date_selection: true
+      stat_types:
+      - mean
+      - max
+      chart_type: line
+      grid_options:
+        columns: full
+      entities:
+      - entity: sensor.zagalnii_strum
+        name: Разом
+      - entity: sensor.energy_meter_phase_a_current_2
+        name: Фаза A
+      - entity: sensor.energy_meter_phase_b_current_2
+        name: Фаза B
+      - entity: sensor.energy_meter_phase_c_current_2
+        name: Фаза C
+  # --- Секція 6 · Напруга ---
+  - type: grid
+    column_span: 4
+    cards:
+    - type: heading
+      heading: Напруга по фазах
+      icon: mdi:flash-triangle
+      grid_options:
+        columns: full
+    - type: statistics-graph
       period: hour
       energy_date_selection: true
       stat_types:
@@ -330,6 +406,8 @@ views:
       - mean
       - max
       chart_type: line
+      grid_options:
+        columns: full
       entities:
       - entity: sensor.energy_meter_phase_a_voltage_2
         name: Фаза A
@@ -337,22 +415,442 @@ views:
         name: Фаза B
       - entity: sensor.energy_meter_phase_c_voltage_2
         name: Фаза C
+    - type: markdown
+      grid_options:
+        columns: full
+      content: |-
+        Допустимий діапазон — **207…253 В** (230 В ±10 %). Напруга найважливіша з
+        трьох величин: саме її просідання псує техніку. Причина просідання зазвичай
+        локальна — перекіс навантаження між фазами, а не аварія в мережі.
+- title: Витрати
+  path: cost
+  icon: mdi:cash-multiple
+  type: sections
+  max_columns: 4
+  dense_section_placement: false
+  sections:
+  # --- Секція 1 · Hero ---
+  - type: grid
+    column_span: 4
+    cards:
+    - type: markdown
+      grid_options:
+        columns: full
+      content: |-
+        {% set d = states('sensor.vitrati_vden_tsogo_misiatsia') | float(0) %}
+        {% set n = states('sensor.vitrati_vnochi_tsogo_misiatsia') | float(0) %}
+        {% set total = d + n %}
+        {% set today = (states('sensor.vitrati_vden_sogodni') | float(0)) + (states('sensor.vitrati_vnochi_sogodni') | float(0)) %}
+        {% set kwh_today = (states('sensor.merezha_dobovyi_den') | float(0)) + (states('sensor.merezha_dobovyi_nich') | float(0)) %}
+        ## {{ total | round(2) }} грн за {{ now().strftime('%B') | replace('August', 'серпень') | replace('July', 'липень') | replace('September', 'вересень') | replace('October', 'жовтень') | replace('November', 'листопад') | replace('December', 'грудень') | replace('January', 'січень') | replace('February', 'лютий') | replace('March', 'березень') | replace('April', 'квітень') | replace('May', 'травень') | replace('June', 'червень') }}
+
+        {% if total > 0 %}
+        Причина такої суми: **{{ (100 * d / total) | round(0) | int }} %** витрат припало на денний тариф
+        {{ states('input_number.tarif_den_07_00_22_59') | float(0) | round(2) }} грн — уночі за ті самі
+        кіловати платили б по {{ states('input_number.tarif_nich_23_00_06_59') | float(0) | round(2) }} грн.
+        {% else %}
+        Причина: за цей місяць витрат ще не зафіксовано.
+        {% endif %}
+        Сьогодні вже витрачено **{{ today | round(2) }} грн** за {{ kwh_today | round(1) }} кВт·год.
+    - type: statistic
+      entity: sensor.vitrati_na_merezhu_razom
+      stat_type: change
+      name: Сьогодні
+      period:
+        calendar:
+          period: day
+      grid_options:
+        columns: 12
+    - type: statistic
+      entity: sensor.vitrati_na_merezhu_razom
+      stat_type: change
+      name: Цей місяць
+      period:
+        calendar:
+          period: month
+      grid_options:
+        columns: 12
+    - type: statistic
+      entity: sensor.vitrati_na_merezhu_razom
+      stat_type: change
+      name: Цей рік
+      period:
+        calendar:
+          period: year
+      grid_options:
+        columns: 12
+    - type: statistic
+      entity: sensor.inverter_total_energy_import
+      stat_type: change
+      name: Спожито за місяць
+      period:
+        calendar:
+          period: month
+      grid_options:
+        columns: 12
+  # --- Секція 2 · Тариф ---
+  - type: grid
+    column_span: 2
+    cards:
+    - type: heading
+      heading: Тариф
+      icon: mdi:cash-clock
+      grid_options:
+        columns: full
+    - type: tile
+      entity: sensor.tarif_elektroenergii_zaraz
+      name: Діє зараз
+      color: purple
+      grid_options:
+        columns: full
+        rows: 1
+    - type: tile
+      entity: input_number.tarif_den_07_00_22_59
+      name: День · 07:00–22:59
+      icon: mdi:white-balance-sunny
+      color: orange
+      grid_options:
+        columns: full
+      features:
+      - type: numeric-input
+        style: box
+    - type: tile
+      entity: input_number.tarif_nich_23_00_06_59
+      name: Ніч · 23:00–06:59
+      icon: mdi:weather-night
+      color: purple
+      grid_options:
+        columns: full
+      features:
+      - type: numeric-input
+        style: box
+    - type: markdown
+      grid_options:
+        columns: full
+      content: |-
+        {% set h = now().hour %}
+        {% if 7 <= h < 23 %}
+        {% set left = 23 - h %}
+        Зараз діє **денна** ставка. Нічна ввімкнеться о 23:00 — приблизно через {{ left }} год.
+        {% else %}
+        {% set left = (7 - h) if h < 7 else (31 - h) %}
+        Зараз діє **нічна** ставка. Денна ввімкнеться о 07:00 — приблизно через {{ left }} год.
+        {% endif %}
+
+        Ставки редагуються прямо тут, YAML правити не треба. Сутність тарифу сама
+        перемикається о 07:00 і о 23:00, і саме за нею Energy-панель рахує вартість.
+  # --- Секція 3 · День проти ночі ---
+  - type: grid
+    column_span: 2
+    cards:
+    - type: heading
+      heading: Дорогий день і дешева ніч
+      icon: mdi:theme-light-dark
+      grid_options:
+        columns: full
+    - type: tile
+      entity: sensor.vitrati_vden_sogodni
+      name: Удень сьогодні
+      icon: mdi:white-balance-sunny
+      color: orange
+      grid_options:
+        columns: 12
+        rows: 1
+    - type: tile
+      entity: sensor.vitrati_vnochi_sogodni
+      name: Уночі сьогодні
+      icon: mdi:weather-night
+      color: purple
+      grid_options:
+        columns: 12
+        rows: 1
+    - type: tile
+      entity: sensor.merezha_dobovyi_den
+      name: Спожито вдень
+      icon: mdi:transmission-tower-export
+      color: orange
+      grid_options:
+        columns: 12
+        rows: 1
+    - type: tile
+      entity: sensor.merezha_dobovyi_nich
+      name: Спожито вночі
+      icon: mdi:transmission-tower-export
+      color: purple
+      grid_options:
+        columns: 12
+        rows: 1
+    - type: tile
+      entity: sensor.vitrati_vden_tsogo_misiatsia
+      name: Удень за місяць
+      icon: mdi:white-balance-sunny
+      color: orange
+      grid_options:
+        columns: 12
+        rows: 1
+    - type: tile
+      entity: sensor.vitrati_vnochi_tsogo_misiatsia
+      name: Уночі за місяць
+      icon: mdi:weather-night
+      color: purple
+      grid_options:
+        columns: 12
+        rows: 1
+    - type: markdown
+      grid_options:
+        columns: full
+      content: |-
+        {% set kd = states('sensor.merezha_dobovyi_den') | float(0) %}
+        {% set kn = states('sensor.merezha_dobovyi_nich') | float(0) %}
+        {% set gd = states('sensor.vitrati_vden_sogodni') | float(0) %}
+        {% set gn = states('sensor.vitrati_vnochi_sogodni') | float(0) %}
+        {% if kd > 0 and kn > 0 %}
+        Сьогодні вночі спожито {{ kn | round(1) }} кВт·год проти {{ kd | round(1) }} удень,
+        а коштувало це {{ gn | round(2) }} проти {{ gd | round(2) }} грн.
+        Причина різниці: нічна ставка вдвічі нижча. Що більше важкого —
+        бойлера, заряджання авто, прання — переноситься на ніч, то менший рахунок.
+        {% else %}
+        Нічний тариф удвічі дешевший за денний. Переносьте на ніч усе, що можна
+        відкласти: бойлер, заряджання авто, прання.
+        {% endif %}
+  # --- Секція 4 · Куди пішли гроші ---
+  - type: grid
+    column_span: 4
+    cards:
+    - type: heading
+      heading: Куди пішли гроші
+      icon: mdi:devices
+      grid_options:
+        columns: full
+    - type: markdown
+      grid_options:
+        columns: full
+      content: |-
+        {% set items = [
+             ('Інше — без лічильника', 'sensor.vitrati_inshe_bez_lichilnika'),
+             ('Зарядка авто', 'sensor.vitrati_zariadka_avto'),
+             ('Бойлер', 'sensor.vitrati_boiler'),
+             ('Насос поливу', 'sensor.vitrati_nasos_polivu'),
+             ('Тепла підлога 1', 'sensor.vitrati_tepla_pidloga_1'),
+             ('Тепла підлога 2', 'sensor.vitrati_tepla_pidloga_2')
+           ] %}
+        {% set ns = namespace(rows=[], total=0.0) %}
+        {% for name, ent in items %}{% set v = states(ent) | float(0) %}{% set ns.rows = ns.rows + [(v, name)] %}{% set ns.total = ns.total + v %}{% endfor %}
+
+        | Споживач | Витрачено | Частка |
+        |---|---|---|
+        {% for v, name in ns.rows | sort(reverse=true) -%}
+        | {{ name }} | {{ v | round(2) }} грн | {{ (100 * v / ns.total) | round(0) | int if ns.total > 0 else 0 }} % |
+        {% endfor -%}
+        | **Разом** | **{{ ns.total | round(2) }} грн** | 100 % |
+
+        {% set other = states('sensor.vitrati_inshe_bez_lichilnika') | float(0) %}
+        {% if ns.total > 0 and (100 * other / ns.total) > 50 %}
+        🟠 **{{ (100 * other / ns.total) | round(0) | int }} % витрат не мають джерела.**
+        Причина: власні лічильники стоять лише на п'яти пристроях, а решта дому —
+        холодильник, освітлення, мережеве обладнання, дрібна техніка — вимірюється
+        тільки загальним лічильником. Зменшити цей рядок можна єдиним способом:
+        додати лічильники на конкретні лінії.
+        {% endif %}
+  # --- Секція 5 · Динаміка ---
+  - type: grid
+    column_span: 4
+    cards:
+    - type: heading
+      heading: Динаміка витрат
+      icon: mdi:chart-bar-stacked
       grid_options:
         columns: full
     - type: statistics-graph
-      title: Струм за вибраний період
-      period: hour
-      energy_date_selection: true
+      title: Гривні за добу · день проти ночі
+      days_to_show: 30
+      period: day
       stat_types:
-      - mean
-      - max
-      chart_type: line
-      entities:
-      - entity: sensor.zagalnii_strum
-        name: Разом
+      - change
+      chart_type: bar
       grid_options:
         columns: full
-- title: Інвертор
+      entities:
+      - entity: sensor.vitrati_vden_razom
+        name: Удень
+      - entity: sensor.vitrati_vnochi_razom
+        name: Уночі
+    - type: statistics-graph
+      title: Гривні за добу по пристроях
+      days_to_show: 30
+      period: day
+      stat_types:
+      - change
+      chart_type: bar
+      grid_options:
+        columns: full
+      entities:
+      - entity: sensor.vitrati_boiler
+        name: Бойлер
+      - entity: sensor.vitrati_zariadka_avto
+        name: Зарядка авто
+      - entity: sensor.vitrati_tepla_pidloga_1
+        name: Тепла підлога 1
+      - entity: sensor.vitrati_tepla_pidloga_2
+        name: Тепла підлога 2
+      - entity: sensor.vitrati_nasos_polivu
+        name: Насос поливу
+      - entity: sensor.vitrati_inshe_bez_lichilnika
+        name: Інше
+  # --- Секція 6 · По місяцях ---
+  - type: grid
+    column_span: 4
+    cards:
+    - type: heading
+      heading: По місяцях
+      icon: mdi:calendar-month
+      grid_options:
+        columns: full
+    - type: statistics-graph
+      title: Спожито з мережі
+      days_to_show: 400
+      period: month
+      stat_types:
+      - change
+      chart_type: bar
+      grid_options:
+        columns: full
+      entities:
+      - entity: sensor.inverter_total_energy_import
+        name: З мережі
+    - type: statistics-graph
+      title: Гривні · день проти ночі
+      days_to_show: 400
+      period: month
+      stat_types:
+      - change
+      chart_type: bar
+      grid_options:
+        columns: full
+      entities:
+      - entity: sensor.vitrati_vden_razom
+        name: Удень
+      - entity: sensor.vitrati_vnochi_razom
+        name: Уночі
+  # --- Секція 7 · Довідка ---
+  - type: grid
+    column_span: 4
+    cards:
+    - type: heading
+      heading: Довідка
+      icon: mdi:information-outline
+      grid_options:
+        columns: full
+    - type: markdown
+      grid_options:
+        columns: full
+      content: |-
+        <details><summary>Чому історія до 3 серпня порахована за старою ціною</summary>
+
+        Двозонний тариф підключено 2026-08-03. Перерахунок стосується лише
+        споживання після цієї дати; попередня історія порахована за старою плоскою
+        ціною 2,5 грн і заднім числом не переписується.
+
+        </details>
+
+        <details><summary>Як зменшити «Інше»</summary>
+
+        «Інше» — це різниця між загальним лічильником і сумою відомих пристроїв.
+        Зменшити її можна лише додаванням лічильників: розумні розетки з
+        вимірюванням на великих споживачах або окремі модулі на лінії в щитку.
+        Найперші кандидати — холодильник, пральна машина, кондиціонери.
+
+        </details>
+
+        <details><summary>Офіційний облік Home Assistant</summary>
+
+        Вкладка **«Облік HA»** показує ті самі дані очима вбудованої системи
+        енергообліку: розподіл по джерелах, споживання по пристроях і вартість за
+        тарифом. Вона бере імпорт із `sensor.inverter_total_energy_import` і
+        будується з погодинної довгострокової статистики, тому остання неповна
+        година може з'явитися із затримкою до однієї години.
+
+        </details>
+- title: Облік HA
+  path: energy
+  icon: mdi:home-lightning-bolt
+  type: sections
+  max_columns: 4
+  dense_section_placement: true
+  sections:
+  - type: grid
+    column_span: 4
+    cards:
+    - type: heading
+      heading: Офіційний облік енергії Home Assistant
+      icon: mdi:home-lightning-bolt
+      grid_options:
+        columns: full
+    - type: energy-date-selection
+      grid_options:
+        columns: full
+    - type: markdown
+      grid_options:
+        columns: full
+      content: |-
+        Це вбудована система енергообліку Home Assistant, перенесена сюди з окремої
+        панелі «Енергія». Причина перенесення: тримати всі енергетичні показники в
+        одному дашборді, а не в двох різних розділах меню.
+
+        Ці картки мають власний фіксований вигляд — вони не налаштовуються так, як
+        решта сторінок проєкту.
+  - type: grid
+    column_span: 4
+    cards:
+    - type: heading
+      heading: Споживання за період
+      icon: mdi:chart-bar
+      grid_options:
+        columns: full
+    - type: energy-usage-graph
+      grid_options:
+        columns: full
+  - type: grid
+    column_span: 2
+    cards:
+    - type: heading
+      heading: Розподіл
+      icon: mdi:chart-donut
+      grid_options:
+        columns: full
+    - type: energy-distribution
+      grid_options:
+        columns: full
+  - type: grid
+    column_span: 2
+    cards:
+    - type: heading
+      heading: Джерела
+      icon: mdi:table
+      grid_options:
+        columns: full
+    - type: energy-sources-table
+      grid_options:
+        columns: full
+  - type: grid
+    column_span: 4
+    cards:
+    - type: heading
+      heading: По пристроях
+      icon: mdi:devices
+      grid_options:
+        columns: full
+    - type: energy-devices-graph
+      grid_options:
+        columns: full
+    - type: markdown
+      grid_options:
+        columns: full
+      content: |-
+        Тут показані лише ті пристрої, які додані в налаштуваннях енергообліку
+        (Налаштування → Панелі керування → Енергія). Гривневий розподіл по всіх
+        наших лічильниках — на вкладці **«Витрати»**.
+- title: Сонце і батарея
   path: inverter
   icon: mdi:solar-power-variant
   type: sections
@@ -457,387 +955,3 @@ views:
         name: Спожито з мережі сьогодні
       - entity: sensor.inverter_today_load_consumption
         name: Навантаження сьогодні
-- title: Тариф
-  path: tariff
-  icon: mdi:cash-clock
-  type: sections
-  max_columns: 4
-  dense_section_placement: true
-  sections:
-  - type: grid
-    cards:
-    - type: heading
-      heading: Двозонний тариф
-      grid_options:
-        columns: full
-    - type: tile
-      entity: sensor.tarif_elektroenergii_zaraz
-      name: Діє зараз
-      grid_options:
-        columns: full
-    - type: tile
-      entity: input_number.tarif_den_07_00_22_59
-      name: День (07:00-22:59)
-      grid_options:
-        columns: full
-      features:
-      - type: numeric-input
-        style: box
-    - type: tile
-      entity: input_number.tarif_nich_23_00_06_59
-      name: Ніч (23:00-06:59)
-      grid_options:
-        columns: full
-      features:
-      - type: numeric-input
-        style: box
-    - type: entities
-      title: Витрати
-      grid_options:
-        columns: full
-      entities:
-      - entity: sensor.inverter_total_energy_import_cost
-        name: Вартість спожитого (наростаюча)
-      - entity: sensor.inverter_total_energy_import
-        name: Імпорт із мережі (лічильник інвертора)
-    - type: custom:mini-graph-card
-      name: Перемикання тарифу за добу
-      hours_to_show: 24
-      points_per_hour: 4
-      line_width: 3
-      animate: true
-      show:
-        labels: true
-        points: false
-      grid_options:
-        columns: full
-      entities:
-      - entity: sensor.tarif_elektroenergii_zaraz
-        name: Ставка
-    - type: markdown
-      title: Як це працює
-      grid_options:
-        columns: full
-      content: 'Energy-дашборд рахує вартість не за фіксованою ціною, а за сутністю `sensor.tarif_elektroenergii_zaraz`,
-        яка сама перемикається між денною і нічною ставкою о 07:00 і о 23:00. Ставки редагуються прямо
-        тут - YAML правити не треба.
-
-        Важливо: перерахунок стосується лише споживання ПІСЛЯ підключення тарифу (2026-08-03). Історія
-        до цього моменту порахована за старою плоскою ціною 2.5 грн і заднім числом не переписується.
-
-        '
-- title: Витрати
-  path: cost
-  icon: mdi:cash-multiple
-  type: sections
-  max_columns: 4
-  dense_section_placement: false
-  sections:
-  - type: grid
-    column_span: 2
-    cards:
-    - type: heading
-      heading: Скільки коштує електрика
-      icon: mdi:cash-multiple
-      grid_options:
-        columns: full
-    - type: statistic
-      entity: sensor.vitrati_na_merezhu_razom
-      stat_type: change
-      name: Сьогодні
-      period:
-        calendar:
-          period: day
-      grid_options:
-        columns: 4
-    - type: statistic
-      entity: sensor.vitrati_na_merezhu_razom
-      stat_type: change
-      name: Цей місяць
-      period:
-        calendar:
-          period: month
-      grid_options:
-        columns: 4
-    - type: statistic
-      entity: sensor.vitrati_na_merezhu_razom
-      stat_type: change
-      name: Цей рік
-      period:
-        calendar:
-          period: year
-      grid_options:
-        columns: 4
-    - type: statistic
-      entity: sensor.inverter_total_energy_import
-      stat_type: change
-      name: Спожито сьогодні
-      period:
-        calendar:
-          period: day
-      grid_options:
-        columns: 4
-    - type: statistic
-      entity: sensor.inverter_total_energy_import
-      stat_type: change
-      name: Спожито за місяць
-      period:
-        calendar:
-          period: month
-      grid_options:
-        columns: 4
-    - type: statistic
-      entity: sensor.inverter_total_energy_import
-      stat_type: change
-      name: Спожито за рік
-      period:
-        calendar:
-          period: year
-      grid_options:
-        columns: 4
-    - type: tile
-      entity: sensor.tarif_elektroenergii_zaraz
-      name: Ставка, що діє зараз
-      color: green
-      grid_options:
-        columns: full
-        rows: 1
-  - type: grid
-    column_span: 2
-    cards:
-    - type: heading
-      heading: Дорогий день і дешева ніч
-      icon: mdi:theme-light-dark
-      grid_options:
-        columns: full
-    - type: tile
-      entity: sensor.vitrati_vden_sogodni
-      name: Удень сьогодні
-      icon: mdi:white-balance-sunny
-      color: orange
-      grid_options:
-        columns: 12
-        rows: 1
-    - type: tile
-      entity: sensor.vitrati_vnochi_sogodni
-      name: Уночі сьогодні
-      icon: mdi:weather-night
-      color: blue
-      grid_options:
-        columns: 12
-        rows: 1
-    - type: tile
-      entity: sensor.vitrati_vden_tsogo_misiatsia
-      name: Удень за місяць
-      icon: mdi:white-balance-sunny
-      color: orange
-      grid_options:
-        columns: 12
-        rows: 1
-    - type: tile
-      entity: sensor.vitrati_vnochi_tsogo_misiatsia
-      name: Уночі за місяць
-      icon: mdi:weather-night
-      color: blue
-      grid_options:
-        columns: 12
-        rows: 1
-    - type: tile
-      entity: sensor.merezha_dobovyi_den
-      name: Спожито вдень
-      icon: mdi:transmission-tower-export
-      color: orange
-      grid_options:
-        columns: 12
-        rows: 1
-    - type: tile
-      entity: sensor.merezha_dobovyi_nich
-      name: Спожито вночі
-      icon: mdi:transmission-tower-export
-      color: blue
-      grid_options:
-        columns: 12
-        rows: 1
-  - type: grid
-    column_span: 4
-    cards:
-    - type: heading
-      heading: Витрати по днях - день проти ночі
-      icon: mdi:chart-bar-stacked
-      grid_options:
-        columns: full
-    - type: statistics-graph
-      title: Гривні за добу
-      days_to_show: 30
-      period: day
-      stat_types:
-      - change
-      chart_type: bar
-      grid_options:
-        columns: full
-      entities:
-      - entity: sensor.vitrati_vden_razom
-        name: Удень
-      - entity: sensor.vitrati_vnochi_razom
-        name: Уночі
-  - type: grid
-    column_span: 4
-    cards:
-    - type: heading
-      heading: Скільки витрат забрав кожен пристрій
-      icon: mdi:devices
-      grid_options:
-        columns: full
-    - type: statistics-graph
-      title: Гривні за добу по пристроях
-      days_to_show: 30
-      period: day
-      stat_types:
-      - change
-      chart_type: bar
-      grid_options:
-        columns: full
-      entities:
-      - entity: sensor.vitrati_boiler
-        name: Бойлер
-      - entity: sensor.vitrati_zariadka_avto
-        name: Зарядка авто
-      - entity: sensor.vitrati_tepla_pidloga_1
-        name: Тепла підлога 1
-      - entity: sensor.vitrati_tepla_pidloga_2
-        name: Тепла підлога 2
-      - entity: sensor.vitrati_nasos_polivu
-        name: Насос поливу
-      - entity: sensor.vitrati_inshe_bez_lichilnika
-        name: Інше (без лічильника)
-  - type: grid
-    column_span: 4
-    cards:
-    - type: heading
-      heading: По місяцях
-      icon: mdi:calendar-month
-      grid_options:
-        columns: full
-    - type: statistics-graph
-      title: Спожито з мережі по місяцях
-      days_to_show: 400
-      period: month
-      stat_types:
-      - change
-      chart_type: bar
-      grid_options:
-        columns: full
-      entities:
-      - entity: sensor.inverter_total_energy_import
-        name: З мережі
-    - type: statistics-graph
-      title: Гривні по місяцях - день проти ночі
-      days_to_show: 400
-      period: month
-      stat_types:
-      - change
-      chart_type: bar
-      grid_options:
-        columns: full
-      entities:
-      - entity: sensor.vitrati_vden_razom
-        name: Удень
-      - entity: sensor.vitrati_vnochi_razom
-        name: Уночі
-    - type: statistics-graph
-      title: Гривні по місяцях по пристроях
-      days_to_show: 400
-      period: month
-      stat_types:
-      - change
-      chart_type: bar
-      grid_options:
-        columns: full
-      entities:
-      - entity: sensor.vitrati_boiler
-        name: Бойлер
-      - entity: sensor.vitrati_zariadka_avto
-        name: Зарядка авто
-      - entity: sensor.vitrati_tepla_pidloga_1
-        name: Тепла підлога 1
-      - entity: sensor.vitrati_tepla_pidloga_2
-        name: Тепла підлога 2
-      - entity: sensor.vitrati_nasos_polivu
-        name: Насос поливу
-      - entity: sensor.vitrati_inshe_bez_lichilnika
-        name: Інше (без лічильника)
-  - type: grid
-    column_span: 4
-    cards:
-    - type: heading
-      heading: Довільний період - оберіть дату нижче
-      icon: mdi:calendar-cursor
-      grid_options:
-        columns: full
-    - type: markdown
-      text_only: true
-      grid_options:
-        columns: full
-      content: 'Три картки в цьому блоці показують саме той відрізок часу, який обрано
-        в рядку з датою. Стрілками гортаються попередні й наступні періоди, а кнопка
-        з трьома крапками перемикає добу, тиждень, місяць або рік. Решта вкладки від
-        цього вибору не залежить - там завжди поточна доба, місяць і рік.'
-    - type: energy-date-selection
-      grid_options:
-        columns: full
-    - type: energy-sources-table
-      grid_options:
-        columns: full
-    - type: energy-usage-graph
-      grid_options:
-        columns: full
-    - type: energy-devices-graph
-      grid_options:
-        columns: full
-  - type: grid
-    column_span: 4
-    cards:
-    - type: heading
-      heading: Як це рахується
-      icon: mdi:information-outline
-      grid_options:
-        columns: full
-    - type: markdown
-      text_only: true
-      grid_options:
-        columns: full
-      content: 'Кожен лічильник розведений на дві гілки: денну і нічну. Перемикання
-        відбувається о 07:00 і о 23:00 - рівно там, де змінюється ставка. Тому денні
-        кВт-год множаться на денну ставку, а нічні на нічну, і цифра точна, а не
-        усереднена. Правка ставки на вкладці "Тариф" одразу перераховує все.
-
-
-        Витрати по пристроях рахуються з тих самих лічильників, які Energy-дашборд
-        показує в кВт-год - просто з урахуванням тарифу. Окремим рядом іде "Інше
-        (без лічильника)" - різниця між усім купленим з мережі і сумою пяти
-        вимірюваних пристроїв: світло, розетки, побутова техніка, насоси опалення,
-        сама плата. Разом ці шість рядів дають повний рахунок.
-
-
-        Ряд "Інше" іноді провалюється в мінус. Це не помилка: пристрої частину часу
-        живляться від батареї інвертора, а гривні рахуються лише за куплені з мережі
-        кіловати. У такі години виміряні пристрої витратили більше, ніж було куплено,
-        і залишок стає відємним.
-
-
-        ЧОМУ ТУТ БІЛЬШЕ, НІЖ НА ENERGY-ДАШБОРДІ. Історію з 1 серпня 2026 перераховано
-        заднім числом за НИНІШНІМИ ставками: кожну годину зі статистики споживання
-        віднесено до дня або ночі за київським часом і помножено на 5,00 або 2,50 грн.
-        Energy-дашборд натомість показує те, що нарахував історично, а до 3 серпня
-        там діяла плоска ціна 2,50 грн на цілу добу. Тому його цифра менша. Тутешня
-        відповідає на питання "скільки це коштувало б за сьогоднішнім тарифом", а не
-        "скільки нарахувала система тоді".
-
-
-        Глибше 1 серпня 2026 даних немає - там закінчується довгострокова статистика
-        споживання, і ділити нічого. Тому "цей рік" поки дорівнює серпню, а графік по
-        місяцях має єдиний стовпчик.
-
-
-        На слабкій платі ці картки оживають не миттєво - таблиця і графіки
-        довантажуються приблизно півхвилини.'

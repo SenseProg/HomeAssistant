@@ -632,10 +632,12 @@ lovelace:
       type: module
   mode: storage
   dashboards:
+    # url_path свідомо лишається power-dashboard: перейменування зламало б усі
+    # наявні посилання, зокрема кнопку «Витрати» на головній сторінці «Огляд».
     power-dashboard:
       mode: yaml
-      title: Потужність
-      icon: mdi:flash
+      title: Енергія
+      icon: mdi:home-lightning-bolt
       show_in_sidebar: true
       filename: power_dashboard.yaml
     pristroi-dashboard:
