@@ -425,22 +425,39 @@ template:
       # графік по пристроях створює хибне враження, ніби вони вичерпують увесь
       # рахунок.
       #
-      # Може ненадовго піти в мінус: пристрої частину часу живляться від
-      # батареї інвертора, а ця гілка рахує тільки куплені з мережі кіловати.
+      # ВАЖЛИВО про монотонність. Ця величина - різниця, і сама по собі вона НЕ
+      # монотонна: уночі полив нараховує гривні за нічним тарифом швидше, ніж
+      # росте загальний рахунок, і різниця просідає на копійки. Для state_class
+      # total кожне таке просідання Home Assistant трактує як скидання
+      # лічильника і перебудовує накопичувальну суму.
+      #
+      # 2026-08-08 о 14:00 це вилилось у справжню аварію даних: під час
+      # перезапуску sensor.vitrati_na_merezhu_razom на мить віддав нуль,
+      # різниця впала з 491 грн майже до нуля, і recorder зафіксував скидання.
+      # Накопичувальна сума відв'язалась від стану рівно на 491.66 грн, а на
+      # графіку витрат по пристроях 8 серпня з'явився стовпчик -430 грн.
+      #
+      # Захист подвійний: max() із власним попереднім станом не дає значенню
+      # спадати взагалі, а availability додатково вимагає, щоб загальний
+      # лічильник був більший за нуль - інакше сенсор стає недоступним і
+      # recorder просто не отримує сміттєвої точки.
       - name: "Витрати - інше без лічильника"
         unique_id: cost_device_other
         unit_of_measurement: "UAH"
         device_class: monetary
         state_class: total
         state: >
-          {{ ((states('sensor.vitrati_na_merezhu_razom') | float(0))
+          {% set calc = (states('sensor.vitrati_na_merezhu_razom') | float(0))
             - (states('sensor.vitrati_boiler') | float(0))
             - (states('sensor.vitrati_zariadka_avto') | float(0))
             - (states('sensor.vitrati_tepla_pidloga_1') | float(0))
             - (states('sensor.vitrati_tepla_pidloga_2') | float(0))
-            - (states('sensor.vitrati_nasos_polivu') | float(0))) | round(2) }}
+            - (states('sensor.vitrati_nasos_polivu') | float(0)) %}
+          {% set prev = this.state | float(0) %}
+          {{ [calc, prev, 0] | max | round(2) }}
         availability: >
           {{ has_value('sensor.vitrati_na_merezhu_razom')
+             and (states('sensor.vitrati_na_merezhu_razom') | float(0)) > 0
              and has_value('sensor.vitrati_boiler')
              and has_value('sensor.vitrati_zariadka_avto')
              and has_value('sensor.vitrati_tepla_pidloga_1')
