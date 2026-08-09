@@ -2589,33 +2589,41 @@ views:
       icon: mdi:tune-variant
       grid_options:
         columns: full
+    # Усі три number редагуються просто на картці — слайдером і полем вводу,
+    # без відкривання діалогу. Значення йде прямо в станцію.
     - type: tile
       entity: number.zariadka_7_5kvt_set_32a
       name: Максимальний струм заряджання
       icon: mdi:current-ac
-      tap_action:
-        action: more-info
+      color: amber
+      features_position: bottom
+      features:
+      - type: numeric-input
+        style: slider
       grid_options:
         columns: full
-        rows: 1
     - type: tile
       entity: number.zariadka_7_5kvt_set_delay_time
       name: Відкладений старт · години
       icon: mdi:clock-start
-      tap_action:
-        action: more-info
+      color: cyan
+      features_position: bottom
+      features:
+      - type: numeric-input
+        style: box
       grid_options:
         columns: 12
-        rows: 1
     - type: tile
       entity: number.zariadka_7_5kvt_set_define_time
       name: Обмеження тривалості · години
       icon: mdi:timer-sand
-      tap_action:
-        action: more-info
+      color: cyan
+      features_position: bottom
+      features:
+      - type: numeric-input
+        style: box
       grid_options:
         columns: 12
-        rows: 1
     - type: markdown
       grid_options:
         columns: full
@@ -2631,8 +2639,59 @@ views:
         {{ 'не задано' if l == 0 else (l | round(0) ~ ' год') }}.
         {% endif %}
 
-        Зміни застосовуються безпосередньо до зарядної станції.
-        Не змінюйте їх посеред активної сесії без потреби.
+        Апаратна межа станції — {{ states('sensor.zariadka_7_5kvt_max_set_ampere') }}.
+        Зміни йдуть прямо в зарядну станцію; не чіпайте їх посеред активної сесії
+        без потреби.
+  # --- Секція 8б · Що станція не віддає ---
+  # Перевірено 2026-08-09: LocalTuya створив 23 сутності, з них 10 ніколи не
+  # отримували значення. Показуємо це явно, щоб не шукати причину в дашборді.
+  - type: grid
+    column_span: 2
+    cards:
+    - type: heading
+      heading: Що не працює на цій станції
+      icon: mdi:alert-circle-outline
+      grid_options:
+        columns: full
+    - type: markdown
+      grid_options:
+        columns: full
+      content: |-
+        {% set dead = ['unknown', 'unavailable'] %}
+        {% set checks = [
+             ('Другий перемикач живлення', 'switch.zariadka_7_5kvt_switch'),
+             ('Режим заряджання (Energy/NOW/PCT/Schedule)', 'select.zariadka_7_5kvt_mode'),
+             ('Стан підключення до хмари', 'select.zariadka_7_5kvt_online_state'),
+             ('Робочий стан', 'sensor.zariadka_7_5kvt_work_state'),
+             ('Залишок енергії', 'sensor.zariadka_7_5kvt_energy_balance'),
+             ('Енергія сесії', 'sensor.zariadka_7_5kvt_energy_charge'),
+             ('Ознака фази', 'sensor.zariadka_7_5kvt_phase_flag'),
+             ('Скидання лічильника енергії', 'button.zariadka_7_5kvt_clear_energy')
+           ] %}
+        {% set ns = namespace(bad=[]) %}
+        {% for label, ent in checks %}{% if states(ent) in dead %}{% set ns.bad = ns.bad + [label] %}{% endif %}{% endfor %}
+        {% if ns.bad | count == 0 %}
+        🟢 Усі контроли станції відповідають.
+        {% else %}
+        🟠 **Станція не віддає {{ ns.bad | count }} контрол(ів) із {{ checks | count }} перевірених.**
+        Причина: LocalTuya налаштований на точки даних, яких ця модель не має або
+        не публікує. Це не поломка дашборда — сутності створені, але значення в
+        них ніколи не приходило.
+
+        {% for b in ns.bad %}
+        · {{ b }}
+        {% endfor %}
+
+        Найвідчутніша втрата — **режим заряджання**: вибір між «за енергією»,
+        «зараз», «за відсотком» і «за розкладом» недоступний. Полагодити це можна
+        лише перенастроюванням точок даних у самій інтеграції LocalTuya
+        (Налаштування → Пристрої → LocalTuya → зарядна станція), не в YAML.
+        {% endif %}
+
+        Що працює й керується звідси: **зупинка і запуск сесії**, **максимальний
+        струм**, **відкладений старт**, **обмеження тривалості**. Читаються
+        потужність, струм і напруга фази A, температура, стан пристрою та
+        несправність.
   # --- Секція 9 · Довідка ---
   - type: grid
     column_span: 2
