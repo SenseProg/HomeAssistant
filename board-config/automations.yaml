@@ -481,3 +481,80 @@
       data:
         value: '{{ now().strftime(''%d.%m %H:%M'') }} · дощу на ранок не прогнозують · поллється за розкладом'
   mode: single
+- id: ev_schedule_window_start
+  alias: Заряджання - старт вікна розкладу
+  description: О часі початку вікна виставляє струм і дозволяє заряджання. Потрібне
+    саме тут, а не в самій станції - її власні таймери set_delay_time і set_define_time
+    відлічують час від підключення авто, а не за годинником, тому нічний тариф ними
+    не спіймати.
+  triggers:
+  - trigger: time
+    at: input_datetime.zariadka_pochatok
+  conditions:
+  - condition: state
+    entity_id: input_boolean.zariadka_rozklad
+    state: 'on'
+  actions:
+  - action: number.set_value
+    target:
+      entity_id: number.zariadka_7_5kvt_set_32a
+    data:
+      value: '{{ states(''input_number.zariadka_strum_rozklad'') | int(32) }}'
+  - delay: 00:00:03
+  - action: select.select_option
+    target:
+      entity_id: select.zariadka_7_5kvt_charge_state
+    data:
+      option: Open charging
+  mode: single
+- id: ev_schedule_window_end
+  alias: Заряджання - кінець вікна розкладу
+  description: О часі кінця вікна зупиняє заряджання. Зупиняє саме командою
+    Close charging - перемикач switch.zariadka_7_5kvt на сесію не впливає, це
+    перевірено 2026-08-09.
+  triggers:
+  - trigger: time
+    at: input_datetime.zariadka_kinets
+  conditions:
+  - condition: state
+    entity_id: input_boolean.zariadka_rozklad
+    state: 'on'
+  actions:
+  - action: select.select_option
+    target:
+      entity_id: select.zariadka_7_5kvt_charge_state
+    data:
+      option: Close charging
+  mode: single
+- id: ev_schedule_car_plugged_inside_window
+  alias: Заряджання - авто підключили всередині вікна
+  description: Якщо машину під'єднали посеред дозволеного вікна, заряджання має
+    початися одразу, а не чекати наступної ночі. Спрацьовує на виході станції зі
+    стану no_connet.
+  triggers:
+  - trigger: state
+    entity_id: sensor.zariadka_7_5kvt_device_state
+    from: no_connet
+  conditions:
+  - condition: state
+    entity_id: input_boolean.zariadka_rozklad
+    state: 'on'
+  - condition: template
+    value_template: >
+      {% set now_t = now().strftime('%H:%M') %}
+      {% set a = states('input_datetime.zariadka_pochatok')[:5] %}
+      {% set b = states('input_datetime.zariadka_kinets')[:5] %}
+      {% if a <= b %}{{ a <= now_t < b }}{% else %}{{ now_t >= a or now_t < b }}{% endif %}
+  actions:
+  - action: number.set_value
+    target:
+      entity_id: number.zariadka_7_5kvt_set_32a
+    data:
+      value: '{{ states(''input_number.zariadka_strum_rozklad'') | int(32) }}'
+  - delay: 00:00:03
+  - action: select.select_option
+    target:
+      entity_id: select.zariadka_7_5kvt_charge_state
+    data:
+      option: Open charging
+  mode: single

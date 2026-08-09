@@ -2661,6 +2661,85 @@ views:
         Апаратна межа станції — {{ states('sensor.zariadka_7_5kvt_max_set_ampere') }}.
         Зміни йдуть прямо в зарядну станцію; не чіпайте їх посеред активної сесії
         без потреби.
+  # --- Секція 8а · Розклад заряджання ---
+  # Власні таймери станції (set_delay_time, set_define_time) відлічують час від
+  # підключення авто, а не за годинником, тому нічний тариф ними не спіймати.
+  # Розклад веде Home Assistant трьома автоматизаціями ev_schedule_*.
+  - type: grid
+    column_span: 2
+    cards:
+    - type: heading
+      heading: Розклад заряджання
+      icon: mdi:calendar-clock
+      grid_options:
+        columns: full
+    - type: tile
+      entity: input_boolean.zariadka_rozklad
+      name: Заряджати за розкладом
+      icon: mdi:calendar-clock
+      color: green
+      grid_options:
+        columns: full
+        rows: 1
+    - type: tile
+      entity: input_datetime.zariadka_pochatok
+      name: Початок вікна
+      icon: mdi:clock-start
+      grid_options:
+        columns: 12
+        rows: 1
+    - type: tile
+      entity: input_datetime.zariadka_kinets
+      name: Кінець вікна
+      icon: mdi:clock-end
+      grid_options:
+        columns: 12
+        rows: 1
+    - type: tile
+      entity: input_number.zariadka_strum_rozklad
+      name: Струм у вікні
+      icon: mdi:current-ac
+      color: amber
+      features_position: bottom
+      features:
+      - type: numeric-input
+        style: slider
+      grid_options:
+        columns: full
+    - type: markdown
+      grid_options:
+        columns: full
+      content: |-
+        {% set on = is_state('input_boolean.zariadka_rozklad', 'on') %}
+        {% set a = states('input_datetime.zariadka_pochatok')[:5] %}
+        {% set b = states('input_datetime.zariadka_kinets')[:5] %}
+        {% set amp = states('input_number.zariadka_strum_rozklad') | int(32) %}
+        {% set v = states('sensor.zariadka_7_5kvt_voltage_a') | float(230) %}
+        {% set nowt = now().strftime('%H:%M') %}
+        {% set inside = (a <= nowt < b) if a <= b else (nowt >= a or nowt < b) %}
+        {% set night = states('input_number.tarif_nich_23_00_06_59') | float(0) %}
+        {% set day = states('input_number.tarif_den_07_00_22_59') | float(0) %}
+        {% if not on %}
+        ## ⚪ Розклад вимкнено
+        Причина: заряджання відбувається лише вручну кнопками вище.
+        {% elif inside %}
+        ## 🟢 Зараз усередині вікна {{ a }}–{{ b }}
+        Станція має заряджати на {{ amp }} А — це близько
+        {{ (amp * v / 1000) | round(1) }} кВт.
+        {% else %}
+        ## 🌙 Вікно зачинене · відкриється о {{ a }}
+        Причина: поза вікном заряджання заблоковане командою «Close charging».
+        {% endif %}
+
+        {% if night > 0 and day > 0 %}
+        Нічний тариф **{{ night | round(2) }} грн** проти денного
+        **{{ day | round(2) }} грн** — повна батарея вночі коштує в
+        {{ (day / night) | round(1) }} раза дешевше. Тому типове вікно —
+        23:00–06:59.
+        {% endif %}
+
+        Якщо машину під'єднати посеред вікна, заряджання почнеться одразу,
+        а не наступної ночі.
   # --- Секція 8б · Що станція не віддає ---
   # Перевірено 2026-08-09: LocalTuya створив 23 сутності, з них 10 ніколи не
   # отримували значення. Показуємо це явно, щоб не шукати причину в дашборді.
