@@ -15,8 +15,10 @@ views:
   dense_section_placement: true
   sections:
   # --- Секція 0 · Потік енергії ---
+  # column_span 2 замість 4: карта потоку масштабується за шириною секції,
+  # на всю ширину вона виростала до ~470 px і давила решту сторінки.
   - type: grid
-    column_span: 4
+    column_span: 2
     cards:
     - type: heading
       heading: Потік енергії просто зараз
@@ -27,6 +29,8 @@ views:
       cardstyle: lite
       panel_mode: false
       large_font: true
+      # Власний параметр картки: обмежує висоту SVG (типове значення — 100%).
+      card_height: 340px
       show_solar: false
       inverter:
         modern: true
@@ -80,8 +84,10 @@ views:
       grid_options:
         columns: full
   # --- Секція 1 · Hero ---
+  # Теж 2 колонки — стає праворуч від карти потоку. Інакше dense-розміщення
+  # підтягує сюди «Хто бере потужність» і ламає парність наступних секцій.
   - type: grid
-    column_span: 4
+    column_span: 2
     cards:
     - type: markdown
       grid_options:
