@@ -23,6 +23,27 @@
 - Irrigation pump energy uses measured/confirmed pump power when available; do
   not replace an actual measurement with the nominal 1.1 kW label.
 
+## The EV charger switch does not stop a charging session
+
+`switch.zariadka_7_5kvt` looks like the power switch and accepts commands — the
+entity flips to `off` — but the station keeps charging. Confirmed on 2026-08-09:
+the switch sat at `off` from 12:06:51 while `device_kw` still reported 6.3 kW at
+12:09:14. LocalTuya bound it to a datapoint the station ignores mid-session.
+
+The real control is **`select.zariadka_7_5kvt_charge_state`** with options
+`Open charging` / `Close charging` / `Wait for operation`. Sending
+`Close charging` stopped the session in two seconds: `device_state` → `finish`,
+power 6.3 → 0.0 kW, current → 0.0 A.
+
+Consequences for anything that reads charger state:
+
+- never derive "station is off" from `switch.zariadka_7_5kvt`; use
+  `device_state` plus `device_kw`, and treat `finish` as a normal end-of-session;
+- `switch.zariadka_7_5kvt_switch` is a second switch that has been `unavailable`
+  since 11:19 the same day — it may be the actual power datapoint and is worth
+  re-pairing in LocalTuya;
+- `device_state` spells charging as `charing` (sic) — match both spellings.
+
 ## Difference sensors with `state_class: total` corrupt their own statistics
 
 `sensor.vitrati_inshe_bez_lichilnika` is "everything bought from the grid minus

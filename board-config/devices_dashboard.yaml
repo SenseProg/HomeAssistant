@@ -2270,19 +2270,25 @@ views:
         {% set voltage = states('sensor.zariadka_7_5kvt_voltage_a') | float(0) %}
         {% set dev = states('sensor.zariadka_7_5kvt_device_state') | lower %}
         {% set fault = is_state('binary_sensor.zariadka_7_5kvt_fault', 'on') %}
-        {% set powered = is_state('switch.zariadka_7_5kvt', 'on') %}
+        {# Стан беремо ТІЛЬКИ з device_state і потужності. switch.zariadka_7_5kvt
+           тут свідомо не використовується: він не відображає, чи йде сесія. #}
+        {% set blocked = is_state('select.zariadka_7_5kvt_charge_state', 'Close charging') %}
         {% if fault %}
         ## 🔴 Несправність зарядної станції
         Причина: станція повідомила про помилку. Заряджання не почнеться, доки її не усунути.
         {% elif power > 0.1 or dev in ['charing', 'charging'] %}
         ## 🟢 Заряджання триває · {{ power | round(2) }} кВт
         Причина: автомобіль підключений і приймає струм{% if voltage > 0 %} — приблизно {{ (power * 1000 / voltage) | round(0) }} А при {{ voltage | round(1) }} В{% endif %}.
-        {% elif not powered %}
-        ## ⚪ Зарядну станцію вимкнено
-        Причина: живлення станції вимкнене вручну. Заряджання неможливе, доки його не увімкнути.
+        {% elif blocked %}
+        ## ⚪ Заряджання зупинено командою
+        Причина: станції надіслано «Close charging». Щоб дозволити знову — оберіть
+        «Open charging» у секції керування.
         {% elif dev in ['no_connet', 'no_connect', 'disconnected'] %}
         ## ⚪ Автомобіль не підключений
-        Причина: станція увімкнена, справна й готова — чекає, доки вставлять кабель у машину.
+        Причина: станція справна й готова — чекає, доки вставлять кабель у машину.
+        {% elif dev == 'finish' %}
+        ## ⚪ Заряджання завершено
+        Причина: станція повідомила «finish» — сесія закінчилась, струм не подається.
         {% else %}
         ## 🟡 Станція готова, заряджання не йде
         Причина: станція повідомляє стан «{{ dev }}» і зараз не віддає потужність.
@@ -2316,16 +2322,10 @@ views:
         columns: 12
         rows: 1
     - type: tile
-      entity: switch.zariadka_7_5kvt
-      name: Живлення станції
+      entity: select.zariadka_7_5kvt_charge_state
+      name: Керування сесією
       icon: mdi:ev-plug-type2
       color: green
-      tap_action:
-        action: more-info
-      hold_action:
-        action: toggle
-        confirmation:
-          text: Змінити живлення зарядної станції? Під час заряджання це зупинить сесію.
       grid_options:
         columns: 12
         rows: 1
@@ -2433,26 +2433,57 @@ views:
         {% else %}
         🔴 Станція гаряча ({{ t }} °C). Перевірте вентиляцію і навантаження.
         {% endif %}
-  # --- Секція 5 · Безпечне керування ---
+  # --- Секція 5 · Керування заряджанням ---
+  # Перевірено 2026-08-09: сесією керує ТІЛЬКИ select charge_state. Команда
+  # «Close charging» зупинила заряджання за дві секунди — 6,3 кВт впали до нуля,
+  # device_state став finish. Перемикач switch.zariadka_7_5kvt на сесію не
+  # впливає взагалі: він стояв у off чотири хвилини, поки станція заряджала.
   - type: grid
     column_span: 1
     cards:
     - type: heading
-      heading: Керування
-      icon: mdi:gesture-tap-hold
+      heading: Керування заряджанням
+      icon: mdi:ev-station
       grid_options:
         columns: full
     - type: tile
-      entity: switch.zariadka_7_5kvt
-      name: Живлення зарядної станції
+      entity: select.zariadka_7_5kvt_charge_state
+      name: Заряджання
       icon: mdi:ev-plug-type2
       color: green
+      features_position: bottom
+      features:
+      - type: select-options
+      grid_options:
+        columns: full
+    - type: markdown
+      grid_options:
+        columns: full
+      content: |-
+        {% set st = states('select.zariadka_7_5kvt_charge_state') %}
+        {% set p = states('sensor.zariadka_7_5kvt_device_kw') | float(0) %}
+        **Це єдиний контрол, який справді зупиняє й запускає сесію.**
+
+        · **Close charging** — зупинити заряджання зараз
+        · **Open charging** — дозволити заряджання
+        · **Wait for operation** — станція чекає команди
+
+        {% if p > 0.1 %}
+        Зараз станція віддає {{ p | round(2) }} кВт. Щоб зупинити — оберіть
+        «Close charging».
+        {% elif st == 'Close charging' %}
+        Заряджання зупинено командою. Щоб дозволити знову — оберіть «Open charging».
+        {% endif %}
+    - type: tile
+      entity: switch.zariadka_7_5kvt
+      name: Перемикач станції · сесію не зупиняє
+      icon: mdi:toggle-switch-off-outline
       tap_action:
         action: more-info
       hold_action:
         action: toggle
         confirmation:
-          text: Змінити живлення зарядної станції? Під час заряджання це зупинить сесію.
+          text: Цей перемикач не зупиняє активне заряджання. Все одно перемкнути?
       grid_options:
         columns: full
         rows: 1
@@ -2460,9 +2491,16 @@ views:
       grid_options:
         columns: full
       content: |-
-        Коротке натискання лише відкриває деталі. Щоб увімкнути або вимкнути
-        станцію, **утримуйте** плитку і підтвердьте дію.
-        Причина: так заряджання не зупиниться від випадкового дотику.
+        ⚠️ **Перемикач вище не зупиняє заряджання.** Перевірено 9 серпня: він
+        чотири хвилини стояв у «вимкнено», поки станція віддавала 6,3 кВт.
+        Причина: LocalTuya прив'язав його до точки даних, яку станція під час
+        активної сесії ігнорує.
+
+        {% if states('switch.zariadka_7_5kvt_switch') in ['unavailable', 'unknown'] %}
+        Другий перемикач `switch.zariadka_7_5kvt_switch` зараз недоступний —
+        схоже, саме він мав керувати живленням, але його точка даних не
+        відповідає.
+        {% endif %}
   # --- Секція 6 · Скільки заряджали і за скільки ---
   - type: grid
     column_span: 2
