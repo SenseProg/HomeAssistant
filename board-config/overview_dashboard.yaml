@@ -1,0 +1,277 @@
+# Головний дашборд «Огляд» — реалізація затвердженого макета v2 (08.08.2026).
+# Джерело правди: board-config/overview_dashboard.yaml → /userdata/hass/config/overview_dashboard.yaml
+views:
+- title: Огляд
+  path: overview
+  icon: mdi:home-variant
+  type: sections
+  max_columns: 4
+  sections:
+  # --- Секція 1 · Hero: привітання, погода, полив, тариф, NAS ---
+  - type: grid
+    column_span: 4
+    cards:
+    - type: markdown
+      grid_options:
+        columns: full
+      content: |-
+        ## {% set h = now().hour %}{{ 'Доброго ранку' if 5 <= h < 12 else 'Доброго дня' if 12 <= h < 18 else 'Доброго вечора' if 18 <= h < 23 else 'Доброї ночі' }} · Дім Ковтуни
+        {{ now().strftime('%A, %d.%m') }} · схід {{ as_timestamp(state_attr('sun.sun','next_rising')) | timestamp_custom('%H:%M', true) }} · тариф зараз: {{ states('sensor.tarif_elektroenergii_zaraz') }} грн/кВт·год
+        🕘 {{ states('input_text.poliv_ostannie_rishennia') }}
+    - type: tile
+      entity: weather.forecast_golovna
+      name: Погода
+      grid_options:
+        columns: 12
+        rows: 1
+    - type: tile
+      entity: sensor.poliv_stan_sistemi
+      name: Полив
+      icon: mdi:sprinkler-variant
+      grid_options:
+        columns: 12
+        rows: 1
+    - type: tile
+      entity: sensor.tarif_elektroenergii_zaraz
+      name: Тариф
+      color: purple
+      grid_options:
+        columns: 12
+        rows: 1
+    - type: tile
+      entity: binary_sensor.cloudmate_nas_online
+      name: NAS
+      grid_options:
+        columns: 12
+        rows: 1
+  # --- Секція 2 · Енергія ---
+  - type: grid
+    column_span: 2
+    cards:
+    - type: heading
+      heading: Енергія
+      icon: mdi:lightning-bolt
+      grid_options:
+        columns: full
+    - type: gauge
+      entity: sensor.zagalne_navantazhennia
+      name: Навантаження
+      min: 0
+      max: 15
+      needle: true
+      severity:
+        green: 0
+        yellow: 6
+        red: 11
+      grid_options:
+        columns: 6
+    - type: gauge
+      entity: sensor.inverter_battery
+      name: Батарея
+      unit: '%'
+      min: 0
+      max: 100
+      needle: false
+      severity:
+        red: 0
+        yellow: 25
+        green: 40
+      grid_options:
+        columns: 6
+    - type: tile
+      entity: sensor.naibilshii_spozhivach_zaraz
+      name: Найбільший споживач
+      grid_options:
+        columns: 12
+        rows: 1
+    - type: statistic
+      entity: sensor.vitrati_na_merezhu_razom
+      stat_type: change
+      name: Витрати сьогодні
+      period:
+        calendar:
+          period: day
+      grid_options:
+        columns: 6
+    - type: statistic
+      entity: sensor.vitrati_na_merezhu_razom
+      stat_type: change
+      name: Витрати за місяць
+      period:
+        calendar:
+          period: month
+      grid_options:
+        columns: 6
+  # --- Секція 3 · Дім зараз ---
+  - type: grid
+    column_span: 2
+    cards:
+    - type: heading
+      heading: Дім зараз
+      icon: mdi:home-account
+      grid_options:
+        columns: full
+    - type: tile
+      entity: water_heater.144036023323246_water_heater
+      name: Бойлер
+      # Стан водонагрівача — сире "on" без перекладу; температура води корисніша
+      state_content: current_temperature
+      grid_options:
+        columns: 12
+        rows: 1
+    - type: tile
+      entity: sensor.boiler_sogodni
+      name: Бойлер сьогодні
+      icon: mdi:water-boiler
+      grid_options:
+        columns: 12
+        rows: 1
+    - type: tile
+      entity: switch.zariadka_7_5kvt
+      name: Зарядка авто
+      grid_options:
+        columns: 12
+        rows: 1
+    - type: tile
+      entity: sensor.zariadka_7_5kvt_device_kw
+      name: Потужність зарядки
+      grid_options:
+        columns: 12
+        rows: 1
+    - type: tile
+      entity: person.dim_kovtuni
+      grid_options:
+        columns: 8
+        rows: 1
+    - type: tile
+      entity: person.katerina
+      grid_options:
+        columns: 8
+        rows: 1
+    - type: tile
+      entity: person.olesia
+      grid_options:
+        columns: 8
+        rows: 1
+  # --- Секція 4 · Клімат зараз ---
+  - type: grid
+    column_span: 4
+    cards:
+    - type: heading
+      heading: Клімат зараз
+      icon: mdi:home-thermometer
+      grid_options:
+        columns: full
+    - type: tile
+      entity: sensor.2_floor_inside_temperature
+      name: Спальня батьків
+      grid_options:
+        columns: 8
+        rows: 1
+    - type: tile
+      entity: sensor.2_floor_carbon_dioxide
+      name: CO₂ спальня
+      grid_options:
+        columns: 8
+        rows: 1
+    - type: tile
+      entity: sensor.terneo_2_floor_temperature
+      name: Кухня · підлога
+      grid_options:
+        columns: 8
+        rows: 1
+    - type: tile
+      entity: sensor.sonoff_a48001c18f_temperature
+      name: Гостьова
+      grid_options:
+        columns: 8
+        rows: 1
+    - type: tile
+      entity: sensor.siku_blauberg_fan_192_168_50_27_humidity
+      name: Хлопці · вологість
+      grid_options:
+        columns: 8
+        rows: 1
+    - type: tile
+      entity: sensor.2i_poverkh_t_h_temperature
+      name: Дім бабусі
+      grid_options:
+        columns: 8
+        rows: 1
+  # --- Секція 5 · Камера ---
+  - type: grid
+    column_span: 1
+    cards:
+    - type: heading
+      heading: Двір
+      icon: mdi:cctv
+      grid_options:
+        columns: full
+    - type: picture-entity
+      entity: binary_sensor.cam1_motion
+      camera_image: camera.cam1
+      show_state: true
+      show_name: false
+      grid_options:
+        columns: full
+  # --- Секція 6 · Сьогодні (журнал подій) ---
+  - type: grid
+    column_span: 2
+    cards:
+    - type: heading
+      heading: Сьогодні
+      icon: mdi:timeline-clock
+      grid_options:
+        columns: full
+    - type: logbook
+      hours_to_show: 24
+      grid_options:
+        columns: full
+      target:
+        entity_id:
+        - switch.mini_switch_k601_2_switch_1_2
+        - binary_sensor.irrigation_unlimited_c1_m
+        - binary_sensor.cam1_motion
+        - input_boolean.poliv_avtomatika_dozvolena
+        - water_heater.144036023323246_water_heater
+        - switch.zariadka_7_5kvt
+  # --- Секція 7 · Швидкі дії ---
+  - type: grid
+    column_span: 1
+    cards:
+    - type: heading
+      heading: Швидкі дії
+      grid_options:
+        columns: full
+    - type: button
+      name: Автополив
+      icon: mdi:sprinkler
+      tap_action:
+        action: navigate
+        navigation_path: /pristroi-dashboard/poliv
+      grid_options:
+        columns: full
+    - type: button
+      name: Витрати
+      icon: mdi:cash
+      tap_action:
+        action: navigate
+        navigation_path: /power-dashboard/cost
+      grid_options:
+        columns: full
+    - type: button
+      name: Claude чат
+      icon: mdi:message-text
+      tap_action:
+        action: navigate
+        navigation_path: /claude-home
+      grid_options:
+        columns: full
+    - type: button
+      name: Стоп полив
+      icon: mdi:stop-circle-outline
+      tap_action:
+        action: call-service
+        service: script.poliv_stop_all
+      grid_options:
+        columns: full
