@@ -6,46 +6,231 @@ views:
   max_columns: 4
   dense_section_placement: true
   sections:
+  # --- Секція 1 · Hero: стан мережі однією відповіддю ---
   - type: grid
+    column_span: 4
+    cards:
+    - type: markdown
+      grid_options:
+        columns: full
+      content: |-
+        {% set asus = states('sensor.spalnia_batkiv_192_168_50_1_devices_connected') %}
+        {% set ap_n = states('sensor.tenda_ap_clients') %}
+        {% set rep_n = states('sensor.tenda_repeater_clients') %}
+        {% set sig = states('sensor.tenda_repeater_signal') %}
+        {% set dn = states('sensor.spalnia_batkiv_192_168_50_1_download_speed') | float(0) %}
+        {% set up = states('sensor.spalnia_batkiv_192_168_50_1_upload_speed') | float(0) %}
+        {% set trackers = states.device_tracker | list %}
+        {% set home = trackers | selectattr('state', 'eq', 'home') | list | count %}
+        {% set bad = ['unknown', 'unavailable', 'none', ''] %}
+        {% set key_states = [
+             is_state('binary_sensor.cloudmate_nas_online', 'on'),
+             is_state('binary_sensor.hikvision_camera_online', 'on'),
+             states('switch.avtopoliv_kontroler_avtopoliv_klapan_1') not in bad,
+             states('switch.mini_switch_k601_2_switch_1_2') not in bad,
+             rep_n not in bad,
+             is_state('binary_sensor.tcl_tv_online', 'on')
+           ] %}
+        {% set key_ok = key_states | select | list | count %}
+        {% set aps_ok = (asus not in bad) and (ap_n not in bad) and (rep_n not in bad) %}
+        {% if aps_ok %}
+        ## 🟢 Мережа працює · {{ asus }} пристроїв на зв'язку
+        {% else %}
+        ## 🔴 Точка доступу не відповідає
+        {% endif %}
+
+        {% if aps_ok %}
+        Причина: усі три точки доступу онлайн, повторювач тримає аплінк на {{ sig }} dBm.
+        {% else %}
+        Причина: хоча б одна з точок доступу не віддає дані — перевірте живлення обладнання.
+        {% endif %}
+        Удома {{ home }} із {{ trackers | count }} відстежуваних пристроїв · інтернет ↓ {{ dn | round(2) }} / ↑ {{ up | round(2) }} Мбіт/с ·
+        ключових пристроїв на зв'язку {{ key_ok }} із 6.
+
+        {% if states('sensor.tenda_ap_security') == 'Не встановлено' %}
+        ⚠️ **Пароль адміністратора не встановлено — Tenda AC10 «Промінь» і Tenda A9.**
+        Будь-хто в домашній мережі може змінити налаштування точок доступу.
+        Причина: заводські налаштування ніколи не змінювали.
+        {% endif %}
+    - type: tile
+      entity: sensor.spalnia_batkiv_192_168_50_1_devices_connected
+      name: Клієнтів на ASUS
+      icon: mdi:lan-connect
+      grid_options:
+        columns: 12
+        rows: 1
+    - type: tile
+      entity: sensor.tenda_ap_clients
+      name: Клієнтів на «Промені»
+      icon: mdi:access-point
+      grid_options:
+        columns: 12
+        rows: 1
+    - type: tile
+      entity: sensor.tenda_repeater_signal
+      name: Сигнал повторювача
+      icon: mdi:wifi-sync
+      color: green
+      grid_options:
+        columns: 12
+        rows: 1
+    - type: tile
+      entity: sensor.spalnia_batkiv_192_168_50_1_download_speed
+      name: Швидкість завантаження
+      icon: mdi:download-network
+      color: blue
+      grid_options:
+        columns: 12
+        rows: 1
+  # --- Секція 2 · ASUS RT-AX55 ---
+  - type: grid
+    column_span: 1
     cards:
     - type: heading
-      heading: ASUS RT-AX55 · основний роутер «Отаке»
+      heading: ASUS RT-AX55 · «Отаке»
       icon: mdi:router-wireless
       grid_options:
         columns: full
+    - type: markdown
+      grid_options:
+        columns: full
+      content: '`192.168.50.1` · основний роутер'
     - type: entities
-      title: ASUS RT-AX55 · 192.168.50.1
       grid_options:
         columns: full
       entities:
       - entity: sensor.spalnia_batkiv_192_168_50_1_devices_connected
-        name: Пристроїв підключено
+        name: Клієнтів
       - entity: sensor.spalnia_batkiv_192_168_50_1_cpu_temperature
         name: Температура CPU
       - entity: sensor.spalnia_batkiv_192_168_50_1_5ghz_temperature
-        name: Температура 5GHz радіо
+        name: Радіо 5 ГГц
       - type: divider
       - entity: sensor.spalnia_batkiv_192_168_50_1_average_load_1_min
-        name: Навантаження (1 хв)
+        name: Навантаження 1 хв
       - entity: sensor.spalnia_batkiv_192_168_50_1_average_load_5_min
-        name: Навантаження (5 хв)
+        name: Навантаження 5 хв
       - entity: sensor.spalnia_batkiv_192_168_50_1_average_load_15_min
-        name: Навантаження (15 хв)
+        name: Навантаження 15 хв
+  # --- Секція 3 · Tenda AC10 ---
+  - type: grid
+    column_span: 1
+    cards:
+    - type: heading
+      heading: Tenda AC10 · «Промінь»
+      icon: mdi:access-point
+      grid_options:
+        columns: full
+    - type: markdown
+      grid_options:
+        columns: full
+      content: |-
+        `192.168.50.2` · точка доступу
+        {% if states('sensor.tenda_ap_security') == 'Не встановлено' %}
+        · ⚠️ **без пароля адміністратора**
+        {% endif %}
     - type: entities
-      title: Швидкість LAN-опитування
       grid_options:
         columns: full
       entities:
-      - entity: sensor.spalnia_batkiv_192_168_50_1_download_speed
-        name: Швидкість завантаження
-      - entity: sensor.spalnia_batkiv_192_168_50_1_upload_speed
-        name: Швидкість вивантаження
-      - entity: sensor.spalnia_batkiv_192_168_50_1_download
-        name: Завантажено (лічильник)
-      - entity: sensor.spalnia_batkiv_192_168_50_1_upload
-        name: Вивантажено (лічильник)
+      - entity: sensor.tenda_ap_clients
+        name: Клієнтів
+      - entity: sensor.tenda_ap_download_speed
+        name: Трафік клієнтів ↓
+      - entity: sensor.tenda_ap_upload_speed
+        name: Трафік клієнтів ↑
+      - type: divider
+      - entity: sensor.tenda_ap_status
+        name: Прошивка
+      - entity: sensor.tenda_ap_security
+        name: Пароль адміністратора
+  # --- Секція 4 · Tenda A9 ---
+  - type: grid
+    column_span: 1
+    cards:
+    - type: heading
+      heading: Tenda A9 · повторювач
+      icon: mdi:wifi-sync
+      grid_options:
+        columns: full
+    - type: markdown
+      grid_options:
+        columns: full
+      content: '`192.168.50.102` · мережа «Отаке» · лише 2,4 ГГц, до 300 Мбіт/с'
+    - type: entities
+      grid_options:
+        columns: full
+      entities:
+      - entity: sensor.tenda_repeater_clients
+        name: Клієнтів
+      - entity: sensor.tenda_repeater_status
+        name: Стан аплінка
+      - entity: sensor.tenda_repeater_signal
+        name: Сигнал аплінка
+    - type: markdown
+      grid_options:
+        columns: full
+      content: |-
+        {% set s = states('sensor.tenda_repeater_signal') | float(-100) %}
+        {% if s >= -60 %}
+        🟢 Сигнал впевнений ({{ s | round(0) }} dBm) — запас великий.
+        {% elif s >= -70 %}
+        🟢 Сигнал придатний ({{ s | round(0) }} dBm), але запас невеликий.
+        Причина: ближче до −70 dBm швидкість падає першою.
+        {% else %}
+        🟠 Сигнал слабкий ({{ s | round(0) }} dBm) — переставте повторювач ближче до роутера.
+        {% endif %}
+  # --- Секція 5 · Zigbee-шлюз ---
+  - type: grid
+    column_span: 1
+    cards:
+    - type: heading
+      heading: SONOFF ZBBridge
+      icon: mdi:zigbee
+      grid_options:
+        columns: full
+    - type: markdown
+      grid_options:
+        columns: full
+      content: |-
+        {% set clients = state_attr('sensor.tenda_repeater_clients', 'onlineList') or [] %}
+        {% set bridge = clients | selectattr('devIp', 'defined') | selectattr('devIp', 'equalto', '192.168.50.164') | list %}
+        {% if bridge | count > 0 %}
+        🟢 **Онлайн** · з'єднаний через повторювач Tenda A9
+
+        `192.168.50.164` · `{{ bridge[0].devMac | upper }}`
+        прошивка `1.7.0` · SONOFF ID `100124a572`
+        {% else %}
+        🔴 **Недоступний** — шлюза немає у списку клієнтів Tenda A9.
+        Причина: без шлюза дочірні Zigbee-датчики перестають оновлюватися.
+        {% endif %}
+
+        Передає в Home Assistant кліматичні датчики, датчики гаражних воріт і руху.
+        Їхні батареї — у секції «Zigbee-датчики» нижче.
+  # --- Секція 6 · Швидкість інтернету ---
+  - type: grid
+    column_span: 2
+    cards:
+    - type: heading
+      heading: Швидкість інтернету
+      icon: mdi:speedometer
+      grid_options:
+        columns: full
+    - type: tile
+      entity: sensor.spalnia_batkiv_192_168_50_1_download_speed
+      name: Завантаження
+      color: green
+      grid_options:
+        columns: 12
+        rows: 1
+    - type: tile
+      entity: sensor.spalnia_batkiv_192_168_50_1_upload_speed
+      name: Вивантаження
+      color: blue
+      grid_options:
+        columns: 12
+        rows: 1
     - type: history-graph
-      title: Швидкість за 3 години
       hours_to_show: 3
       grid_options:
         columns: full
@@ -55,19 +240,116 @@ views:
       - entity: sensor.spalnia_batkiv_192_168_50_1_upload_speed
         name: Вивантаження
     - type: markdown
-      title: Про WAN-сенсори
       grid_options:
         columns: full
-      content: 'Вбудовані сенсори WAN-статусу і зовнішньої IP (через UPnP/IGD) на цьому роутері нестабільні
-        і завжди повертають unavailable/0.0.0.0 - це обмеження прошивки ASUS, не Home Assistant. Прибрано
-        з дашборда свідомо.
-
-        '
+      content: |-
+        Лічильники «Завантажено/Вивантажено» роутер не веде — вони завжди 0,00 ГБ
+        ({{ states('sensor.spalnia_batkiv_192_168_50_1_download') }} / {{ states('sensor.spalnia_batkiv_192_168_50_1_upload') }} ГБ).
+        Причина: прошивка ASUS не віддає накопичувальні лічильники через LAN-опитування.
+  # --- Секція 7 · Хто вдома ---
+  - type: grid
+    column_span: 2
+    cards:
+    - type: heading
+      heading: Хто зараз удома
+      icon: mdi:home-account
+      grid_options:
+        columns: full
+    - type: tile
+      entity: person.dim_kovtuni
+      name: Дмитро
+      grid_options:
+        columns: 12
+        rows: 1
+    - type: tile
+      entity: person.katerina
+      name: Катерина
+      grid_options:
+        columns: 12
+        rows: 1
+    - type: tile
+      entity: person.olesia
+      name: Олеся
+      grid_options:
+        columns: 12
+        rows: 1
+    - type: tile
+      entity: person.babusia_sima
+      name: Бабуся Сіма
+      grid_options:
+        columns: 12
+        rows: 1
     - type: markdown
-      title: Усі активні клієнти та їхня точка підключення
       grid_options:
         columns: full
-      content: "**Позначення:** \U0001F50C Ethernet · \U0001F4F6 Wi-Fi · частота/покоління вказуються\n\
+      content: |-
+        Людина має стан **удома**, коли хоча б один прив'язаний телефон бачить
+        Home Assistant або основний роутер ASUS. Точка Wi-Fi значення не має:
+        клієнти ASUS, «Променя» і повторювача належать до однієї домашньої мережі.
+  # --- Секція 8 · Ключові пристрої однією таблицею ---
+  - type: grid
+    column_span: 4
+    cards:
+    - type: heading
+      heading: Ключові пристрої
+      icon: mdi:server-network
+      grid_options:
+        columns: full
+    - type: markdown
+      grid_options:
+        columns: full
+      content: |-
+        {% set bad = ['unknown', 'unavailable', 'none', ''] %}
+        {% set irr = states('switch.avtopoliv_kontroler_avtopoliv_klapan_1') %}
+        {% set pump = states('switch.mini_switch_k601_2_switch_1_2') %}
+        {% set clients = state_attr('sensor.tenda_repeater_clients', 'onlineList') or [] %}
+        {% set bridge_on = (clients | selectattr('devIp', 'defined') | selectattr('devIp', 'equalto', '192.168.50.164') | list | count) > 0 %}
+
+        | Пристрій | Адреса | Підключення | Стан |
+        |---|---|---|---|
+        | CloudMate — NAS QNAP | `192.168.50.25` | 🔌 Ethernet · ASUS | {{ '🟢 доступний' if is_state('binary_sensor.cloudmate_nas_online','on') else ('🔴 недоступний' if is_state('binary_sensor.cloudmate_nas_online','off') else '🟡 визначається') }} |
+        | Камера Hikvision — двір | `192.168.50.201` | 🔌 Ethernet · ASUS | {{ '🟢 доступна' if is_state('binary_sensor.hikvision_camera_online','on') else ('🔴 недоступна' if is_state('binary_sensor.hikvision_camera_online','off') else '🟡 визначається') }} |
+        | Контролер автополиву Tuya — 8 зон | `192.168.50.221` | 📶 Wi-Fi 2,4 ГГц · ASUS | {{ '🟢 LocalTuya 3.4' if irr not in bad else '🔴 локального зв\'язку немає' }} |
+        | Насос автополиву K601 | `192.168.50.91` | 📶 Wi-Fi 2,4 ГГц · ASUS | {{ ('🟢 увімкнений' if pump == 'on' else '🟢 вимкнений') if pump not in bad else '🔴 локального зв\'язку немає' }} |
+        | SONOFF ZBBridge — Zigbee-шлюз | `192.168.50.164` | 📶 Wi-Fi 2,4 ГГц · Tenda A9 | {{ '🟢 онлайн' if bridge_on else '🔴 недоступний' }} |
+        | Телевізор TCL — Google Cast | `192.168.50.175` | 📶 Wi-Fi · ASUS | {{ '🟢 увімкнений' if is_state('binary_sensor.tcl_tv_online','on') else ('⚪ вимкнений — це норма' if is_state('binary_sensor.tcl_tv_online','off') else '🟡 визначається') }} |
+
+        <details><summary>Мережеві подробиці цих пристроїв</summary>
+
+        **CloudMate** — `00:08:9B:ED:62:EF`, адреса закріплена в ASUS RT-AX55.
+
+        **Камера Hikvision** — `10:12:FB:F7:95:AD`, сервіси HTTP `80` · RTSP `554` ·
+        Hikvision SDK `8000`. Живе відео й датчики руху — на вкладці «Камера і рух».
+
+        **Контролер автополиву** — `38:2C:E5:2D:5B:32`, LocalTuya, протокол 3.4,
+        опитування кожні 5 с. Старий IP `192.168.50.223` більше не використовується.
+        Контролер не з'являється в загальному списку клієнтів, бо AsusWRT не створює
+        для нього окремий `device_tracker`, а до Tenda він не підключений.
+
+        **Насос K601** — `80:64:7C:46:E8:D1`, LocalTuya через TCP `6668`.
+        Картка лишається тут незалежно від того, чи створив AsusWRT для насоса
+        окремий `device_tracker`.
+
+        **Телевізор TCL** — `F0:35:75:B3:31:80`, TCL BeyondTV · Google Cast.
+        Коли телевізор вимкнений, його мережевий модуль теж вимикається — тому
+        «вимкнений» тут нормальний стан, а не проблема. Керувати ним або надсилати
+        фото до ввімкнення неможливо.
+
+        </details>
+  # --- Секція 9 · Повний список клієнтів ---
+  - type: grid
+    column_span: 4
+    cards:
+    - type: heading
+      heading: Повний список клієнтів
+      icon: mdi:format-list-bulleted
+      grid_options:
+        columns: full
+    - type: markdown
+      grid_options:
+        columns: full
+      content: "<details><summary>Усі активні клієнти та їхня точка підключення</summary>\n\n\
+        **Позначення:** \U0001F50C Ethernet · \U0001F4F6 Wi-Fi · частота/покоління вказуються\n\
         лише тоді, коли їх повідомляє точка доступу. Сама частота 5 ГГц ще не\nдоводить, що клієнт працює\
         \ саме у Wi-Fi 5 або Wi-Fi 6.\n\n{% set ap_clients = state_attr('sensor.tenda_ap_clients', 'onlineList')\
         \ or [] %}\n{% set repeater_clients = state_attr('sensor.tenda_repeater_clients', 'onlineList')\
@@ -170,425 +452,110 @@ views:
         \ fallback)) }}** — {% if ip != 'UnKnown' %}`{{ ip }}`{% else %}IP не отримано{% endif %} · `{{\
         \ mac | upper }}` · **\U0001F4F6 Wi-Fi 4 · 2,4 ГГц** · **Tenda A9 · повторювач «Отаке»**\n  {%\
         \ endif %}\n{% endfor %}\n{% if not ns.found %}\nНемає активних клієнтів або мережеві пристрої\
-        \ недоступні.\n{% endif %}\n"
-    - type: markdown
-      title: CloudMate · NAS QNAP
-      grid_options:
-        columns: full
-      content: '{% if is_state(''binary_sensor.cloudmate_nas_online'', ''on'') %}
-
-        ## 🟢 CloudMate у мережі
-
-        {% elif is_state(''binary_sensor.cloudmate_nas_online'', ''off'') %}
-
-        ## 🔴 CloudMate недоступний
-
-        {% else %}
-
-        ## 🟡 Перевіряється після перезапуску Home Assistant
-
-        {% endif %}
-
-
-        **IP:** `192.168.50.25` · **MAC:** `00:08:9B:ED:62:EF`<br>
-
-        **Тип підключення:** 🔌 **Ethernet**<br>
-
-        **DHCP:** адреса закріплена в ASUS RT-AX55
-
-        '
-    - type: markdown
-      title: Телевізор TCL · Google Cast
-      grid_options:
-        columns: full
-      content: '{% if is_state(''binary_sensor.tcl_tv_online'', ''on'') %}
-
-        ## 🟢 Телевізор увімкнений і в мережі
-
-        {% elif is_state(''binary_sensor.tcl_tv_online'', ''off'') %}
-
-        ## 🔴 Телевізор вимкнений або недоступний
-
-        {% else %}
-
-        ## 🟡 Перевіряється після перезапуску Home Assistant
-
-        {% endif %}
-
-
-        **IP:** `192.168.50.175` · **MAC:** `F0:35:75:B3:31:80`<br>
-
-        **Тип підключення:** 📶 **Wi-Fi**<br>
-
-        **DHCP:** адреса закріплена в ASUS RT-AX55<br>
-
-        **Модель:** TCL BeyondTV · Google Cast
-
-
-        Коли телевізор вимкнений, його мережевий модуль також вимикається.
-
-        Тому червоний стан у цей момент нормальний: пристрій більше не зникає
-
-        з дашборда, але керувати ним або надсилати фото до ввімкнення неможливо.
-
-        '
-    - type: markdown
-      title: Камера Hikvision · двір
-      grid_options:
-        columns: full
-      content: '{% if is_state(''binary_sensor.hikvision_camera_online'', ''on'') %}
-
-        ## 🟢 Камера доступна
-
-        {% elif is_state(''binary_sensor.hikvision_camera_online'', ''off'') %}
-
-        ## 🔴 Камера недоступна
-
-        {% else %}
-
-        ## 🟡 Стан визначається
-
-        {% endif %}
-
-
-        **IP:** `192.168.50.201` · **MAC:** `10:12:FB:F7:95:AD`<br>
-
-        **Тип підключення:** 🔌 **Ethernet**<br>
-
-        **DHCP:** адреса закріплена в ASUS RT-AX55<br>
-
-        **Сервіси:** HTTP `80` · RTSP `554` · Hikvision SDK `8000`
-
-
-        Ця картка показує мережеву доступність. Живе відео та датчики руху
-
-        залишаються на окремій вкладці «Камера».
-
-        '
-    - type: markdown
-      title: Контролер автополиву · мережевий стан
-      grid_options:
-        columns: full
-      content: '{% set entity = ''switch.avtopoliv_kontroler_avtopoliv_klapan_1'' %}
-
-        {% if states(entity) in [''on'', ''off''] %}
-
-        ## 🟢 Підключений локально
-
-
-        **Пристрій:** Tuya Smart Sprinkler Controller · 8 зон<br>
-
-        **IP:** `192.168.50.221` · **MAC:** `38:2C:E5:2D:5B:32`<br>
-
-        **Підключення:** ASUS RT-AX55 · основна мережа «Отаке»<br>
-
-        **LocalTuya:** працює · протокол 3.4 · опитування кожні 5 с
-
-
-        Старий IP `192.168.50.223` більше не використовується. Контролер не
-
-        з''являвся в загальному списку, бо AsusWRT не створив для нього окремий
-
-        `device_tracker`, а до Tenda AC10/A9 він не підключений.
-
-        {% else %}
-
-        ## 🔴 Локальний зв''язок відсутній
-
-
-        Контролер очікується на `192.168.50.221` (`38:2C:E5:2D:5B:32`), але
-
-        LocalTuya зараз має стан **{{ states(entity) }}**. Клапани в такому стані
-
-        не слід запускати до відновлення зв''язку.
-
-        {% endif %}
-
-        '
-    - type: markdown
-      title: Насос автополиву K601 · мережевий стан
-      grid_options:
-        columns: full
-      content: '{% set entity = ''switch.mini_switch_k601_2_switch_1_2'' %}
-
-        {% if states(entity) in [''on'', ''off''] %}
-
-        ## 🟢 Підключений локально
-
-
-        **Стан насоса:** {{ ''увімкнений'' if is_state(entity, ''on'') else ''вимкнений'' }}<br>
-
-        **IP:** `192.168.50.91` · **MAC:** `80:64:7C:46:E8:D1`<br>
-
-        **Підключення:** 📶 Wi-Fi · 2,4 ГГц · ASUS RT-AX55 · мережа «Отаке»<br>
-
-        **DHCP:** адреса закріплена в ASUS RT-AX55<br>
-
-        **LocalTuya:** локальний зв''язок працює · TCP `6668`
-
-
-        Картка залишається на вкладці «Мережа» незалежно від того, чи створив
-
-        ASUSWRT для насоса окремий `device_tracker`.
-
-        {% else %}
-
-        ## 🔴 Локальний зв''язок відсутній
-
-
-        Насос очікується на `192.168.50.91` (`80:64:7C:46:E8:D1`), але LocalTuya
-
-        зараз має стан **{{ states(entity) }}**. Не запускайте полив до відновлення
-
-        зв''язку з насосом.
-
-        {% endif %}
-
-        '
+        \ недоступні.\n{% endif %}\n\n</details>\n"
+  # --- Секція 10 · Zigbee-датчики та їхні батареї ---
   - type: grid
+    column_span: 4
     cards:
     - type: heading
-      heading: Хто зараз удома
-      icon: mdi:home-account
-      grid_options:
-        columns: full
-    - type: entities
-      title: Люди
-      grid_options:
-        columns: full
-      entities:
-      - entity: person.dim_kovtuni
-        name: Дмитро
-      - entity: person.katerina
-        name: Катерина
-      - entity: person.olesia
-        name: Олеся
-      - entity: person.babusia_sima
-        name: Бабуся Сіма
-    - type: markdown
-      grid_options:
-        columns: full
-      content: 'Людина має стан **удома**, коли хоча б один прив''язаний телефон бачить Home Assistant
-        або основний роутер ASUS. Точка Wi-Fi не має значення: клієнти ASUS, Tenda «Промінь» і Tenda-повторювача
-        належать до однієї домашньої мережі.'
-  - type: grid
-    cards:
-    - type: heading
-      heading: Tenda AC10 · точка доступу «Промінь»
-      icon: mdi:access-point
-      grid_options:
-        columns: full
-    - type: entities
-      title: Tenda AC10 v3 · 192.168.50.2 · SSID «Промінь»
-      grid_options:
-        columns: full
-      entities:
-      - entity: sensor.tenda_ap_status
-        name: Прошивка
-      - entity: sensor.tenda_ap_clients
-        name: Прямих Wi-Fi клієнтів
-      - entity: sensor.tenda_ap_download_speed
-        name: Поточне завантаження клієнтів
-      - entity: sensor.tenda_ap_upload_speed
-        name: Поточне вивантаження клієнтів
-      - entity: sensor.tenda_ap_security
-        name: Пароль адміністратора
-    - type: markdown
-      title: Підключені безпосередньо до точки доступу
-      grid_options:
-        columns: full
-      content: "{% set clients = state_attr('sensor.tenda_ap_clients', 'onlineList') or [] %}\n{% set\
-        \ wifi = clients | selectattr('qosListConnectType', 'equalto', 'wifi') | list %}\n{% set names\
-        \ = {\n  '1E:C0:D2:73:2C:C9': 'Samsung Galaxy S21 — бабуся Сіма',\n  'C0:35:32:C4:8A:4B': 'Ноутбук\
-        \ LAPTOP-U1I8PNMK'\n} %}\n{% if wifi | count == 0 %}\nНемає активних прямих Wi-Fi-клієнтів.\n\
-        {% else %}\n{% for client in wifi %}\n- **{{ names.get(client.qosListMac | upper, client.qosListHostname\
-        \ if client.qosListHostname not in ['', 'Unknown'] else 'Невідомий пристрій') }}**\n  — `{{ client.qosListIP\
-        \ }}` · `{{ client.qosListMac | upper }}` ·\n  {{ '2,4 ГГц' if client.qosListAccessType | default('')\
-        \ == 'wifi_2G' else ('5 ГГц' if client.qosListAccessType | default('') == 'wifi_5G' else 'Wi-Fi')\
-        \ }} ·\n  ↓ {{ client.qosListDownSpeed | float(0) | round(1) }} кБ/с ·\n  ↑ {{ client.qosListUpSpeed\
-        \ | float(0) | round(1) }} кБ/с\n{% endfor %}\n{% endif %}\n"
-    - type: history-graph
-      title: Трафік точки доступу за 3 години
-      hours_to_show: 3
-      grid_options:
-        columns: full
-      entities:
-      - entity: sensor.tenda_ap_download_speed
-        name: Завантаження
-      - entity: sensor.tenda_ap_upload_speed
-        name: Вивантаження
-    - type: markdown
-      title: Можливості точки доступу
-      grid_options:
-        columns: full
-      content: '**Tenda AC10 v3 / AC1200**, режим точки доступу. Паспортна швидкість: до **300 Мбіт/с**
-        на 2,4 ГГц і до **867 Мбіт/с** на 5 ГГц; Ethernet-порти гігабітні. Значення вище — не швидкість
-        Wi-Fi-з''єднання, а поточний корисний трафік клієнтів, який повідомляє сама Tenda.
-
-        '
-  - type: grid
-    cards:
-    - type: heading
-      heading: Tenda A9 · повторювач «Отаке»
-      icon: mdi:wifi-sync
-      grid_options:
-        columns: full
-    - type: entities
-      title: Tenda A9 · 192.168.50.102 · повторювач «Отаке»
-      grid_options:
-        columns: full
-      entities:
-      - entity: sensor.tenda_repeater_status
-        name: Стан аплінка
-      - entity: sensor.tenda_repeater_signal
-        name: Сигнал до основної мережі
-      - entity: sensor.tenda_repeater_clients
-        name: Підключених клієнтів
-    - type: markdown
-      title: Підключені через повторювач
-      grid_options:
-        columns: full
-      content: "{% set clients = state_attr('sensor.tenda_repeater_clients', 'onlineList') or [] %}\n\
-        {% set names = {\n  '192.168.50.13': 'Термостат Terneo — контур 1',\n  '192.168.50.27': 'Рекуператор\
-        \ Blauberg',\n  '192.168.50.36': 'Зарядна станція авто — 7,5 кВт',\n  '192.168.50.118': 'Бойлер\
-        \ Midea',\n  '192.168.50.157': 'Термостат Terneo — контур 2',\n  '192.168.50.164': 'SONOFF ZBBridge\
-        \ — Zigbee-шлюз',\n  '192.168.50.176': 'Контролер гаражних воріт — Sonoff/eWeLink',\n  '192.168.50.179':\
-        \ 'Інвертор Deye',\n  '192.168.50.219': 'Трифазний лічильник електроенергії будинку'\n} %}\n{%\
-        \ set mac_names = {\n  'DC:6A:E7:A1:09:F2': 'Xiaomi — модель не визначена',\n  '62:1A:51:F4:B2:EE':\
-        \ 'Samsung Galaxy A24 — Василь'\n} %}\n{% set ns = namespace(found=false) %}\n{% for client in\
-        \ clients if client.devIp is defined %}\n{% set ns.found = true %}\n- **{{ names.get(client.devIp,\
-        \ mac_names.get(client.devMac | upper, client.devName if client.devName not in ['', 'UnKnown']\
-        \ else 'Невідомий пристрій')) }}**\n  — {% if client.devIp not in ['', 'UnKnown'] %}`{{ client.devIp\
-        \ }}`{% else %}IP не отримано{% endif %} · `{{ client.devMac | upper }}`\n{% endfor %}\n{% if\
-        \ not ns.found %}\nНемає активних клієнтів або повторювач недоступний.\n{% endif %}\n"
-    - type: history-graph
-      title: Сигнал повторювача за 24 години
-      hours_to_show: 24
-      grid_options:
-        columns: full
-      entities:
-      - entity: sensor.tenda_repeater_signal
-        name: Сигнал аплінка
-    - type: markdown
-      title: Можливості повторювача
-      grid_options:
-        columns: full
-      content: '**Tenda A9 / N300**, лише 2,4 ГГц, паспортна швидкість до **300 Мбіт/с**. Прошивка не
-        віддає фактичну швидкість з''єднання або трафік окремих клієнтів, тому тут показується реальний
-        рівень сигналу аплінка в dBm. Значення ближче до 0 — краще; приблизно −60…−70 dBm зазвичай придатне,
-        але запас невеликий.
-
-        ⚠️ На повторювачі зараз не встановлено пароль адміністратора.
-
-        '
-  - type: grid
-    cards:
-    - type: heading
-      heading: SONOFF ZBBridge — Zigbee-мережа
-      icon: mdi:zigbee
+      heading: Zigbee-датчики · батареї
+      icon: mdi:battery-heart-variant
       grid_options:
         columns: full
     - type: markdown
-      title: Шлюз · 192.168.50.164
       grid_options:
         columns: full
-      content: '{% set clients = state_attr(''sensor.tenda_repeater_clients'', ''onlineList'') or [] %}
+      content: |-
+        {% set bad = ['unknown', 'unavailable', 'none', ''] %}
+        {% set devices = [
+             ('2 поверх — температура/вологість', 'sonoff_a4800819f3', true),
+             ('Температура будинку — 2 поверх', 'sonoff_a48005e8ed', true),
+             ('Вулиця — балкон', 'sonoff_a48005a66a', true),
+             ('Гостьова — температура/вологість', 'sonoff_a48001c18f', true),
+             ('Гаражні ворота — датчик 1', 'sonoff_a48001bcf2', false),
+             ('Гаражні ворота — датчик 2', 'sonoff_a48005b691', false)
+           ] %}
+        {% set mb = states('sensor.sonoff_a48001bcc7_battery') %}
+        {% set motion = states('binary_sensor.sonoff_a48001bcc7') %}
+        {% set ns = namespace(offline=0, low=0) %}
+        {# Підрахунок робиться одним рядком: перенос усередині циклу розірвав би markdown-таблицю нижче. #}
+        {% for name, slug, has_climate in devices %}{% set b = states('sensor.' ~ slug ~ '_battery') %}{% if b in bad %}{% set ns.offline = ns.offline + 1 %}{% elif b | float(100) < 25 %}{% set ns.low = ns.low + 1 %}{% endif %}{% endfor %}
+        {% if mb in bad %}{% set ns.offline = ns.offline + 1 %}{% elif mb | float(100) < 25 %}{% set ns.low = ns.low + 1 %}{% endif %}
 
-        {% set bridge = clients | selectattr(''devIp'', ''equalto'', ''192.168.50.164'') | list %}
+        | Датчик | Батарея | Показання |
+        |---|---|---|
+        {% for name, slug, has_climate in devices -%}
+        {% set b = states('sensor.' ~ slug ~ '_battery') -%}
+        {% set t = states('sensor.' ~ slug ~ '_temperature') if has_climate else 'none' -%}
+        | {{ name }} | {{ ('🔴 датчик офлайн' if b in bad else (('🟠 ' if b | float(100) < 25 else '🟢 ') ~ b ~ ' %')) }} | {{ 'н/д' if b in bad else (('дані не надходять' if t in bad else t ~ ' °C · ' ~ states('sensor.' ~ slug ~ '_humidity') ~ ' %') if has_climate else 'на зв\'язку') }} |
+        {% endfor -%}
+        | Датчик руху | {{ '🔴 датчик офлайн' if mb in bad else '🟢 ' ~ mb ~ ' %' }} | {{ '🟠 виявлено рух' if motion == 'on' else ('руху немає' if motion == 'off' else 'н/д') }} |
 
-        {% if bridge | count > 0 %}
-
-        ## 🟢 Онлайн
-
-        **SONOFF ZBBridge** з''єднаний через повторювач Tenda A9.
-
-
-        IP: `192.168.50.164` · MAC: `{{ bridge[0].devMac | upper }}` ·
-
-        прошивка `1.7.0` · SONOFF ID `100124a572`
-
+        {% if ns.offline > 0 %}
+        🔴 **Офлайн датчиків: {{ ns.offline }}.** Причина: Zigbee-пристрій не виходив на зв'язок —
+        зазвичай це сіла батарея або пристрій поза радіусом шлюза.
+        {% elif ns.low > 0 %}
+        🟠 **Батарея сідає в {{ ns.low }} датчика(ів)** — нижче 25 %, варто підготувати заміну.
         {% else %}
-
-        ## 🔴 Недоступний
-
-        Шлюз відсутній у поточному списку клієнтів Tenda A9. Дочірні
-
-        Zigbee-датчики можуть не оновлюватися.
-
+        🟢 Усі Zigbee-датчики на зв'язку, батареї в нормі.
         {% endif %}
-
-
-        Шлюз передає у Home Assistant показники кліматичних датчиків,
-
-        датчиків гаражних воріт і руху.
-
-        '
-    - type: markdown
-      title: Підключені Zigbee-пристрої
+  # --- Секція 11 · Довідка ---
+  - type: grid
+    column_span: 4
+    cards:
+    - type: heading
+      heading: Довідка
+      icon: mdi:information-outline
       grid_options:
         columns: full
-      content: '{% set bad = [''unknown'', ''unavailable'', ''none'', ''''] %}
+    - type: markdown
+      grid_options:
+        columns: full
+      content: |-
+        <details><summary>Чому немає WAN-статусу і зовнішньої IP</summary>
 
-        {% set t = states(''sensor.sonoff_a4800819f3_temperature'') %}
+        Вбудовані сенсори WAN-статусу і зовнішньої IP (через UPnP/IGD) на цьому
+        роутері нестабільні і завжди повертають `unavailable` / `0.0.0.0`.
+        Причина: це обмеження прошивки ASUS, а не Home Assistant. Прибрано з
+        дашборда свідомо, щоб не показувати завідомо неправдиві значення.
 
-        {% set h = states(''sensor.sonoff_a4800819f3_humidity'') %}
+        </details>
 
-        {% set b = states(''sensor.sonoff_a4800819f3_battery'') %}
+        <details><summary>Можливості точок доступу і що означає dBm</summary>
 
-        - **2 поверх — температура/вологість** — {% if t in bad %}🔴 недоступний{% else %}🟢 {{ t }} °C
-        · {{ h }}% · батарея {{ b }}%{% endif %}
+        **Tenda AC10 v3 / AC1200**, режим точки доступу. Паспортна швидкість: до
+        **300 Мбіт/с** на 2,4 ГГц і до **867 Мбіт/с** на 5 ГГц; Ethernet-порти
+        гігабітні. Показаний трафік — не швидкість Wi-Fi-з'єднання, а поточний
+        корисний трафік клієнтів, який повідомляє сама Tenda.
 
+        **Tenda A9 / N300**, лише 2,4 ГГц, паспортна швидкість до **300 Мбіт/с**.
+        Прошивка не віддає фактичну швидкість з'єднання або трафік окремих
+        клієнтів, тому показується рівень сигналу аплінка в dBm. Значення ближче
+        до нуля — краще; приблизно −60…−70 dBm зазвичай придатне, але запас
+        невеликий.
 
-        {% set t = states(''sensor.sonoff_a48005e8ed_temperature'') %}
+        </details>
 
-        {% set h = states(''sensor.sonoff_a48005e8ed_humidity'') %}
+        <details><summary>Як визначається «удома» і чому точка Wi-Fi не важлива</summary>
 
-        {% set b = states(''sensor.sonoff_a48005e8ed_battery'') %}
+        Людина має стан **удома**, коли хоча б один прив'язаний телефон бачить
+        Home Assistant або основний роутер ASUS. Клієнти ASUS, Tenda «Промінь» і
+        Tenda-повторювача належать до однієї домашньої мережі, тому конкретна
+        точка підключення на присутність не впливає.
 
-        - **Температура будинку — 2 поверх** — {% if t in bad %}🔴 недоступний{% else %}🟢 {{ t }} °C ·
-        {{ h }}% · батарея {{ b }}%{% endif %}
+        </details>
 
+        <details><summary>Мережеві нотатки автополиву</summary>
 
-        {% set t = states(''sensor.sonoff_a48005a66a_temperature'') %}
+        Контролер очікується на `192.168.50.221` (`38:2C:E5:2D:5B:32`), насос — на
+        `192.168.50.91` (`80:64:7C:46:E8:D1`), обидва через LocalTuya. Якщо
+        локальний зв'язок відсутній, клапани не слід запускати до відновлення
+        зв'язку: Home Assistant не зможе їх закрити.
 
-        {% set h = states(''sensor.sonoff_a48005a66a_humidity'') %}
+        </details>
 
-        {% set b = states(''sensor.sonoff_a48005a66a_battery'') %}
-
-        - **Вулиця — балкон** — {% if t in bad %}🔴 недоступний{% else %}🟢 {{ t }} °C · {{ h }}% · батарея
-        {{ b }}%{% endif %}
-
-
-        {% set t = states(''sensor.sonoff_a48001c18f_temperature'') %}
-
-        {% set h = states(''sensor.sonoff_a48001c18f_humidity'') %}
-
-        {% set b = states(''sensor.sonoff_a48001c18f_battery'') %}
-
-        - **Гостьова — температура/вологість** — {% if t in bad %}🔴 недоступний{% else %}🟢 {{ t }} °C
-        · {{ h }}% · батарея {{ b }}%{% endif %}
-
-
-        {% set b = states(''sensor.sonoff_a48001bcf2_battery'') %}
-
-        - **Гаражні ворота — датчик 1** — {% if b in bad %}🔴 недоступний{% else %}🟢 на зв''язку · батарея
-        {{ b }}%{% endif %}
-
-
-        {% set b = states(''sensor.sonoff_a48005b691_battery'') %}
-
-        - **Гаражні ворота — датчик 2** — {% if b in bad %}🔴 недоступний{% else %}🟢 на зв''язку · батарея
-        {{ b }}%{% endif %}
-
-
-        {% set motion = states(''binary_sensor.sonoff_a48001bcc7'') %}
-
-        {% set b = states(''sensor.sonoff_a48001bcc7_battery'') %}
-
-        - **Датчик руху** — {% if motion == ''on'' %}🟠 виявлено рух · батарея {{ b }}%{% elif motion ==
-        ''off'' %}🟢 руху немає · батарея {{ b }}%{% else %}🔴 недоступний{% endif %}
-
-        '
+        Правило зростання цієї сторінки: новий пристрій додає **рядок у таблицю
+        або в акордеон**, а не ще одну картку.
 - title: Клімат
   path: climate
   icon: mdi:home-thermometer-outline
@@ -2179,60 +2146,190 @@ views:
   max_columns: 4
   dense_section_placement: true
   sections:
+  # --- Секція 1 · Hero: що зі станцією просто зараз ---
   - type: grid
+    column_span: 4
     cards:
-    - type: heading
-      heading: Зарядна станція 1 · 7,5 кВт
-      icon: mdi:ev-station
-      grid_options:
-        columns: full
     - type: markdown
       grid_options:
         columns: full
-      content: '{% set power = states(''sensor.zariadka_7_5kvt_device_kw'') | float(0) %} {% set voltage
-        = states(''sensor.zariadka_7_5kvt_voltage_a'') | float(0) %} {% set device_state = states(''sensor.zariadka_7_5kvt_device_state'')
-        | lower %} {% if is_state(''binary_sensor.zariadka_7_5kvt_fault'', ''on'') %} # 🔴 НЕСПРАВНІСТЬ
-        ЗАРЯДНОЇ СТАНЦІЇ {% elif power > 0.1 or device_state in [''charing'', ''charging''] %} # 🟢 ЗАРЯДЖАННЯ
-        ТРИВАЄ {% elif is_state(''switch.zariadka_7_5kvt'', ''off'') %} # ⚪ ЗАРЯДНУ СТАНЦІЮ ВИМКНЕНО {%
-        else %} # 🟡 ПІДКЛЮЧЕНО, ОЧІКУЄ АВТОМОБІЛЬ {% endif %}
+      content: |-
+        {% set power = states('sensor.zariadka_7_5kvt_device_kw') | float(0) %}
+        {% set voltage = states('sensor.zariadka_7_5kvt_voltage_a') | float(0) %}
+        {% set dev = states('sensor.zariadka_7_5kvt_device_state') | lower %}
+        {% set fault = is_state('binary_sensor.zariadka_7_5kvt_fault', 'on') %}
+        {% set powered = is_state('switch.zariadka_7_5kvt', 'on') %}
+        {% if fault %}
+        ## 🔴 Несправність зарядної станції
+        Причина: станція повідомила про помилку. Заряджання не почнеться, доки її не усунути.
+        {% elif power > 0.1 or dev in ['charing', 'charging'] %}
+        ## 🟢 Заряджання триває · {{ power | round(2) }} кВт
+        Причина: автомобіль підключений і приймає струм{% if voltage > 0 %} — приблизно {{ (power * 1000 / voltage) | round(0) }} А при {{ voltage | round(1) }} В{% endif %}.
+        {% elif not powered %}
+        ## ⚪ Зарядну станцію вимкнено
+        Причина: живлення станції вимкнене вручну. Заряджання неможливе, доки його не увімкнути.
+        {% elif dev in ['no_connet', 'no_connect', 'disconnected'] %}
+        ## ⚪ Автомобіль не підключений
+        Причина: станція увімкнена, справна й готова — чекає, доки вставлять кабель у машину.
+        {% else %}
+        ## 🟡 Станція готова, заряджання не йде
+        Причина: станція повідомляє стан «{{ dev }}» і зараз не віддає потужність.
+        {% endif %}
 
-        **Зараз:** {{ power | round(2) }} кВт · {{ voltage | round(1) }} В {% if power > 0 and voltage
-        > 0 %} · приблизно {{ (power * 1000 / voltage) | round(1) }} А{% endif %}
-
-        **Температура станції:** {{ states(''sensor.zariadka_7_5kvt_device_temperature'') }} °C'
+        Спожито від початку обліку **{{ states('sensor.zariadka_avto_spozhito') | float(0) | round(2) }} кВт·год**
+        на суму **{{ states('sensor.vitrati_zariadka_avto') | float(0) | round(2) }} грн**{% set kwh = states('sensor.zariadka_avto_spozhito') | float(0) %}{% if kwh > 0 %} — у середньому {{ (states('sensor.vitrati_zariadka_avto') | float(0) / kwh) | round(2) }} грн за кВт·год{% endif %}.
+        Витрати рахуються за фактичним тарифом на момент кожної сесії, день і ніч окремо.
     - type: tile
       entity: sensor.zariadka_7_5kvt_device_kw
       name: Потужність зараз
       icon: mdi:flash
       color: amber
       grid_options:
-        columns: 6
+        columns: 12
+        rows: 1
     - type: tile
       entity: sensor.zariadka_avto_spozhito
-      name: Спожито від початку обліку
+      name: Спожито всього
       icon: mdi:counter
       color: blue
       grid_options:
-        columns: 6
+        columns: 12
+        rows: 1
     - type: tile
-      entity: sensor.zariadka_7_5kvt_voltage_a
-      name: Напруга
+      entity: sensor.vitrati_zariadka_avto
+      name: Витрати всього
+      icon: mdi:cash
+      color: orange
+      grid_options:
+        columns: 12
+        rows: 1
+    - type: tile
+      entity: switch.zariadka_7_5kvt
+      name: Живлення станції
+      icon: mdi:ev-plug-type2
+      color: green
+      tap_action:
+        action: more-info
+      hold_action:
+        action: toggle
+        confirmation:
+          text: Змінити живлення зарядної станції? Під час заряджання це зупинить сесію.
+      grid_options:
+        columns: 12
+        rows: 1
+  # --- Секція 2 · Потужність ---
+  - type: grid
+    column_span: 1
+    cards:
+    - type: heading
+      heading: Потужність
+      icon: mdi:gauge
+      grid_options:
+        columns: full
+    - type: gauge
+      entity: sensor.zariadka_7_5kvt_device_kw
+      name: Зараз
+      min: 0
+      max: 7.5
+      needle: true
+      severity:
+        green: 0
+        yellow: 3
+        red: 7
+      grid_options:
+        columns: full
+    - type: markdown
+      grid_options:
+        columns: full
+      content: |-
+        {% set p = states('sensor.zariadka_7_5kvt_device_kw') | float(0) %}
+        {% if p > 0.1 %}
+        Станція віддає {{ p | round(2) }} кВт із можливих 7,5.
+        {% else %}
+        **Заряджання не йде.** Нуль тут — нормальний стан більшість доби,
+        а не помилка: кабель просто не підключений до автомобіля.
+        {% endif %}
+  # --- Секція 3 · Мережа живлення ---
+  - type: grid
+    column_span: 1
+    cards:
+    - type: heading
+      heading: Мережа живлення
       icon: mdi:sine-wave
       grid_options:
-        columns: 6
+        columns: full
+    - type: tile
+      entity: sensor.zariadka_7_5kvt_voltage_a
+      name: Напруга · фаза A
+      grid_options:
+        columns: full
+        rows: 1
+    - type: markdown
+      grid_options:
+        columns: full
+      content: |-
+        {% set p = states('sensor.zariadka_7_5kvt_device_kw') | float(0) %}
+        {% set v = states('sensor.zariadka_7_5kvt_voltage_a') | float(0) %}
+        Станція однофазна — фази B і C не задіяні.
+
+        **Струм зараз:** {{ (p * 1000 / v) | round(1) if (p > 0 and v > 0) else 0 }} А ·
+        **апаратна межа:** {{ states('sensor.zariadka_7_5kvt_max_set_ampere') }}
+
+        Струм обчислюється як потужність × 1000 ÷ напруга. Причина: власний
+        датчик струму інтеграції має неправильний масштаб і навіть помилкову
+        одиницю «V», тому йому не можна довіряти.
+  # --- Секція 4 · Стан обладнання ---
+  - type: grid
+    column_span: 1
+    cards:
+    - type: heading
+      heading: Стан обладнання
+      icon: mdi:thermometer
+      grid_options:
+        columns: full
     - type: tile
       entity: sensor.zariadka_7_5kvt_device_temperature
       name: Температура станції
-      icon: mdi:thermometer
       grid_options:
-        columns: 6
+        columns: full
+        rows: 1
     - type: tile
       entity: binary_sensor.zariadka_7_5kvt_fault
       name: Несправність
       icon: mdi:alert-circle
       color: red
       grid_options:
-        columns: 6
+        columns: full
+        rows: 1
+    - type: entities
+      grid_options:
+        columns: full
+      entities:
+      - entity: sensor.zariadka_7_5kvt_device_state
+        name: Стан пристрою
+      - entity: select.zariadka_7_5kvt_charge_state
+        name: Стан заряджання
+    - type: markdown
+      grid_options:
+        columns: full
+      content: |-
+        {% set t = states('sensor.zariadka_7_5kvt_device_temperature') | float(0) %}
+        {% if t < 45 %}
+        🟢 Температура в нормі. Причина: у холостому режимі станція майже не гріється.
+        {% elif t < 60 %}
+        🟠 Станція помітно нагрілася — це очікувано під навантаженням.
+        {% else %}
+        🔴 Станція гаряча ({{ t }} °C). Перевірте вентиляцію і навантаження.
+        {% endif %}
+  # --- Секція 5 · Безпечне керування ---
+  - type: grid
+    column_span: 1
+    cards:
+    - type: heading
+      heading: Керування
+      icon: mdi:gesture-tap-hold
+      grid_options:
+        columns: full
     - type: tile
       entity: switch.zariadka_7_5kvt
       name: Живлення зарядної станції
@@ -2245,23 +2342,59 @@ views:
         confirmation:
           text: Змінити живлення зарядної станції? Під час заряджання це зупинить сесію.
       grid_options:
-        columns: 6
+        columns: full
+        rows: 1
     - type: markdown
-      title: Безпечне керування
       grid_options:
         columns: full
-      content: Коротке натискання лише відкриває деталі. Щоб увімкнути або вимкнути станцію, **утримуйте**
-        плитку «Живлення зарядної станції» і підтвердьте дію. Так заряджання не зупиниться від випадкового
-        дотику.
+      content: |-
+        Коротке натискання лише відкриває деталі. Щоб увімкнути або вимкнути
+        станцію, **утримуйте** плитку і підтвердьте дію.
+        Причина: так заряджання не зупиниться від випадкового дотику.
+  # --- Секція 6 · Скільки заряджали і за скільки ---
   - type: grid
+    column_span: 2
     cards:
     - type: heading
-      heading: Споживання та історія
+      heading: Скільки заряджали
+      icon: mdi:chart-bar
+      grid_options:
+        columns: full
+    - type: statistics-graph
+      title: Спожито за добу · 30 днів
+      chart_type: bar
+      period: day
+      days_to_show: 30
+      stat_types:
+      - change
+      grid_options:
+        columns: full
+      entities:
+      - entity: sensor.zariadka_avto_spozhito
+        name: Зарядна станція 1
+    - type: statistics-graph
+      title: Витрачено за добу · 30 днів, грн
+      chart_type: bar
+      period: day
+      days_to_show: 30
+      stat_types:
+      - change
+      grid_options:
+        columns: full
+      entities:
+      - entity: sensor.vitrati_zariadka_avto
+        name: Витрати на заряджання
+  # --- Секція 7 · Історія сесій ---
+  - type: grid
+    column_span: 2
+    cards:
+    - type: heading
+      heading: Коли станція працювала
       icon: mdi:chart-areaspline
       grid_options:
         columns: full
     - type: custom:mini-graph-card
-      name: Потужність зарядної станції · 24 години
+      name: Потужність · 24 години
       hours_to_show: 24
       points_per_hour: 4
       line_width: 3
@@ -2281,40 +2414,25 @@ views:
       entities:
       - entity: sensor.zariadka_7_5kvt_device_kw
         name: Зарядна станція 1
-    - type: statistics-graph
-      title: Спожито за добу
-      chart_type: bar
-      period: day
-      days_to_show: 30
-      stat_types:
-      - change
-      grid_options:
-        columns: full
-      entities:
-      - entity: sensor.zariadka_avto_spozhito
-        name: Зарядна станція 1
-    - type: history-graph
-      title: Коли зарядна станція вмикалася · 7 днів
+    - type: logbook
       hours_to_show: 168
       grid_options:
         columns: full
-      entities:
-      - entity: switch.zariadka_7_5kvt
-        name: Живлення станції
-      - entity: sensor.zariadka_7_5kvt_device_kw
-        name: Потужність
+      target:
+        entity_id:
+        - switch.zariadka_7_5kvt
+        - binary_sensor.zariadka_7_5kvt_fault
     - type: markdown
-      title: Як рахується електроенергія
       grid_options:
         columns: full
-      content: '`sensor.zariadka_avto_spozhito` інтегрує фактичну потужність `sensor.zariadka_7_5kvt_device_kw`
-        у часі. Стовпчики показують приріст цього накопичувального лічильника за кожну добу; графік живлення
-        та потужності показує частоту і тривалість сесій.
-
-        Датчик струму самої інтеграції зараз має неправильний масштаб та навіть помилкову одиницю «V»,
-        тому на головній картці струм обчислюється як `потужність × 1000 / напруга` і явно позначений
-        як приблизний.'
+      content: |-
+        Журнал показує, коли станцію вмикали й вимикали за останні 7 днів,
+        і чи траплялися несправності. Тривалість і обсяг кожної окремої сесії
+        Home Assistant окремо не рахує — для цього довелося б додати сенсор
+        сесії, якого зараз немає.
+  # --- Секція 8 · Налаштування станції ---
   - type: grid
+    column_span: 2
     cards:
     - type: heading
       heading: Налаштування станції 1
@@ -2329,6 +2447,7 @@ views:
         action: more-info
       grid_options:
         columns: full
+        rows: 1
     - type: tile
       entity: number.zariadka_7_5kvt_set_delay_time
       name: Відкладений старт · години
@@ -2336,7 +2455,8 @@ views:
       tap_action:
         action: more-info
       grid_options:
-        columns: 6
+        columns: 12
+        rows: 1
     - type: tile
       entity: number.zariadka_7_5kvt_set_define_time
       name: Обмеження тривалості · години
@@ -2344,33 +2464,73 @@ views:
       tap_action:
         action: more-info
       grid_options:
-        columns: 6
-    - type: entities
-      title: Службовий стан
-      grid_options:
-        columns: full
-      entities:
-      - entity: sensor.zariadka_7_5kvt_device_state
-        name: Стан заряджання
-      - entity: sensor.zariadka_7_5kvt_max_set_ampere
-        name: Апаратна межа струму
+        columns: 12
+        rows: 1
     - type: markdown
-      title: Що означають налаштування
       grid_options:
         columns: full
-      content: '**Максимальний струм** задає межу навантаження; для цієї однофазної станції пристрій повідомляє
-        апаратну межу 32 А. **Відкладений старт** — через скільки годин почати заряджання. **Обмеження
-        тривалості** — скільки годин дозволено заряджати після старту; нуль означає, що таймер не задано.
+      content: |-
+        {% set d = states('number.zariadka_7_5kvt_set_delay_time') | float(0) %}
+        {% set l = states('number.zariadka_7_5kvt_set_define_time') | float(0) %}
+        {% if d == 0 and l == 0 %}
+        **Обидва таймери в нулі — це означає «не задано», а не «нуль годин».**
+        Причина: станція починає заряджати одразу після підключення авто
+        і не зупиняє його за часом.
+        {% else %}
+        Відкладений старт: {{ d | round(0) }} год · обмеження тривалості:
+        {{ 'не задано' if l == 0 else (l | round(0) ~ ' год') }}.
+        {% endif %}
 
-        Зміни застосовуються безпосередньо до зарядної станції. Не змінюйте їх посеред активної сесії
-        без потреби.'
-    - type: markdown
-      title: Майбутні зарядні станції
+        Зміни застосовуються безпосередньо до зарядної станції.
+        Не змінюйте їх посеред активної сесії без потреби.
+  # --- Секція 9 · Довідка ---
+  - type: grid
+    column_span: 2
+    cards:
+    - type: heading
+      heading: Довідка
+      icon: mdi:information-outline
       grid_options:
         columns: full
-      content: Ця колонка свідомо названа «Станція 1». Кожну наступну зарядну станцію буде додано окремою
-        колонкою з власними станом, лічильником, графіками та налаштуваннями — без змішування статистики
-        між автомобілями або станціями.
+    - type: markdown
+      grid_options:
+        columns: full
+      content: |-
+        <details><summary>Як рахується електроенергія і гроші</summary>
+
+        `sensor.zariadka_avto_spozhito` інтегрує фактичну потужність
+        `sensor.zariadka_7_5kvt_device_kw` у часі. Стовпчики показують приріст
+        цього накопичувального лічильника за кожну добу.
+        `sensor.vitrati_zariadka_avto` множить спожите на тариф, що діяв у
+        відповідний момент, тому нічне заряджання виходить дешевшим.
+
+        </details>
+
+        <details><summary>Що означає кожне налаштування</summary>
+
+        **Максимальний струм** задає межу навантаження; для цієї однофазної
+        станції пристрій повідомляє апаратну межу 32 А.
+        **Відкладений старт** — через скільки годин почати заряджання.
+        **Обмеження тривалості** — скільки годин дозволено заряджати після
+        старту; нуль означає, що таймер не задано.
+
+        </details>
+
+        <details><summary>Чому струм приблизний</summary>
+
+        Датчик струму самої інтеграції має неправильний масштаб і навіть
+        помилкову одиницю «V». Тому струм обчислюється як
+        потужність × 1000 ÷ напруга і явно позначений як приблизний.
+
+        </details>
+
+        <details><summary>Чому станція названа «Станція 1»</summary>
+
+        Кожну наступну зарядну станцію буде додано окремою секцією з власними
+        станом, лічильником, графіками та налаштуваннями — без змішування
+        статистики між автомобілями або станціями.
+
+        </details>
 - title: Вентиляція
   path: ventilation
   icon: mdi:hvac
@@ -2378,7 +2538,77 @@ views:
   max_columns: 4
   dense_section_placement: true
   sections:
+  # --- Секція 1 · Hero: чи свіже повітря ---
   - type: grid
+    column_span: 4
+    cards:
+    - type: markdown
+      grid_options:
+        columns: full
+      content: |-
+        {% set bad = ['unknown', 'unavailable', 'none', ''] %}
+        {% set co2raw = states('sensor.2_floor_carbon_dioxide') %}
+        {% set co2 = co2raw | float(0) %}
+        {% set b1 = states('fan.siku_blauberg_fan_192_168_50_27') %}
+        {% set b2 = states('fan.siku_blauberg_fan_192_168_50_123') %}
+        {% set prana_on = is_state('fan.2_floor_supply_fan', 'on') or is_state('fan.2_floor_extract_fan', 'on') %}
+        {% set working = [b1 == 'on', b2 == 'on', prana_on] | select | list | count %}
+        {% if co2raw in bad %}
+        ## 🟡 Датчик CO₂ не відповідає
+        Причина: PRANA не віддає показання — без неї якість повітря оцінити нічим.
+        {% elif co2 < 800 %}
+        ## 🟢 Повітря свіже · CO₂ {{ co2 | round(0) }} ppm
+        {% elif co2 < 1200 %}
+        ## 🟠 Повітря прийнятне · CO₂ {{ co2 | round(0) }} ppm
+        {% else %}
+        ## 🔴 Задушливо · CO₂ {{ co2 | round(0) }} ppm
+        {% endif %}
+
+        {% if co2raw not in bad %}
+        {% if co2 < 800 %}
+        Причина: {{ working }} з трьох пристроїв провітрюють приміщення, і цього досить —
+        нижче 800 ppm повітря вважається свіжим.
+        {% elif co2 < 1200 %}
+        Причина: провітрювання не встигає. Увімкніть посилений режим або додайте швидкості.
+        {% else %}
+        Причина: приміщення довго не провітрювалося. Увімкніть вентиляцію на максимум
+        або відчиніть вікно.
+        {% endif %}
+        {% endif %}
+        {% if not prana_on %}
+        PRANA вимкнена повністю — усі її режими в нулі. Це нормальний стан, коли CO₂ у межах норми.
+        {% endif %}
+    - type: tile
+      entity: sensor.2_floor_carbon_dioxide
+      name: CO₂
+      icon: mdi:molecule-co2
+      grid_options:
+        columns: 12
+        rows: 1
+    - type: tile
+      entity: sensor.2_floor_volatile_organic_compounds_parts
+      name: Леткі сполуки
+      icon: mdi:air-filter
+      grid_options:
+        columns: 12
+        rows: 1
+    - type: tile
+      entity: sensor.2_floor_humidity
+      name: Вологість
+      icon: mdi:water-percent
+      grid_options:
+        columns: 12
+        rows: 1
+    - type: tile
+      entity: sensor.2_floor_inside_temperature
+      name: Температура в приміщенні
+      icon: mdi:thermometer
+      grid_options:
+        columns: 12
+        rows: 1
+  # --- Секція 2 · PRANA ---
+  - type: grid
+    column_span: 1
     cards:
     - type: heading
       heading: PRANA · спальня батьків
@@ -2393,7 +2623,7 @@ views:
       features:
       - type: fan-speed
       grid_options:
-        columns: 6
+        columns: full
     - type: tile
       entity: fan.2_floor_extract_fan
       name: Витяжка
@@ -2402,7 +2632,18 @@ views:
       features:
       - type: fan-speed
       grid_options:
-        columns: 6
+        columns: full
+    - type: markdown
+      grid_options:
+        columns: full
+      content: |-
+        {% set on = is_state('fan.2_floor_supply_fan', 'on') or is_state('fan.2_floor_extract_fan', 'on') %}
+        {% if on %}
+        🟢 Рекуператор працює. Шість швидкостей на кожен вентилятор.
+        {% else %}
+        ⚪ **Вимкнена.** Причина: обидва вентилятори зупинені вручну.
+        Шість швидкостей на кожен вентилятор стануть доступні після ввімкнення.
+        {% endif %}
     - type: entities
       title: Режими роботи
       show_header_toggle: false
@@ -2412,7 +2653,7 @@ views:
       - entity: switch.2_floor_auto
         name: Автоматичний режим
       - entity: switch.2_floor_auto_plus
-        name: Розширений автоматичний режим
+        name: Розширений автоматичний
       - entity: switch.2_floor_bound
         name: Синхронізувати приплив і витяжку
       - entity: switch.2_floor_heater
@@ -2421,27 +2662,175 @@ views:
         name: Зимовий режим
       - entity: number.2_floor_display_brightness
         name: Яскравість дисплея
+  # --- Секція 3 · Blauberg №1 ---
   - type: grid
+    column_span: 1
+    cards:
+    - type: heading
+      heading: Blauberg №1 · кімната хлопців
+      icon: mdi:fan
+      grid_options:
+        columns: full
+    - type: tile
+      entity: fan.siku_blauberg_fan_192_168_50_27
+      name: Рекуператор
+      icon: mdi:fan
+      features_position: bottom
+      features:
+      - type: fan-speed
+      - type: fan-preset-modes
+        style: dropdown
+        preset_modes:
+        - auto
+        - manual
+        - 'on'
+        - party
+        - sleep
+      - type: fan-direction
+      - type: fan-oscillate
+      grid_options:
+        columns: full
+    - type: tile
+      entity: sensor.siku_blauberg_fan_192_168_50_27_rpm
+      name: Оберти
+      icon: mdi:rotate-right
+      grid_options:
+        columns: 12
+        rows: 1
+    - type: tile
+      entity: sensor.siku_blauberg_fan_192_168_50_27_humidity
+      name: Вологість
+      icon: mdi:water-percent
+      grid_options:
+        columns: 12
+        rows: 1
+    - type: horizontal-stack
+      grid_options:
+        columns: full
+      cards:
+      - type: button
+        entity: button.kimnata_khloptsiv_blauberg_no1_kimnata_khloptsiv_party_mode
+        name: Посилений
+        icon: mdi:weather-windy
+        show_state: false
+      - type: button
+        entity: button.kimnata_khloptsiv_blauberg_no1_kimnata_khloptsiv_sleep_mode
+        name: Нічний
+        icon: mdi:weather-night
+        show_state: false
+    - type: markdown
+      grid_options:
+        columns: full
+      content: '`192.168.50.27` · локально, без хмари · режим {{ states(''sensor.siku_blauberg_fan_192_168_50_27_mode'')
+        }}'
+  # --- Секція 4 · Blauberg №2 ---
+  - type: grid
+    column_span: 1
+    cards:
+    - type: heading
+      heading: Blauberg №2 · кімната Олесі
+      icon: mdi:fan
+      grid_options:
+        columns: full
+    - type: tile
+      entity: fan.siku_blauberg_fan_192_168_50_123
+      name: Рекуператор
+      icon: mdi:fan
+      features_position: bottom
+      features:
+      - type: fan-speed
+      - type: fan-preset-modes
+        style: dropdown
+        preset_modes:
+        - auto
+        - manual
+        - 'on'
+        - party
+        - sleep
+      - type: fan-direction
+      - type: fan-oscillate
+      grid_options:
+        columns: full
+    - type: tile
+      entity: sensor.siku_blauberg_fan_192_168_50_123_rpm
+      name: Оберти
+      icon: mdi:rotate-right
+      grid_options:
+        columns: 12
+        rows: 1
+    - type: tile
+      entity: sensor.siku_blauberg_fan_192_168_50_123_humidity
+      name: Вологість
+      icon: mdi:water-percent
+      grid_options:
+        columns: 12
+        rows: 1
+    - type: horizontal-stack
+      grid_options:
+        columns: full
+      cards:
+      - type: button
+        entity: button.kimnata_olesi_blauberg_no2_kimnata_olesi_party_mode
+        name: Посилений
+        icon: mdi:weather-windy
+        show_state: false
+      - type: button
+        entity: button.kimnata_olesi_blauberg_no2_kimnata_olesi_sleep_mode
+        name: Нічний
+        icon: mdi:weather-night
+        show_state: false
+    - type: markdown
+      grid_options:
+        columns: full
+      content: '`192.168.50.123` · локально, без хмари · режим {{ states(''sensor.siku_blauberg_fan_192_168_50_123_mode'')
+        }}'
+  # --- Секція 5 · Якість повітря ---
+  - type: grid
+    column_span: 1
     cards:
     - type: heading
       heading: Якість повітря
-      icon: mdi:air-filter
+      icon: mdi:molecule-co2
+      grid_options:
+        columns: full
+    - type: gauge
+      entity: sensor.2_floor_carbon_dioxide
+      name: CO₂
+      min: 400
+      max: 2000
+      needle: true
+      severity:
+        green: 400
+        yellow: 800
+        red: 1200
       grid_options:
         columns: full
     - type: entities
       grid_options:
         columns: full
       entities:
-      - entity: sensor.2_floor_carbon_dioxide
-        name: Вуглекислий газ (CO₂)
       - entity: sensor.2_floor_volatile_organic_compounds_parts
-        name: Леткі органічні сполуки (VOC)
+        name: Леткі сполуки (VOC)
       - entity: sensor.2_floor_humidity
         name: Вологість
       - entity: sensor.2_floor_pressure
         name: Атмосферний тиск
+    - type: markdown
+      grid_options:
+        columns: full
+      content: |-
+        400 ppm — свіже повітря надворі · до 800 свіже · до 1200 прийнятне ·
+        понад 1200 задушливо, з'являється сонливість.
+  # --- Секція 6 · Історія якості повітря ---
+  - type: grid
+    column_span: 2
+    cards:
+    - type: heading
+      heading: Якість повітря за добу
+      icon: mdi:chart-line
+      grid_options:
+        columns: full
     - type: history-graph
-      title: CO₂, VOC і вологість · 24 години
       hours_to_show: 24
       grid_options:
         columns: full
@@ -2452,23 +2841,39 @@ views:
         name: VOC
       - entity: sensor.2_floor_humidity
         name: Вологість
+    - type: markdown
+      grid_options:
+        columns: full
+      content: |-
+        Нічний пік CO₂ — норма для зачиненої спальні. Різке падіння вранці
+        означає, що приміщення провітрили: або вентиляцією, або відчиненим вікном.
+  # --- Секція 7 · Температури ---
   - type: grid
+    column_span: 2
     cards:
     - type: heading
       heading: Температури
       icon: mdi:thermometer-lines
       grid_options:
         columns: full
-    - type: entities
+    - type: tile
+      entity: sensor.2_floor_inside_temperature
+      name: У приміщенні
       grid_options:
-        columns: full
-      entities:
-      - entity: sensor.2_floor_inside_temperature
-        name: Температура в приміщенні
-      - entity: sensor.2_floor_outside_temperature
-        name: Температура зовні · датчик 1
-      - entity: sensor.2_floor_outside_temperature_2
-        name: Температура зовні · датчик 2
+        columns: 12
+        rows: 1
+    - type: tile
+      entity: sensor.2_floor_outside_temperature
+      name: Зовні · датчик 1
+      grid_options:
+        columns: 12
+        rows: 1
+    - type: tile
+      entity: sensor.2_floor_outside_temperature_2
+      name: Зовні · датчик 2
+      grid_options:
+        columns: 12
+        rows: 1
     - type: custom:mini-graph-card
       name: Температури PRANA · 24 години
       hours_to_show: 24
@@ -2487,177 +2892,95 @@ views:
         name: Зовні 1
       - entity: sensor.2_floor_outside_temperature_2
         name: Зовні 2
-  - type: grid
-    cards:
-    - type: heading
-      heading: Blauberg №1 · кімната хлопців
-      icon: mdi:fan
-      grid_options:
-        columns: full
-    - type: tile
-      entity: fan.siku_blauberg_fan_192_168_50_27
-      name: Blauberg №1 · кімната хлопців
-      icon: mdi:fan
-      features_position: bottom
-      features:
-      - type: fan-speed
-      - type: fan-preset-modes
-        style: dropdown
-        preset_modes:
-        - auto
-        - manual
-        - 'on'
-        - party
-        - sleep
-      - type: fan-direction
-      - type: fan-oscillate
-      grid_options:
-        columns: full
-    - type: entities
-      title: Стан і датчики
-      show_header_toggle: false
-      grid_options:
-        columns: full
-      entities:
-      - entity: sensor.siku_blauberg_fan_192_168_50_27_mode
-        name: Режим
-      - entity: sensor.siku_blauberg_fan_192_168_50_27_humidity
-        name: Вологість
-      - entity: sensor.siku_blauberg_fan_192_168_50_27_rpm
-        name: Оберти вентилятора
-      - entity: sensor.siku_blauberg_fan_192_168_50_27_alarm
-        name: Аварія
-      - entity: sensor.siku_blauberg_fan_192_168_50_27_filter_timer_countdown
-        name: Залишок ресурсу фільтра
-      - entity: sensor.siku_blauberg_fan_192_168_50_27_timer_countdown
-        name: Залишок таймера
-      - entity: sensor.siku_blauberg_fan_192_168_50_27_firmware_version
-        name: Прошивка
-    - type: horizontal-stack
-      cards:
-      - type: button
-        entity: button.siku_blauberg_fan_192_168_50_27_party_mode
-        name: Посилений режим
-        icon: mdi:weather-windy
-        show_state: false
-      - type: button
-        entity: button.siku_blauberg_fan_192_168_50_27_sleep_mode
-        name: Нічний режим
-        icon: mdi:weather-night
-        show_state: false
-      grid_options:
-        columns: full
-    - type: history-graph
-      title: Вологість і оберти · 24 години
-      hours_to_show: 24
-      grid_options:
-        columns: full
-      entities:
-      - entity: sensor.siku_blauberg_fan_192_168_50_27_humidity
-        name: Вологість
-      - entity: sensor.siku_blauberg_fan_192_168_50_27_rpm
-        name: Оберти
     - type: markdown
       grid_options:
         columns: full
-      content: 'Локальна адреса: `192.168.50.27`. Рекуператор встановлений у **кімнаті хлопців**. Скидання
-        попередження фільтра навмисно не винесене на головну картку — його слід натискати лише після обслуговування
-        фільтра.'
+      content: |-
+        {% set i = states('sensor.2_floor_inside_temperature') | float(0) %}
+        {% set o = states('sensor.2_floor_outside_temperature') | float(0) %}
+        {% if o > i %}
+        Надворі тепліше на {{ (o - i) | round(1) }} °C — провітрювання зараз
+        нагріє приміщення, а не охолодить.
+        {% else %}
+        Надворі холодніше на {{ (i - o) | round(1) }} °C — провітрювання
+        охолоджує приміщення.
+        {% endif %}
+  # --- Секція 8 · Обслуговування ---
   - type: grid
+    column_span: 4
     cards:
     - type: heading
-      heading: Blauberg №2 · кімната Олесі
-      icon: mdi:fan
+      heading: Обслуговування і діагностика
+      icon: mdi:wrench-clock
       grid_options:
         columns: full
-    - type: tile
-      entity: fan.siku_blauberg_fan_192_168_50_123
-      name: Blauberg №2 · кімната Олесі
-      icon: mdi:fan
-      features_position: bottom
-      features:
-      - type: fan-speed
-      - type: fan-preset-modes
-        style: dropdown
-        preset_modes:
-        - auto
-        - manual
-        - 'on'
-        - party
-        - sleep
-      - type: fan-direction
-      - type: fan-oscillate
-      grid_options:
-        columns: full
-    - type: entities
-      title: Стан і датчики
-      show_header_toggle: false
-      grid_options:
-        columns: full
-      entities:
-      - entity: sensor.siku_blauberg_fan_192_168_50_123_mode
-        name: Режим
-      - entity: sensor.siku_blauberg_fan_192_168_50_123_humidity
-        name: Вологість
-      - entity: sensor.siku_blauberg_fan_192_168_50_123_rpm
-        name: Оберти вентилятора
-      - entity: sensor.siku_blauberg_fan_192_168_50_123_alarm
-        name: Аварія
-      - entity: sensor.siku_blauberg_fan_192_168_50_123_filter_timer_countdown
-        name: Залишок ресурсу фільтра
-      - entity: sensor.siku_blauberg_fan_192_168_50_123_timer_countdown
-        name: Залишок таймера
-      - entity: sensor.siku_blauberg_fan_192_168_50_123_firmware_version
-        name: Прошивка
-    - type: horizontal-stack
-      cards:
-      - type: button
-        entity: button.siku_blauberg_fan_192_168_50_123_party_mode
-        name: Посилений режим
-        icon: mdi:weather-windy
-        show_state: false
-      - type: button
-        entity: button.siku_blauberg_fan_192_168_50_123_sleep_mode
-        name: Нічний режим
-        icon: mdi:weather-night
-        show_state: false
-      grid_options:
-        columns: full
-    - type: history-graph
-      title: Вологість і оберти · 24 години
-      hours_to_show: 24
-      grid_options:
-        columns: full
-      entities:
-      - entity: sensor.siku_blauberg_fan_192_168_50_123_humidity
-        name: Вологість
-      - entity: sensor.siku_blauberg_fan_192_168_50_123_rpm
-        name: Оберти
     - type: markdown
       grid_options:
         columns: full
-      content: 'Локальна адреса: `192.168.50.123`. Рекуператор встановлений у **кімнаті Олесі**. Картка
-        дозволяє вмикати рекуператор, задавати швидкість, режим, напрямок потоку та чергування напрямків.'
+      content: |-
+        {% set bad = ['unknown', 'unavailable', 'none', ''] %}
+        {% set units = [
+             ('Blauberg №1 · кімната хлопців', 'siku_blauberg_fan_192_168_50_27'),
+             ('Blauberg №2 · кімната Олесі', 'siku_blauberg_fan_192_168_50_123')
+           ] %}
+
+        | Пристрій | Ресурс фільтра | Таймер | Прошивка | Аварія |
+        |---|---|---|---|---|
+        {% for name, slug in units -%}
+        {% set f = states('sensor.' ~ slug ~ '_filter_timer_countdown') -%}
+        {% set t = states('sensor.' ~ slug ~ '_timer_countdown') -%}
+        {% set a = states('sensor.' ~ slug ~ '_alarm') -%}
+        | {{ name }} | {{ 'н/д' if f in bad else ('лічильник не запущено' if f | float(0) == 0 else f ~ ' діб') }} | {{ 'н/д' if t in bad else ('не заданий' if t | float(0) == 0 else t ~ ' хв') }} | {{ states('sensor.' ~ slug ~ '_firmware_version') }} | {{ '🔴 є' if a | lower in ['true', 'on', '1'] else '🟢 немає' }} |
+        {% endfor %}
+        **«0 діб» у полі фільтра означає, що лічильник ресурсу ніколи не
+        запускали** — а не те, що фільтр вичерпано. Причина: рекуператор починає
+        відлік лише після ручного скидання після обслуговування.
+
+        Скидання попередження фільтра свідомо не винесене на картки пристроїв:
+        його натискають лише після фактичної заміни або миття фільтра.
+  # --- Секція 9 · Довідка ---
   - type: grid
+    column_span: 4
     cards:
     - type: heading
-      heading: Пояснення
+      heading: Довідка
       icon: mdi:information-outline
       grid_options:
         columns: full
     - type: markdown
       grid_options:
         columns: full
-      content: '**Приплив** подає свіже повітря, **витяжка** видаляє відпрацьоване. Швидкість кожного
-        вентилятора можна змінювати окремо. Режим **«Синхронізувати приплив і витяжку»** зв''язує їхні
-        швидкості. **Автоматичний режим** керує вентиляцією за датчиками PRANA, а **розширений автоматичний
-        режим** використовує посилений алгоритм пристрою. Підігрів і зимовий режим вмикайте за потреби
-        в холодний період.
+      content: |-
+        <details><summary>Приплив, витяжка, синхронізація — що це і коли вмикати</summary>
 
-        Рекуператори **Blauberg** підключені локально, без хмарного сервісу. На їхніх картках доступні
-        живлення, швидкість, автоматичний, ручний, посилений і нічний режими, напрямок повітря та чергування
-        напрямків. Вологість, оберти, аварійний стан, таймери й версія прошивки відображаються окремо;
-        історія вологості та обертів зберігається у Home Assistant.'
+        **Приплив** подає свіже повітря, **витяжка** видаляє відпрацьоване.
+        Швидкість кожного вентилятора можна змінювати окремо. Режим
+        **«Синхронізувати приплив і витяжку»** зв'язує їхні швидкості.
+        **Автоматичний режим** керує вентиляцією за датчиками PRANA, а
+        **розширений автоматичний** використовує посилений алгоритм пристрою.
+        Підігрів і зимовий режим вмикайте за потреби в холодний період.
+
+        </details>
+
+        <details><summary>Режими Blauberg: авто, ручний, посилений, нічний</summary>
+
+        Рекуператори **Blauberg** підключені локально, без хмарного сервісу.
+        На їхніх картках доступні живлення, швидкість, автоматичний, ручний,
+        посилений і нічний режими, напрямок повітря та чергування напрямків.
+        Вологість, оберти, аварійний стан, таймери й версія прошивки винесені
+        в таблицю обслуговування вище; історія вологості та обертів
+        зберігається у Home Assistant.
+
+        </details>
+
+        <details><summary>Скільки має бути CO₂ і чому це важливо</summary>
+
+        Надворі приблизно 400 ppm. До 800 ppm повітря вважається свіжим,
+        до 1200 — прийнятним, вище 1200 з'являється сонливість і падає
+        концентрація. Саме за цим показником має сенс керувати вентиляцією,
+        а не за відчуттям духоти, яке запізнюється.
+
+        </details>
 - title: Присутність
   path: presence
   icon: mdi:map-marker-account
