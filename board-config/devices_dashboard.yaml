@@ -2439,51 +2439,73 @@ views:
   # device_state став finish. Перемикач switch.zariadka_7_5kvt на сесію не
   # впливає взагалі: він стояв у off чотири хвилини, поки станція заряджала.
   - type: grid
-    column_span: 1
+    column_span: 2
     cards:
     - type: heading
       heading: Керування заряджанням
       icon: mdi:ev-station
       grid_options:
         columns: full
-    - type: tile
-      entity: select.zariadka_7_5kvt_charge_state
-      name: Заряджання
-      icon: mdi:ev-plug-type2
-      color: green
-      features_position: bottom
-      features:
-      - type: select-options
+    # Дві великі кнопки замість дрібної випадайки: користувач скаржився, що
+    # контрол «настільки малий, що його щоразу складно знайти».
+    - type: horizontal-stack
       grid_options:
         columns: full
+      cards:
+      - type: button
+        name: ЗАПУСТИТИ
+        icon: mdi:play-circle
+        icon_height: 64px
+        show_state: false
+        tap_action:
+          action: call-service
+          service: select.select_option
+          target:
+            entity_id: select.zariadka_7_5kvt_charge_state
+          data:
+            option: Open charging
+      - type: button
+        name: ЗУПИНИТИ
+        icon: mdi:stop-circle
+        icon_height: 64px
+        show_state: false
+        tap_action:
+          action: call-service
+          service: select.select_option
+          target:
+            entity_id: select.zariadka_7_5kvt_charge_state
+          data:
+            option: Close charging
+          confirmation:
+            text: Зупинити заряджання автомобіля?
     - type: markdown
       grid_options:
         columns: full
       content: |-
         {% set st = states('select.zariadka_7_5kvt_charge_state') %}
         {% set p = states('sensor.zariadka_7_5kvt_device_kw') | float(0) %}
-        **Це єдиний контрол, який справді зупиняє й запускає сесію.**
-
-        · **Close charging** — зупинити заряджання зараз
-        · **Open charging** — дозволити заряджання
-        · **Wait for operation** — станція чекає команди
-
-        {% if p > 0.1 %}
-        Зараз станція віддає {{ p | round(2) }} кВт. Щоб зупинити — оберіть
-        «Close charging».
+        {% set dev = states('sensor.zariadka_7_5kvt_device_state') | lower %}
+        {% if p > 0.1 or dev in ['charing', 'charging'] %}
+        ## 🟢 Заряджання йде · {{ p | round(2) }} кВт
+        Щоб зупинити — натисніть **ЗУПИНИТИ**.
         {% elif st == 'Close charging' %}
-        Заряджання зупинено командою. Щоб дозволити знову — оберіть «Open charging».
+        ## ⛔ Заряджання заблоковано
+        Причина: станції надіслано «Close charging». Натисніть **ЗАПУСТИТИ**,
+        щоб дозволити знову — потужність з'явиться за кілька секунд.
+        {% elif dev in ['no_connet', 'no_connect', 'disconnected'] %}
+        ## ⚪ Дозволено, але авто не підключене
+        Станція готова: щойно вставите кабель, заряджання почнеться саме.
+        {% else %}
+        ## ⚪ Заряджання не йде
+        Стан станції: «{{ dev }}». Натисніть **ЗАПУСТИТИ**, якщо кабель у машині.
         {% endif %}
+
+        Ці дві кнопки — **єдиний спосіб** запустити або зупинити сесію.
+        Обидві діють за секунди.
     - type: tile
-      entity: switch.zariadka_7_5kvt
-      name: Перемикач станції · сесію не зупиняє
-      icon: mdi:toggle-switch-off-outline
-      tap_action:
-        action: more-info
-      hold_action:
-        action: toggle
-        confirmation:
-          text: Цей перемикач не зупиняє активне заряджання. Все одно перемкнути?
+      entity: select.zariadka_7_5kvt_charge_state
+      name: Поточна команда станції
+      icon: mdi:ev-plug-type2
       grid_options:
         columns: full
         rows: 1
@@ -2491,16 +2513,13 @@ views:
       grid_options:
         columns: full
       content: |-
-        ⚠️ **Перемикач вище не зупиняє заряджання.** Перевірено 9 серпня: він
-        чотири хвилини стояв у «вимкнено», поки станція віддавала 6,3 кВт.
-        Причина: LocalTuya прив'язав його до точки даних, яку станція під час
-        активної сесії ігнорує.
-
-        {% if states('switch.zariadka_7_5kvt_switch') in ['unavailable', 'unknown'] %}
-        Другий перемикач `switch.zariadka_7_5kvt_switch` зараз недоступний —
-        схоже, саме він мав керувати живленням, але його точка даних не
-        відповідає.
-        {% endif %}
+        ⚠️ **Перемикач станції нічого не вмикає й не вимикає — не шукайте його
+        тут.** Перевірено двічі 9 серпня: о 12:06 він стояв у «вимкнено», поки
+        станція віддавала 6,3 кВт, а о 13:02 його ввімкнули — і потужність
+        лишилася нульовою, бо блокування знімається тільки командою вище.
+        Причина: LocalTuya прив'язав його до точки даних, яку станція ігнорує.
+        Сам перемикач лишився в секції «Що не працює» — щоб бачити його стан,
+        але не плутати з керуванням.
   # --- Секція 6 · Скільки заряджали і за скільки ---
   - type: grid
     column_span: 2
@@ -2692,6 +2711,30 @@ views:
         струм**, **відкладений старт**, **обмеження тривалості**. Читаються
         потужність, струм і напруга фази A, температура, стан пристрою та
         несправність.
+    - type: tile
+      entity: switch.zariadka_7_5kvt
+      name: Перемикач станції · ні на що не впливає
+      icon: mdi:toggle-switch-off-outline
+      tap_action:
+        action: more-info
+      grid_options:
+        columns: full
+        rows: 1
+    - type: markdown
+      grid_options:
+        columns: full
+      content: |-
+        {% set sw = states('switch.zariadka_7_5kvt') %}
+        {% set p = states('sensor.zariadka_7_5kvt_device_kw') | float(0) %}
+        Цей перемикач залишений тут лише для спостереження. Він **не вмикає й не
+        вимикає заряджання** і навіть змінюється сам собою: 9 серпня о 13:02 він
+        став «увімкнено», а через дві хвилини — «вимкнено», без жодної команди.
+        {% if (sw == 'off' and p > 0.1) or (sw == 'on' and p < 0.1) %}
+
+        Просто зараз він показує «{{ 'увімкнено' if sw == 'on' else 'вимкнено' }}»,
+        а станція віддає {{ p | round(2) }} кВт — тобто його стан і реальність
+        знову розходяться.
+        {% endif %}
   # --- Секція 9 · Довідка ---
   - type: grid
     column_span: 2
