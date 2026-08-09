@@ -336,7 +336,119 @@ views:
         фото до ввімкнення неможливо.
 
         </details>
-  # --- Секція 9 · Повний список клієнтів ---
+  # --- Секція 9 · Невідомі пристрої ---
+  - type: grid
+    column_span: 4
+    cards:
+    - type: heading
+      heading: Невідомі пристрої
+      icon: mdi:help-network
+      grid_options:
+        columns: full
+    - type: markdown
+      grid_options:
+        columns: full
+      content: |-
+        {# Невідомий = клієнт, якому ніхто не дав людської назви: його немає в
+           наших словниках, ASUS не завів для нього device_tracker, і точка
+           доступу не повідомила осмислений hostname. Інфраструктуру (роутер,
+           обидві Tenda, плату HA) виключаємо за IP. #}
+        {% set named_macs = [
+             '00:08:9b:ed:62:ef', '04:d6:f4:70:ad:b3', '08:3a:f2:2d:32:30',
+             '14:2b:2f:e1:54:60', '30:83:98:c1:6e:ac', '3c:0b:59:11:9a:13',
+             '80:64:7c:46:e8:d1', '84:cc:a8:96:28:a7', '98:f4:ab:ee:a5:c5',
+             '98:f4:ab:ee:a8:4e', 'd4:27:87:50:23:6c', 'd8:d6:68:31:ba:49',
+             'e0:98:06:af:b7:41', 'dc:6a:e7:a1:09:f2', '62:1a:51:f4:b2:ee',
+             '38:2c:e5:2d:5b:32', 'f0:35:75:b3:31:80', '10:12:fb:f7:95:ad',
+             '1e:c0:d2:73:2c:c9', 'c0:35:32:c4:8a:4b'
+           ] %}
+        {% set named_ips = [
+             '192.168.50.13', '192.168.50.25', '192.168.50.27', '192.168.50.36',
+             '192.168.50.91', '192.168.50.118', '192.168.50.123', '192.168.50.157',
+             '192.168.50.164', '192.168.50.175', '192.168.50.176', '192.168.50.179',
+             '192.168.50.201', '192.168.50.219', '192.168.50.221'
+           ] %}
+        {% set infra_ips = ['192.168.50.1', '192.168.50.2', '192.168.50.102', '192.168.50.141'] %}
+        {# Наш довідник трекерів. Ім'я від роутера НЕ робить пристрій відомим:
+           «ESP_EEA5C5» — це заводський hostname, а не назва, яку дали ми. #}
+        {% set our_trackers = [
+             'device_tracker.homemate', 'device_tracker.ok3568',
+             'device_tracker.s23_ultra_dvk', 'device_tracker.s24_koristuvaca_kateryna',
+             'device_tracker.s20_fe_koristuvaca_kateryna',
+             'device_tracker.s21_pol_zovatela_kateryna',
+             'device_tracker.a24_koristuvaca_vasilij', 'device_tracker.galaxy_j8',
+             'device_tracker.laptop_u1i8pnmk', 'device_tracker.cloudmate',
+             'device_tracker.esp_eea5c5', 'device_tracker.esp_eea84e'
+           ] %}
+        {% set tm = namespace(macs=[]) %}
+        {% for t in states.device_tracker %}
+        {%- set m = t.attributes.mac | default('', true) | lower -%}
+        {%- if m and t.entity_id in our_trackers %}{% set tm.macs = tm.macs + [m] %}{% endif -%}
+        {% endfor %}
+        {% set ns = namespace(rows=[], macs=[]) %}
+        {% for t in states.device_tracker if t.state == 'home' %}
+        {%- set m = t.attributes.mac | default('', true) | lower -%}
+        {%- set ip = t.attributes.ip | default('', true) -%}
+        {%- if m and ip and m not in ns.macs and m not in named_macs and m not in tm.macs
+               and ip not in named_ips and ip not in infra_ips -%}
+        {%- set ns.macs = ns.macs + [m] -%}
+        {%- set ns.rows = ns.rows + [(m, ip, t.name, 'ASUS RT-AX55')] -%}
+        {%- endif -%}
+        {% endfor %}
+        {% for c in (state_attr('sensor.tenda_ap_clients', 'onlineList') or []) %}
+        {%- set m = c.qosListMac | default('', true) | lower -%}
+        {%- set ip = c.qosListIP | default('', true) -%}
+        {%- set host = c.qosListHostname | default('', true) -%}
+        {%- if m and m not in ns.macs and m not in named_macs and m not in tm.macs
+               and ip not in named_ips and ip not in infra_ips -%}
+        {%- set ns.macs = ns.macs + [m] -%}
+        {%- set ns.rows = ns.rows + [(m, ip, host, 'Tenda AC10 · «Промінь»')] -%}
+        {%- endif -%}
+        {% endfor %}
+        {% for c in (state_attr('sensor.tenda_repeater_clients', 'onlineList') or []) %}
+        {%- set m = c.devMac | default('', true) | lower -%}
+        {%- set ip = c.devIp | default('', true) -%}
+        {%- set host = c.devName | default('', true) -%}
+        {%- if m and m not in ns.macs and m not in named_macs and m not in tm.macs
+               and ip not in named_ips and ip not in infra_ips -%}
+        {%- set ns.macs = ns.macs + [m] -%}
+        {%- set ns.rows = ns.rows + [(m, ip, host, 'Tenda A9 · повторювач')] -%}
+        {%- endif -%}
+        {% endfor %}
+        {% if ns.rows | count == 0 %}
+        🟢 **Усі пристрої в мережі впізнані.** Кожен клієнт має або назву в
+        нашому довіднику, або ім'я від роутера.
+        {% else %}
+        🟠 **У мережі {{ ns.rows | count }} пристрій(ів), яким ми не дали назви.**
+        Причина: вони підключилися, але їх немає в нашому довіднику. Ім'я в
+        таблиці — це те, що повідомив сам пристрій або роутер, а не назва, яку
+        дали ми. Саме тут з'явиться кожен новий пристрій, який ви щойно увімкнули
+        в розетку.
+
+        | Як себе назвав | Адреса | MAC | Підключений через |
+        |---|---|---|---|
+        {% for m, ip, host, where in ns.rows -%}
+        | {{ host if host and host | lower not in ['unknown', 'unknow'] else '— не повідомив —' }} | {{ ip if ip and ip != 'UnKnown' else 'IP не отримано' }} | `{{ m | upper }}` | {{ where }} |
+        {% endfor %}
+        {% endif %}
+
+        <details><summary>Що з цим робити</summary>
+
+        **Якщо пристрій ваш** — закріпіть за ним адресу в ASUS RT-AX55
+        (`192.168.50.1` → Network Map → Clients) і дайте зрозумілу назву. Після
+        цього він зникне з цього списку й з'явиться у «Ключових пристроях» або в
+        повному переліку клієнтів.
+
+        **Якщо пристрій не ваш** — це привід перевірити, хто підключений до
+        домашньої мережі. Обидві точки доступу Tenda зараз без пароля
+        адміністратора, тож почніть саме з нього.
+
+        MAC, що починається з 02, 06, 0A, 0E, 12… (друга цифра 2, 6, A або E) —
+        це рандомізована адреса телефона чи ноутбука. Такий пристрій щоразу
+        приходить під новим MAC, і впізнати його за адресою неможливо.
+
+        </details>
+  # --- Секція 10 · Повний список клієнтів ---
   - type: grid
     column_span: 4
     cards:
