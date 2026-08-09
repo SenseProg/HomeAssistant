@@ -23,6 +23,50 @@
 - Irrigation pump energy uses measured/confirmed pump power when available; do
   not replace an actual measurement with the nominal 1.1 kW label.
 
+## "Unit cannot be converted" — fix the metadata, never delete the history
+
+Symptom in the log, repeated for several sensors:
+
+```
+The unit of sensor.merezha_za_tarifom_nich (kWh) cannot be converted to the unit
+of previously compiled statistics (None). Generation of long term statistics
+will be suppressed
+```
+
+It means the statistics were first compiled while the sensor had no unit, the
+sensor later gained `kWh`, and the recorder refuses to mix the two. Long-term
+statistics stop growing — daily and monthly charts silently freeze. Eight
+tariff meters were in this state on 2026-08-09.
+
+The values were already in kWh; only the label was missing, so **nothing needed
+converting and nothing needed deleting** — just relabelling:
+
+```
+recorder/update_statistics_metadata
+  statistic_id: sensor.…
+  unit_class: energy          # ← without this the call succeeds and does nothing
+  unit_of_measurement: kWh
+```
+
+Two traps cost real time here:
+
+- **`unit_class` is effectively required.** Omit it and the command still returns
+  `success: true`, logs a deprecation warning, and silently leaves the metadata
+  untouched. `energy` is the class for kWh.
+- **`get_statistics_metadata` has no `unit_of_measurement` field.** It returns
+  `statistics_unit_of_measurement`, `display_unit_of_measurement` and
+  `unit_class`. Reading the wrong key shows `None` forever and makes a working
+  fix look broken.
+
+Verify with 5-minute statistics, not hourly: hourly compilation runs once per
+hour, so a fix applied at :20 shows nothing until the next full hour, whereas
+`period: 5minute` proves within minutes that the sum is accumulating again — and
+that it continues from the old totals instead of restarting at zero.
+
+`recorder/change_statistics_unit` is the other command in this area, but it
+*converts* every stored value; use it only when the old numbers really are in a
+different unit.
+
 ## The EV charger switch does not stop a charging session
 
 `switch.zariadka_7_5kvt` looks like the power switch and accepts commands — the
