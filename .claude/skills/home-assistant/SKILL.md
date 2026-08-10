@@ -73,7 +73,14 @@ ssh.exe -i $key -o BatchMode=yes forlinx@192.168.50.141
 python mcp-server/cli.py git
 python mcp-server/cli.py health
 python mcp-server/cli.py sync
+python mcp-server/cli.py incidents
 ```
+
+`incidents` reads the board's register of open technical problems, the same list
+the conversation agent sees in its `<known_incidents>` block. Read it before
+diagnosing anything: a symptom that is already recorded does not need
+rediscovering, and a record marked `watching` is waiting for exactly the kind of
+confirmation a new session can give. See `docs/incident-register.md`.
 
 Treat any `mismatch` result as a stop condition for deployment. Pull the live
 copy to a temporary directory and use `git diff --no-index` to understand it.

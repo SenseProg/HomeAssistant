@@ -28,6 +28,24 @@ MEMORY_FILE = (
 )
 MEMORY_MAX_ITEMS = 200
 MEMORY_RECALL_TOP_K = 5
+INCIDENTS_FILE = (
+    "/userdata/hass/config/.private/claude-code-conversation/incidents.jsonl"
+)
+INCIDENTS_MAX_ITEMS = 200
+# Скільки відкритих інцидентів іде у промт. Решта дістається IncidentList.
+INCIDENTS_PROMPT_MAX = 12
+INCIDENTS_MAX_TEXT_CHARS = 600
+INCIDENT_STATUSES = ("open", "watching", "resolved")
+INCIDENT_SEVERITIES = ("high", "medium", "low")
+INCIDENT_AREAS = (
+    "irrigation",
+    "energy",
+    "climate",
+    "network",
+    "board",
+    "assistant",
+    "other",
+)
 VOICE_RECORDING_DIR = (
     "/userdata/hass/config/.private/claude-code-conversation/voice-recordings"
 )

@@ -69,7 +69,10 @@ def _run(command: list[str], timeout: int = 30) -> dict[str, Any]:
         return {"ok": False, "returncode": None, "stdout": "", "stderr": str(exc)}
 
 
-def _ssh(remote_command: str, timeout: int = 30) -> dict[str, Any]:
+# Плата на eMMC відповідає повільно: серія sha256sum чи grep по журналу легко
+# перевищує півхвилини, і всі health-інструменти поверталися таймаутом замість
+# даних (спостережено 2026-08-10). Ліміт піднято до півтори хвилини.
+def _ssh(remote_command: str, timeout: int = 90) -> dict[str, Any]:
     executable = "ssh.exe" if os.name == "nt" else "ssh"
     command = [
         executable,
@@ -121,7 +124,7 @@ def repo_board_sync(files: Iterable[str] | None = None) -> dict[str, Any]:
             f"if [ -f {quoted} ]; then sha256sum {quoted}; "
             f"else printf 'MISSING  %s\\n' {quoted}; fi"
         )
-    remote = _ssh("; ".join(script_parts), timeout=45)
+    remote = _ssh("; ".join(script_parts), timeout=150)
     remote_hashes: dict[str, str | None] = {}
     if remote["ok"]:
         for line in remote["stdout"].splitlines():
@@ -181,7 +184,7 @@ printf 'ha_backup_mount='; systemctl is-active userdata-hass-config-backups.moun
 printf 'photo_mount='; systemctl is-active mnt-homemate_media-foto.mount 2>/dev/null || true
 printf 'analyst_timer='; systemctl is-enabled house-analyst.timer 2>/dev/null || true
 """.strip()
-    result = _ssh(command, timeout=30)
+    result = _ssh(command, timeout=120)
     values: dict[str, str] = {}
     for line in result["stdout"].splitlines():
         if "=" in line:
@@ -216,7 +219,7 @@ if sudo ss -Hntp 2>/dev/null | grep -F '{IRRIGATION_PUMP_IP}:{LOCALTUYA_PORT}' |
 printf 'controller_errors_10m='; sudo journalctl -u home-assistant --since '-10 min' --no-pager 2>/dev/null | grep -iE 'bf9.*dy4|192\\.168\\.50\\.221|avtopoliv_kontroler' | grep -ciE 'failed|not connected|unavailable|does not match' || true
 printf 'pump_errors_10m='; sudo journalctl -u home-assistant --since '-10 min' --no-pager 2>/dev/null | grep -iE '192\\.168\\.50\\.91|mini_switch_k601' | grep -ciE 'failed|not connected|unavailable|does not match' || true
 """.strip()
-    result = _ssh(command, timeout=30)
+    result = _ssh(command, timeout=120)
     values: dict[str, str] = {}
     for line in result["stdout"].splitlines():
         if "=" in line:
@@ -303,6 +306,51 @@ def git_status() -> dict[str, Any]:
         "divergence": divergence,
         "status": status,
     }
+
+
+INCIDENTS_PATH = (
+    "/userdata/hass/config/.private/claude-code-conversation/incidents.jsonl"
+)
+
+
+def incidents(status: str = "open") -> dict[str, Any]:
+    """Read the board's incident register. Read-only, never writes.
+
+    Реєстр веде асистент і оператор через чат; тут він потрібен, щоб
+    обслуговча сесія бачила той самий перелік відкритих проблем, що й агент,
+    і не починала розбір з нуля.
+    """
+    result = _ssh(f"cat {shlex.quote(INCIDENTS_PATH)} 2>/dev/null || true")
+    if not result["ok"]:
+        return {"ok": False, "count": 0, "incidents": [], "transport": result}
+    wanted = status.strip().casefold()
+    parsed: list[dict[str, Any]] = []
+    for line in result["stdout"].splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            record = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if not isinstance(record, dict):
+            continue
+        record_status = str(record.get("status", "open"))
+        if wanted == "all":
+            parsed.append(record)
+        elif wanted == "open":
+            if record_status in ("open", "watching"):
+                parsed.append(record)
+        elif record_status == wanted:
+            parsed.append(record)
+    severity_rank = {"high": 0, "medium": 1, "low": 2}
+    parsed.sort(
+        key=lambda item: (
+            severity_rank.get(str(item.get("severity")), 3),
+            str(item.get("updated", "")),
+        )
+    )
+    return {"ok": True, "filter": wanted, "count": len(parsed), "incidents": parsed}
 
 
 def network_inventory(query: str | None = None) -> dict[str, Any]:

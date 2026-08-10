@@ -8,6 +8,7 @@ import json
 from project_tools import (
     board_health,
     git_status,
+    incidents,
     irrigation_health,
     network_inventory,
     project_summary,
@@ -32,6 +33,10 @@ def main() -> int:
     sub.add_parser("git")
     inventory_parser = sub.add_parser("inventory")
     inventory_parser.add_argument("query", nargs="?")
+    incidents_parser = sub.add_parser("incidents")
+    incidents_parser.add_argument(
+        "status", nargs="?", default="open", choices=["open", "resolved", "all"]
+    )
     args = parser.parse_args()
 
     if args.command == "summary":
@@ -48,6 +53,8 @@ def main() -> int:
         result = recent_logs(args.lines, args.pattern)
     elif args.command == "git":
         result = git_status()
+    elif args.command == "incidents":
+        result = incidents(args.status)
     else:
         result = network_inventory(args.query)
 

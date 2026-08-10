@@ -118,12 +118,49 @@ hardware fallback.
 Never let a delayed Tuya cloud state abort a known-good local run. Safety guards
 must use the local valve/pump entities and Irrigation Unlimited binary sensors.
 
+## The controller closes its own valves; always set its timer first
+
+Measured on 2026-08-10 and no longer a hypothesis. `irrigation_unlimited.manual_run`
+switches only the valve DP, so the controller falls back to whatever countdown it
+already holds — about ten minutes — and closes the valve itself while Irrigation
+Unlimited keeps the master pump running for the full requested duration.
+
+The zone 5 test that settled it:
+
+- Phase A, no timer written: valve open 10:26:18, closed 10:36:21 — 10 min 03 s —
+  while `binary_sensor.irrigation_unlimited_c1_z4`, the master and the pump stayed
+  `on` for another 2.5 minutes.
+- Phase B, `localtuya.set_dp` DP 17 = 900 written **before** `manual_run`, with the
+  valve still closed: the valve stayed open the whole 13 minutes and Irrigation
+  Unlimited ended the run correctly — pump at 10:54:09, valve at 10:54:13.
+
+Consequences that matter:
+
+1. Any path that starts a zone through Irrigation Unlimited must first write that
+   zone's timer DP with an integer of the intended duration plus about a minute of
+   margin, while the valve is still closed. The hardware countdown is then a
+   backstop, and Home Assistant still owns the stop.
+2. Writing a timer DP into an already-open valve is untested. Do not do it.
+3. Irrigation Unlimited will not notice a valve closing mid-run: `check_back`
+   watches for roughly ninety seconds after the command (three tries thirty
+   seconds apart) and then stops. A valve that fails later leaves the pump running
+   against closed heads until the cycle ends. On the night of 2026-08-10 that was
+   about fifty minutes.
+
+`irrigation_switch_source_log` records every pump and valve transition with its
+Home Assistant context and flags `POLIV-АНОМАЛІЯ` when a valve closes while the
+Irrigation Unlimited master is still watering. Context alone cannot separate
+Irrigation Unlimited from the controller — Irrigation Unlimited calls services
+with a fresh context and no `parent_id`, so its commands look context-free too.
+Only a `user_id` reliably proves a human pressed something in the interface.
+
 ## DP-WBS01 controller diagnostics
 
 The eight-zone controller at `192.168.50.221` matches the DP-WBS01 family:
 
 - DP 1-8: zone valve outputs.
-- DP 13-20: corresponding hardware run timers in seconds.
+- DP 13-20: corresponding hardware run timers in seconds. Zone N uses DP 12+N:
+  zone 1 is DP 13, zone 3 is DP 15, zone 5 is DP 17.
 - DP 25-32: elapsed/used time.
 - DP 40: controller-wide automatic sequence state.
 - DP 42: the controller's own Smart Weather switch. Keep it off because Smart

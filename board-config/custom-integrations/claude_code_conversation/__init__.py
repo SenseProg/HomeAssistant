@@ -12,7 +12,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.typing import ConfigType
 
-from .const import DOMAIN, HISTORY_FILE, MEMORY_FILE
+from .const import DOMAIN, HISTORY_FILE, INCIDENTS_FILE, MEMORY_FILE
 
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 PLATFORMS = (Platform.CONVERSATION,)
@@ -31,6 +31,8 @@ class ClaudeCodeRuntimeData:
     system_snapshot_monotonic: float
     memory_lock: asyncio.Lock
     memory_path: Path
+    incidents_lock: asyncio.Lock
+    incidents_path: Path
 
 
 type ClaudeCodeConfigEntry = ConfigEntry[ClaudeCodeRuntimeData]
@@ -82,8 +84,10 @@ async def async_setup_entry(
     """Set up Claude Code from a config entry."""
     history_path = Path(HISTORY_FILE)
     memory_path = Path(MEMORY_FILE)
+    incidents_path = Path(INCIDENTS_FILE)
     await hass.async_add_executor_job(_ensure_private_history_file, history_path)
     await hass.async_add_executor_job(_ensure_private_history_file, memory_path)
+    await hass.async_add_executor_job(_ensure_private_history_file, incidents_path)
     entry.runtime_data = ClaudeCodeRuntimeData(
         claude_lock=asyncio.Lock(),
         history_lock=asyncio.Lock(),
@@ -93,6 +97,8 @@ async def async_setup_entry(
         system_snapshot_monotonic=0.0,
         memory_lock=asyncio.Lock(),
         memory_path=memory_path,
+        incidents_lock=asyncio.Lock(),
+        incidents_path=incidents_path,
     )
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True

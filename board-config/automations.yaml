@@ -85,7 +85,25 @@
     ДВА ТРИГЕРИ навмисно. Подія Smart Irrigation дає точний старт, але SI НЕ реєструє тригер узагалі,
     якщо сумарна тривалість її зон дорівнює нулю (а це нормальна ситуація наступного дня після поливу).
     Другий тригер від сонця на -75 хв лишається запобіжником на випадок, коли SI не реєструє свою подію
-    (нульова сумарна тривалість). mode: single не дасть запуститися двічі, якщо спрацюють обидва.'
+    (нульова сумарна тривалість). mode: single не дасть запуститися двічі, якщо спрацюють обидва.
+
+    ЗАПИС АПАРАТНОГО ТАЙМЕРА (додано 2026-08-10, підтверджено вимірюванням). Уночі проти 10.08 усі три
+    зони отримали по 10 хвилин замість 27/28/25, а насос пропрацював повні 80 хвилин, з них близько 50 -
+    на закриті клапани.
+    Причина виміряна тестом на зоні 5 того ж дня. Фаза A, без запису DP: клапан відкрито 10:26:18,
+    закрито 10:36:21 - рівно 10 хв 03 с, - і при цьому IU z4, майстер і насос лишалися on ще 2,5 хвилини,
+    поки IU дораховував свої 13 хвилин. Отже клапан закриває сам контролер DP-WBS01 за власним відліком
+    (DP 13-20), а irrigation_unlimited.manual_run перемикає лише DP клапана і цей відлік не задає.
+    Irrigation Unlimited раннього закриття не бачить: його check_back перевіряє клапан лише протягом
+    ~90 секунд після команди (3 спроби через 30 с), а не весь полив.
+    Фаза B, з записом DP 17 = 900 ДО старту зони, поки клапан закритий: клапан пробув відкритим усі
+    13 хвилин без раннього закриття, а зупинив полив саме IU - спершу насос (10:54:09), потім клапан
+    (10:54:13).
+    Тому запис таймера стоїть ПЕРЕД manual_run, значення - тривалість IU плюс 60 секунд запасу:
+    зупинку робить Home Assistant, а відлік контролера лишається страховкою, якщо HA впаде посеред
+    поливу. Писати DP у вже відкритий клапан тут навмисно не робимо - це неперевірений шлях.
+    Ручні скрипти з дашборда задають таймер разом з відкриттям клапана від початку, тому недолив бачили
+    лише на нічному розкладі.'
   triggers:
   - trigger: event
     event_type: smart_irrigation_start_irrigation_all_zones
@@ -173,6 +191,11 @@
     - condition: template
       value_template: '{{ zona_1_seconds | int(0) > 0 }}'
     then:
+    - action: localtuya.set_dp
+      data:
+        device_id: bfb2143124def1078b549a
+        dp: 13
+        value: '{{ (zona_1_seconds | int(0)) + 60 }}'
     - action: irrigation_unlimited.manual_run
       data:
         entity_id: binary_sensor.irrigation_unlimited_c1_z1
@@ -196,6 +219,11 @@
     - condition: template
       value_template: '{{ zona_2_seconds | int(0) > 0 }}'
     then:
+    - action: localtuya.set_dp
+      data:
+        device_id: bfb2143124def1078b549a
+        dp: 14
+        value: '{{ (zona_2_seconds | int(0)) + 60 }}'
     - action: irrigation_unlimited.manual_run
       data:
         entity_id: binary_sensor.irrigation_unlimited_c1_z2
@@ -219,6 +247,11 @@
     - condition: template
       value_template: '{{ zona_5_seconds | int(0) > 0 }}'
     then:
+    - action: localtuya.set_dp
+      data:
+        device_id: bfb2143124def1078b549a
+        dp: 17
+        value: '{{ (zona_5_seconds | int(0)) + 60 }}'
     - action: irrigation_unlimited.manual_run
       data:
         entity_id: binary_sensor.irrigation_unlimited_c1_z4
@@ -558,3 +591,60 @@
     data:
       option: Open charging
   mode: single
+- id: irrigation_switch_source_log
+  alias: Полив - журнал перемикань із джерелом
+  description: 'Пише в журнал HA кожне перемикання насоса й клапанів 1-5 разом із тим, ХТО його зробив.
+    Без цього в логах видно лише факт "клапан закрився", і неможливо відрізнити ручне натискання від
+    роботи автоматизації чи від того, що клапан закрив сам контролер за власним відліком - а саме це
+    питання виникло 10.08.2026 при розборі недоливу.
+
+    Джерело визначається за контекстом Home Assistant:
+    user_id заповнений і батьківського контексту немає - людина натиснула в інтерфейсі;
+    parent_id заповнений - дію породила автоматизація або скрипт (можливо, запущені людиною);
+    обидва порожні - команди з Home Assistant не було АБО її подала інтеграція власним контекстом.
+
+    Контексту недостатньо, щоб відрізнити Irrigation Unlimited від самого контролера: IU викликає
+    сервіси зі свіжим контекстом без parent_id, тому 10.08 його команди підписувалися як "пристрій сам".
+    Тому в рядок додано стан IU, а окремим маркером POLIV-АНОМАЛІЯ позначається саме та ситуація, яка
+    призвела до недоливу: клапан закрився, поки майстер IU ще поливає. IU так ніколи не робить - він
+    спершу зупиняє насос і аж потім закриває клапан, - отже це апаратний відлік контролера.
+
+    Пише через system_log на рівні warning, тому потрапляє і в journalctl, і в Налаштування - Журнали.
+    Домени automation і script виключені з recorder, тому іншого сліду про авторство не лишається.'
+  triggers:
+  - trigger: state
+    entity_id:
+    - switch.mini_switch_k601_2_switch_1_2
+    - switch.avtopoliv_kontroler_avtopoliv_klapan_1
+    - switch.avtopoliv_kontroler_avtopoliv_klapan_2
+    - switch.avtopoliv_kontroler_avtopoliv_klapan_3
+    - switch.avtopoliv_kontroler_avtopoliv_klapan_4
+    - switch.avtopoliv_kontroler_avtopoliv_klapan_5
+    to:
+    - 'on'
+    - 'off'
+  conditions:
+  - condition: template
+    value_template: '{{ trigger.from_state is not none and trigger.from_state.state != trigger.to_state.state
+      }}'
+  actions:
+  - variables:
+      source: "{% set c = trigger.to_state.context %} {% if c.user_id and not c.parent_id %}ВРУЧНУ (людина\
+        \ в інтерфейсі){% elif c.parent_id %}АВТОМАТИЗАЦІЯ або скрипт{% elif c.user_id %}ВРУЧНУ через\
+        \ автоматизацію, запущену людиною{% else %}БЕЗ КОНТЕКСТУ HA (інтеграція або сам контролер){% endif\
+        \ %}"
+      controller_closed: "{{ 'klapan' in trigger.entity_id\n   and trigger.to_state.state == 'off'\n \
+        \  and is_state('binary_sensor.irrigation_unlimited_c1_m', 'on') }}\n"
+  - action: system_log.write
+    data:
+      level: warning
+      logger: homemate.poliv
+      message: '{{ ''POLIV-АНОМАЛІЯ КОНТРОЛЕР ЗАКРИВ КЛАПАН, поки IU ще поливає: '' if controller_closed
+        else ''POLIV '' }}{{ trigger.to_state.name }} {{ trigger.from_state.state }} -> {{ trigger.to_state.state
+        }} · джерело: {{ source }} · IU майстер={{ states(''binary_sensor.irrigation_unlimited_c1_m'')
+        }} · насос={{ states(''switch.mini_switch_k601_2_switch_1_2'') }} · context id={{ trigger.to_state.context.id[:8]
+        }} parent={{ trigger.to_state.context.parent_id[:8] if trigger.to_state.context.parent_id else
+        ''-'' }} user={{ trigger.to_state.context.user_id[:8] if trigger.to_state.context.user_id else
+        ''-'' }}'
+  mode: queued
+  max: 25

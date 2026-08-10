@@ -9,6 +9,7 @@ from mcp.server.fastmcp import FastMCP
 from project_tools import (
     board_health,
     git_status,
+    incidents,
     irrigation_health,
     network_inventory,
     project_summary,
@@ -61,6 +62,12 @@ def ha_recent_logs(lines: int = 100, pattern: Optional[str] = None) -> dict:
 def ha_git_status() -> dict:
     """Read current branch, upstream divergence, and working-tree status."""
     return git_status()
+
+
+@mcp.tool()
+def ha_incidents(status: str = "open") -> dict:
+    """Read the board incident register: open (default), resolved, or all."""
+    return incidents(status)
 
 
 @mcp.tool()
