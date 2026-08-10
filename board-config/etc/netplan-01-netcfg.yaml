@@ -1,0 +1,27 @@
+network:
+        version: 2
+        ethernets:
+                eth0:
+                        # Factory address, no cable in it. Its gateway4 was
+                        # dropped when eth1 became static: two static default
+                        # routes in the same table is a netplan generate error
+                        # ("Conflicting default route declarations"), and this
+                        # is the interface that does not exist in practice.
+                        addresses: [192.168.0.123/24]
+                        nameservers:
+                                addresses: [114.114.114.114,8.8.8.8]
+                        optional: true
+                eth1:
+                        # Static, not DHCP. The address of this board is the one
+                        # thing every note, dashboard and script hardcodes, and
+                        # until now it existed only as a DHCP reservation in the
+                        # router - a router reset or replacement would move it.
+                        # The reservation is kept as well, so nothing else on the
+                        # LAN can be handed .141.
+                        dhcp4: false
+                        addresses: [192.168.50.141/24]
+                        gateway4: 192.168.50.1
+                        nameservers:
+                                addresses: [192.168.50.1, 1.1.1.1]
+                        # optional: do not hold up boot waiting for carrier
+                        optional: true
