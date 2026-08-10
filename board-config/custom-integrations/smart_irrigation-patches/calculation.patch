@@ -1,0 +1,16 @@
+--- calculation.py.orig-v2026.7.1	2026-08-10 22:23:49.651977286 +0300
++++ calculation.py	2026-08-10 22:23:49.651977286 +0300
+@@ -834,13 +834,6 @@
+                         "module.calculation.explanation.duration-after-lead-time-is",
+                         self.hass.config.language,
+                     )
+-                    + f" {duration}</li></ol>"
+-                )
+-                explanation += (
+-                    await localize(
+-                        "module.calculation.explanation.duration-after-lead-time-is",
+-                        self.hass.config.language,
+-                    )
+                     + f" {duration}.</li></ol>"
+                 )
+ 

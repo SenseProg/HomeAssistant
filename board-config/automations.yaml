@@ -356,7 +356,12 @@
         }}.mp4
       duration: 15
   - action: shell_command.rebuild_clip_gallery
-  - action: shell_command.prune_motion_clips
+  # ПРИБРАНО 2026-08-10: тут викликався shell_command.prune_motion_clips, якого
+  # не існує - ні в configuration.yaml, ні в жодній гілці репозиторію. Кожне
+  # спрацювання автоматизації падало з "Service not found ... at pos 4", тобто
+  # кліп записувався, а автоматизація завершувалася помилкою.
+  # Окрема чистка й не потрібна: prepare_motion_dir на початку кожного запису
+  # видаляє теки старші за 14 діб (find -mtime +14 -exec rm -rf).
   mode: queued
   max: 10
 - id: tarif_peremknuty_lichylnyky

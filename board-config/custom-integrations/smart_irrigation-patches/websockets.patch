@@ -1,0 +1,48 @@
+--- websockets.py.orig-v2026.7.1	2026-08-10 22:23:49.655310620 +0300
++++ websockets.py	2026-08-10 22:24:17.261980060 +0300
+@@ -2,6 +2,7 @@
+ 
+ import datetime
+ import logging
++import re
+ 
+ import voluptuous as vol
+ from dateutil import parser as dateutil_parser
+@@ -521,7 +522,7 @@
+             "; ".join(reasons) if reasons else "Scheduled irrigation maintenance"
+         )
+         irrigation_explanation = (
+-            "<br/>".join(explanations)
++            "\n———\n".join(_html_to_plain(item) for item in explanations)
+             if explanations
+             else "Irrigation scheduled based on soil moisture calculations and weather data."
+         )
+@@ -991,3 +992,28 @@
+             }
+         ),
+     )
++
++
++def _html_to_plain(text: str) -> str:
++    """Перетворити HTML-пояснення розрахунку на читабельний простий текст.
++
++    ЛОКАЛЬНИЙ ПАТЧ HomeMate. Панель Info вставляє це значення як текст
++    (view-info.ts: ${this.info.irrigation_explanation} без unsafeHTML), тому
++    користувач бачив сирі <br/>, <ol> і <li> прямо в інтерфейсі. Панель Zones
++    показує те саме поле через unsafeHTML, тому в сховищі текст лишається
++    HTML - перетворення робиться лише тут, на шляху до Info.
++
++    Пункти списку нумеруються, бо у .explanation-text немає white-space,
++    і переноси рядків усе одно схлопнулися б у пробіли.
++    """
++    step = [0]
++
++    def _number(_match: "re.Match[str]") -> str:
++        step[0] += 1
++        return f" {step[0]}) "
++
++    out = re.sub(r"<li>", _number, text)
++    out = out.replace("</li>", "").replace("<ol>", " ").replace("</ol>", " ")
++    out = re.sub(r"<br\s*/?>", " ", out)
++    out = re.sub(r"<[^>]+>", "", out)
++    return " ".join(out.split())
