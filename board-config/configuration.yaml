@@ -747,6 +747,13 @@ sensor:
 
 # The AsusWRT library emits the same deprecation warning every 30 seconds.
 # Keep real errors visible without filling the local journal with duplicates.
+# Щоб увімкнути одноразовий ремонт прив'язки зон Smart Irrigation (інцидент
+# 0cfd77b0), додати сюди рядок `homemate_fixup:` і залити компонент з
+# board-config/custom-integrations/homemate_fixup/. Навмисно НЕ увімкнено: код
+# готовий, але деплой заблокував запобіжник дозволів, тому конфігурація на платі
+# і в репозиторії лишається без нього. Після застосування прибрати і рядок, і
+# сам компонент.
+
 logger:
   logs:
     aioasuswrt.asuswrt: error
@@ -770,6 +777,11 @@ logger:
     # плюс події клапанів, тому балакучості, як у tuya_sharing, тут немає.
     # Вимкнути, коли зарахування зонам 1 і 2 буде налагоджене.
     custom_components.smart_irrigation: info
+    # ТИМЧАСОВО 2026-08-10, теж інцидент 0cfd77b0. На debug цей модуль пише
+    # "zone N valve opened" у момент відкриття прив'язаного клапана. Це єдиний
+    # спосіб побачити, ЧИ ВЗАГАЛІ подія доходить до зони 1 і 2, не читаючи
+    # .storage. Модуль тихий: він реагує лише на клапани, не на погоду.
+    custom_components.smart_irrigation.observed_watering: debug
 
 # --- Per-device energy accounting (added 2026-08-03) ---
 #

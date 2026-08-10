@@ -34,7 +34,10 @@ INCIDENTS_FILE = (
 INCIDENTS_MAX_ITEMS = 200
 # Скільки відкритих інцидентів іде у промт. Решта дістається IncidentList.
 INCIDENTS_PROMPT_MAX = 12
-INCIDENTS_MAX_TEXT_CHARS = 600
+# Підняте з 600 після першого ж змістовного запису: у полі resolution треба
+# вміщати спосіб виправлення з командами й перевіркою, а 600 символів різали
+# його на півслові. Ліміт лишається, щоб один інцидент не з'їв увесь промт.
+INCIDENTS_MAX_TEXT_CHARS = 1500
 INCIDENT_STATUSES = ("open", "watching", "resolved")
 INCIDENT_SEVERITIES = ("high", "medium", "low")
 INCIDENT_AREAS = (
