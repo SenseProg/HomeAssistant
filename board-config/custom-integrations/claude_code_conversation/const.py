@@ -38,6 +38,25 @@ HISTORY_DEFAULT_LOOKBACK_HOURS = 24
 HISTORY_MAX_LOOKBACK_DAYS = 14
 HISTORY_MAX_ENTITIES = 24
 HISTORY_MAX_CHARS = 16000
+
+# Історія тепер додається до КОЖНОГО повідомлення, а не лише тоді, коли в тексті
+# трапилось ключове слово. Щоб «як ти?» не тягнуло за собою 16 КБ журналу,
+# фоновий зріз навмисно вужчий за той, який дається на явне питання про минуле.
+HISTORY_AMBIENT_LOOKBACK_HOURS = 8
+HISTORY_AMBIENT_MAX_ENTITIES = 12
+HISTORY_AMBIENT_MAX_CHARS = 4000
+
+# Скільки попередніх реплік діалогу враховувати при виборі сутностей для історії.
+# Без цього односкладне «Подивись» не має жодного токена для пошуку і історія
+# приходить порожньою саме тоді, коли її просять.
+HISTORY_CONTEXT_TURNS = 4
+
+# Атрибути сутностей (bucket і ET Розумного поливу, статус зон Irrigation
+# Unlimited, режими клімату) - те, чого немає у зрізі станів і через що агент
+# не міг пояснити, звідки взялися розрахунки.
+ATTRIBUTES_MAX_ENTITIES = 12
+ATTRIBUTES_MAX_CHARS = 5000
+ATTRIBUTES_MAX_VALUE_CHARS = 300
 SYSTEM_CONTEXT_TTL_SECONDS = 60
 SYSTEM_CONTEXT_MAX_CHARS = 30000
 

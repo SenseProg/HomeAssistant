@@ -78,6 +78,32 @@ def describe_tools(tools: list[Any]) -> str:
     return "\n".join(lines)
 
 
+def read_tool_instructions(tools: tuple[dict[str, str], ...]) -> str:
+    """Return the always-available read-only half of the tool protocol.
+
+    Ці інструменти нічого не змінюють у будинку, тому доступні незалежно від
+    того, дозволено керування чи ні. Вони існують саме для того, щоб агент не
+    відповідав «не можу сам подивитися історію» і не просив користувача
+    повторити питання окремим повідомленням.
+    """
+    lines = "\n".join(
+        f"- {tool['name']}: {tool['description']}\n  аргументи: {tool['arguments']}"
+        for tool in tools
+    )
+    return (
+        "\n\nЧИТАННЯ ДАНИХ.\n"
+        "Крім готових блоків у запиті, тобі доступні інструменти читання. Вони "
+        "нічого не вмикають і не змінюють:\n\n"
+        f"{lines}\n\n"
+        "Виклик - РІВНО один рядок JSON і нічого більше:\n"
+        '{"tool_call": {"name": "НАЗВА", "arguments": {…}}}\n\n'
+        "Викликай їх лише тоді, коли наданих блоків справді бракує: інша "
+        "сутність, інше вікно часу, потрібні атрибути. Не проси користувача "
+        "підтвердити перелік сутностей чи період - обери розумні значення сам "
+        "і подивись. Після результату відповідай звичайним текстом українською."
+    )
+
+
 def tool_instructions(tools: list[Any]) -> str:
     """Return the system-prompt section that enables the JSON tool protocol."""
     return (
@@ -97,17 +123,24 @@ def tool_instructions(tools: list[Any]) -> str:
     )
 
 
-def format_tool_result(name: str, result: Any, error: str | None = None) -> str:
+def format_tool_result(
+    name: str, result: Any, error: str | None = None, max_chars: int = 2000
+) -> str:
     """Render the tool outcome that is fed back into the next CLI round."""
     if error is not None:
         return (
             f"<tool_result name=\"{name}\" status=\"error\">\n{error}\n</tool_result>"
         )
-    try:
-        rendered = json.dumps(result, ensure_ascii=False, default=str)
-    except (TypeError, ValueError):
-        rendered = str(result)
+    if isinstance(result, str):
+        # Інструменти читання повертають уже готовий текст: json.dumps перетворив
+        # би переноси рядків на \n і зробив журнал нечитабельним.
+        rendered = result
+    else:
+        try:
+            rendered = json.dumps(result, ensure_ascii=False, default=str)
+        except (TypeError, ValueError):
+            rendered = str(result)
     return (
-        f"<tool_result name=\"{name}\" status=\"ok\">\n{rendered[:2000]}\n"
+        f"<tool_result name=\"{name}\" status=\"ok\">\n{rendered[:max_chars]}\n"
         "</tool_result>"
     )
