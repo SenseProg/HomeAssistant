@@ -1,0 +1,16 @@
+[Unit]
+Description=If eth1 comes up with no address, fall back to the DHCP config
+# eth1 became static on 2026-08-10. A static config that is wrong cannot be
+# fixed over the network, and this board's debug UART is mis-routed on the PCB,
+# so the only other way in is a monitor and a keyboard. This is the parachute:
+# it only ever fires when the board has already lost the network, so it cannot
+# make anything worse.
+After=network.target
+ConditionPathExists=/root/netcfg.bak.yaml
+
+[Service]
+Type=oneshot
+ExecStart=/bin/sh -c 'sleep 45; ip -4 addr show eth1 | grep -q "inet " && exit 0; logger -t netplan-fallback "eth1 has no IPv4 after 45 s - restoring the DHCP config"; cp /root/netcfg.bak.yaml /etc/netplan/01-netcfg.yaml; netplan apply'
+
+[Install]
+WantedBy=multi-user.target
