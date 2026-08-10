@@ -1808,6 +1808,34 @@ views:
         | float(0) %}{% if secs > 0 %}Ллємо {{ (secs/60) | round(1) }} хв: ґрунту бракує {{ (b | abs)
         | round(2) }} мм.{% elif b > 0 %}Поливати не треба: запас {{ b | round(2) }} мм — дощу вистачило.{%
         else %}Поливати не треба: дефіциту немає.{% endif %}'
+    # Показує хід поливу, поки клапан відкритий. Відсоток і залишок бере з
+    # Irrigation Unlimited (percent_complete 0-100, time_remaining), тому смуга
+    # однаково працює і для кнопки "Полити зараз", і для нічного розкладу.
+    # Смуга з емодзі, а не CSS: card-mod лежить у www/community, але не
+    # зареєстрований як ресурс, тому будь-яка картка з ним дала б помилку.
+    - type: conditional
+      conditions:
+      - condition: state
+        entity: switch.avtopoliv_kontroler_avtopoliv_klapan_1
+        state: 'on'
+      card:
+        type: markdown
+        content: |-
+          {%- set iu = 'binary_sensor.irrigation_unlimited_c1_z1' -%}
+          {%- set pct = [ state_attr(iu, 'percent_complete') | int(0), 100 ] | min -%}
+          {%- set left = state_attr(iu, 'time_remaining') -%}
+          {%- set cells = 20 -%}
+          {%- set done = (pct * cells / 100) | round(0) | int -%}
+          {%- if is_state(iu, 'on') -%}
+          **Поливаємо {{ pct }}%**{% if left %} · лишилось {{ left }}{% endif %}
+
+          {{ '🟦' * done }}{{ '⬛' * (cells - done) }}
+          {%- else -%}
+          **Клапан відкритий**, але Irrigation Unlimited цю зону не веде, тому
+          показати прогрес нема з чого - видно лише сам факт відкриття.
+          {%- endif -%}
+      grid_options:
+        columns: full
     - type: tile
       entity: input_number.poliv_zona_1_hvylyn
       name: Хвилин вручну
@@ -1872,6 +1900,34 @@ views:
         | float(0) %}{% if secs > 0 %}Ллємо {{ (secs/60) | round(1) }} хв: ґрунту бракує {{ (b | abs)
         | round(2) }} мм.{% elif b > 0 %}Поливати не треба: запас {{ b | round(2) }} мм — дощу вистачило.{%
         else %}Поливати не треба: дефіциту немає.{% endif %}'
+    # Показує хід поливу, поки клапан відкритий. Відсоток і залишок бере з
+    # Irrigation Unlimited (percent_complete 0-100, time_remaining), тому смуга
+    # однаково працює і для кнопки "Полити зараз", і для нічного розкладу.
+    # Смуга з емодзі, а не CSS: card-mod лежить у www/community, але не
+    # зареєстрований як ресурс, тому будь-яка картка з ним дала б помилку.
+    - type: conditional
+      conditions:
+      - condition: state
+        entity: switch.avtopoliv_kontroler_avtopoliv_klapan_2
+        state: 'on'
+      card:
+        type: markdown
+        content: |-
+          {%- set iu = 'binary_sensor.irrigation_unlimited_c1_z2' -%}
+          {%- set pct = [ state_attr(iu, 'percent_complete') | int(0), 100 ] | min -%}
+          {%- set left = state_attr(iu, 'time_remaining') -%}
+          {%- set cells = 20 -%}
+          {%- set done = (pct * cells / 100) | round(0) | int -%}
+          {%- if is_state(iu, 'on') -%}
+          **Поливаємо {{ pct }}%**{% if left %} · лишилось {{ left }}{% endif %}
+
+          {{ '🟦' * done }}{{ '⬛' * (cells - done) }}
+          {%- else -%}
+          **Клапан відкритий**, але Irrigation Unlimited цю зону не веде, тому
+          показати прогрес нема з чого - видно лише сам факт відкриття.
+          {%- endif -%}
+      grid_options:
+        columns: full
     - type: tile
       entity: input_number.poliv_zona_2_hvylyn
       name: Хвилин вручну
@@ -1936,6 +1992,34 @@ views:
         | float(0) %}{% if secs > 0 %}Ллємо {{ (secs/60) | round(1) }} хв: ґрунту бракує {{ (b | abs)
         | round(2) }} мм.{% elif b > 0 %}Поливати не треба: запас {{ b | round(2) }} мм — дощу вистачило.{%
         else %}Поливати не треба: дефіциту немає.{% endif %}'
+    # Показує хід поливу, поки клапан відкритий. Відсоток і залишок бере з
+    # Irrigation Unlimited (percent_complete 0-100, time_remaining), тому смуга
+    # однаково працює і для кнопки "Полити зараз", і для нічного розкладу.
+    # Смуга з емодзі, а не CSS: card-mod лежить у www/community, але не
+    # зареєстрований як ресурс, тому будь-яка картка з ним дала б помилку.
+    - type: conditional
+      conditions:
+      - condition: state
+        entity: switch.avtopoliv_kontroler_avtopoliv_klapan_5
+        state: 'on'
+      card:
+        type: markdown
+        content: |-
+          {%- set iu = 'binary_sensor.irrigation_unlimited_c1_z4' -%}
+          {%- set pct = [ state_attr(iu, 'percent_complete') | int(0), 100 ] | min -%}
+          {%- set left = state_attr(iu, 'time_remaining') -%}
+          {%- set cells = 20 -%}
+          {%- set done = (pct * cells / 100) | round(0) | int -%}
+          {%- if is_state(iu, 'on') -%}
+          **Поливаємо {{ pct }}%**{% if left %} · лишилось {{ left }}{% endif %}
+
+          {{ '🟦' * done }}{{ '⬛' * (cells - done) }}
+          {%- else -%}
+          **Клапан відкритий**, але Irrigation Unlimited цю зону не веде, тому
+          показати прогрес нема з чого - видно лише сам факт відкриття.
+          {%- endif -%}
+      grid_options:
+        columns: full
     - type: tile
       entity: input_number.poliv_zona_5_hvylyn
       name: Хвилин вручну

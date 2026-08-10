@@ -653,3 +653,80 @@
         ''-'' }}'
   mode: queued
   max: 25
+- id: irrigation_credit_bucket_on_valve_close
+  alias: Полив - зарахувати вилиту воду в баланс зони
+  description: 'Додає вилиту воду до водного балансу Smart Irrigation після кожного закриття клапана -
+    незалежно від того, хто його відкрив: розклад, кнопка на дашборді чи тумблер.
+
+    НАВІЩО. Модуль observed watering усередині Smart Irrigation уміє це сам, але для зон 1 і 2 він
+    мовчить: їм прив''язана сутність, яка ніколи не змінює стан (інцидент 0cfd77b0, найімовірніше
+    застарілий хмарний дубль switch.avtopoliv_kontroler_switch_N). Прив''язка лежить у .storage і
+    правиться лише з панелі Smart Irrigation, тому до її виправлення зарахування робить ця
+    автоматизація. Без неї полив зон 1 і 2 не потрапляє ні в баланс, ні на графік "Вода за 7 днів",
+    і дефіцит накопичується щодоби.
+
+    ЧОМУ НЕ БУДЕ ПОДВІЙНОГО РАХУНКУ. Після закриття клапана автоматизація запам''ятовує баланс, чекає
+    20 секунд і дивиться, чи він змінився сам. Якщо змінився - зарахував штатний модуль (так працює
+    зона 5), і автоматизація не робить нічого. Дописує тільки там, де не зарахував ніхто. Через це її
+    можна лишати ввімкненою і після виправлення прив''язки: вона просто перестане спрацьовувати.
+
+    ЯК РАХУЄТЬСЯ. Тими самими числами, що й у самому модулі: мм = хвилини * продуктивність / площа.
+    Зони 1 і 2 - 40 л/хв на 200 м², зона 5 - 20 л/хв на 100 м², тобто однакові 12 мм/год. Результат
+    обрізається зверху максимальним балансом зони, інакше сервіс set_zone відхиляє значення.
+
+    Пробіги коротші за 30 секунд ігноруються: це не полив, а перевірка клапана або збій зв''язку.'
+  triggers:
+  - trigger: state
+    entity_id:
+    - switch.avtopoliv_kontroler_avtopoliv_klapan_1
+    - switch.avtopoliv_kontroler_avtopoliv_klapan_2
+    - switch.avtopoliv_kontroler_avtopoliv_klapan_5
+    from: 'on'
+    to: 'off'
+  conditions: []
+  actions:
+  - variables:
+      zone_sensor: "{{ {'switch.avtopoliv_kontroler_avtopoliv_klapan_1': 'sensor.smart_irrigation_zona1',\n\
+        \  'switch.avtopoliv_kontroler_avtopoliv_klapan_2': 'sensor.smart_irrigation_zona2',\n  'switch.avtopoliv_kontroler_avtopoliv_klapan_5':\
+        \ 'sensor.smart_irrigation_zona5'}[trigger.entity_id] }}\n"
+      seconds: "{{ (as_timestamp(trigger.to_state.last_changed)\n   - as_timestamp(trigger.from_state.last_changed))\
+        \ | int(0) }}\n"
+  - condition: template
+    value_template: '{{ seconds >= 30 and seconds <= 7200 }}'
+  - variables:
+      bucket_before: '{{ state_attr(zone_sensor, ''bucket'') | float(0) }}'
+  - delay: 00:00:20
+  - variables:
+      bucket_after: '{{ state_attr(zone_sensor, ''bucket'') | float(0) }}'
+  - if:
+    - condition: template
+      value_template: '{{ (bucket_after - bucket_before) | abs > 0.001 }}'
+    then:
+    - action: system_log.write
+      data:
+        level: warning
+        logger: homemate.poliv
+        message: 'POLIV-БАЛАНС {{ zone_sensor }}: зарахував штатний модуль ({{ bucket_before | round(3)
+          }} -> {{ bucket_after | round(3) }}), автоматизація не втручається'
+    - stop: Баланс уже поповнено самим Smart Irrigation
+  - variables:
+      applied_mm: "{{ (seconds / 60.0\n   * (state_attr(zone_sensor, 'throughput') | float(0))\n   /\
+        \ (state_attr(zone_sensor, 'size') | float(1))) | round(3) }}\n"
+  - condition: template
+    value_template: '{{ applied_mm > 0 }}'
+  - variables:
+      new_bucket: "{{ [ bucket_after + (applied_mm | float(0)),\n     state_attr(zone_sensor, 'maximum_bucket')\
+        \ | float(24) ] | min | round(3) }}\n"
+  - action: smart_irrigation.set_zone
+    data:
+      entity_id: '{{ zone_sensor }}'
+      new_bucket_value: '{{ new_bucket | float(0) }}'
+  - action: system_log.write
+    data:
+      level: warning
+      logger: homemate.poliv
+      message: 'POLIV-БАЛАНС {{ zone_sensor }}: полив {{ (seconds / 60) | round(1) }} хв = {{ applied_mm
+        }} мм, баланс {{ bucket_after | round(3) }} -> {{ new_bucket }} (зарахувала автоматизація, штатний
+        модуль промовчав)'
+  mode: queued
+  max: 10
