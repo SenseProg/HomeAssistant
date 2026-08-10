@@ -82,7 +82,10 @@ diagnosing anything: a symptom that is already recorded does not need
 rediscovering, and a record marked `watching` is waiting for exactly the kind of
 confirmation a new session can give. See `docs/incident-register.md`.
 
-Treat any `mismatch` result as a stop condition for deployment. Pull the live
+Treat any `mismatch` result as a stop condition for deployment. `match_eol_only`
+is not one: the text is identical and only the line endings differ, which is
+what the Windows working copy does to files the board itself owns — the four
+systemd units are permanently in that state. Pull the live
 copy to a temporary directory and use `git diff --no-index` to understand it.
 The board is the runtime truth; Git is the intended-state truth. Neither should
 silently replace the other.

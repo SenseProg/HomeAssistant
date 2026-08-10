@@ -98,6 +98,23 @@ def _sha256(path: Path) -> str | None:
     return digest.hexdigest()
 
 
+def _sha256_lf(path: Path) -> str | None:
+    """Hash the file with CR removed, so CRLF and LF copies compare equal.
+
+    На Windows робоча копія репозиторію тримає CRLF, а плата - LF, тому чотири
+    systemd-юніти роками показувалися як mismatch, хоча текст у них однаковий
+    (різниця рівно один байт на рядок). Постійний хибний mismatch знецінює саме
+    те правило, заради якого ця звірка існує: розбіжність - це стоп-сигнал.
+    """
+    if not path.is_file():
+        return None
+    digest = hashlib.sha256()
+    with path.open("rb") as stream:
+        for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+            digest.update(chunk.replace(b"\r", b""))
+    return digest.hexdigest()
+
+
 def resolve_targets(files: Iterable[str] | None = None) -> dict[str, str]:
     """Resolve only explicitly allow-listed repository paths."""
     if files is None:
@@ -120,16 +137,27 @@ def repo_board_sync(files: Iterable[str] | None = None) -> dict[str, Any]:
     script_parts = []
     for remote_path in remote_paths:
         quoted = shlex.quote(remote_path)
+        # Другий, LFHASH-рядок - той самий файл без CR. Дає змогу відрізнити
+        # реальну розбіжність від різниці переносів рядків Windows і плати.
         script_parts.append(
             f"if [ -f {quoted} ]; then sha256sum {quoted}; "
+            f"printf 'LFHASH %s ' {quoted}; "
+            f"tr -d '\\r' < {quoted} | sha256sum | cut -c1-64; "
             f"else printf 'MISSING  %s\\n' {quoted}; fi"
         )
     remote = _ssh("; ".join(script_parts), timeout=150)
     remote_hashes: dict[str, str | None] = {}
+    remote_lf_hashes: dict[str, str] = {}
     if remote["ok"]:
         for line in remote["stdout"].splitlines():
             if line.startswith("MISSING  "):
                 remote_hashes[line[9:].strip()] = None
+                continue
+            if line.startswith("LFHASH "):
+                body = line[7:].strip()
+                path_part, _, hash_part = body.rpartition(" ")
+                if re.fullmatch(r"[0-9a-fA-F]{64}", hash_part):
+                    remote_lf_hashes[path_part.strip()] = hash_part.lower()
                 continue
             match = re.match(r"^([0-9a-fA-F]{64})\s+(.+)$", line)
             if match:
@@ -147,6 +175,13 @@ def repo_board_sync(files: Iterable[str] | None = None) -> dict[str, Any]:
             status = "remote_missing"
         elif local_hash == remote_hash:
             status = "match"
+        elif (
+            remote_lf_hashes.get(remote_path) is not None
+            and _sha256_lf(PROJECT_ROOT / repo_path) == remote_lf_hashes[remote_path]
+        ):
+            # Текст однаковий, різняться лише переноси рядків. Це не привід
+            # зупиняти деплой, але й не мовчазний match - хай буде видно.
+            status = "match_eol_only"
         else:
             status = "mismatch"
         results.append(
@@ -161,7 +196,9 @@ def repo_board_sync(files: Iterable[str] | None = None) -> dict[str, Any]:
     return {
         "safe_to_deploy": bool(results)
         and remote["ok"]
-        and all(item["status"] == "match" for item in results),
+        and all(
+            item["status"] in ("match", "match_eol_only") for item in results
+        ),
         "results": results,
         "remote_error": remote["stderr"] if not remote["ok"] else "",
     }
