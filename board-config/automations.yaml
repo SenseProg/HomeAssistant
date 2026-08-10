@@ -695,25 +695,29 @@
     value_template: '{{ seconds >= 30 and seconds <= 7200 }}'
   - variables:
       bucket_before: '{{ state_attr(zone_sensor, ''bucket'') | float(0) }}'
+      applied_mm: "{{ (seconds / 60.0\n   * (state_attr(zone_sensor, 'throughput') | float(0))\n   /\
+        \ (state_attr(zone_sensor, 'size') | float(1))) | round(3) }}\n"
+  - condition: template
+    value_template: '{{ applied_mm > 0 }}'
   - delay: 00:00:20
   - variables:
       bucket_after: '{{ state_attr(zone_sensor, ''bucket'') | float(0) }}'
+  # Осторонь стаємо ЛИШЕ якщо баланс ЗРІС приблизно на очікувану величину. Перша
+  # версія перевіряла будь-яку зміну по модулю і 10.08 о 23:35 промовчала дарма:
+  # баланс зони 1 не зріс, а впав з -9.832 на -9.86 через звичайний перерахунок,
+  # і автоматизація зарахувала це за роботу штатного модуля. Половина очікуваного
+  # як поріг: дрібний дрейф його не перетне, а справжнє зарахування - перетне.
   - if:
     - condition: template
-      value_template: '{{ (bucket_after - bucket_before) | abs > 0.001 }}'
+      value_template: '{{ (bucket_after - bucket_before) >= (applied_mm | float(0)) * 0.5 }}'
     then:
     - action: system_log.write
       data:
         level: warning
         logger: homemate.poliv
         message: 'POLIV-БАЛАНС {{ zone_sensor }}: зарахував штатний модуль ({{ bucket_before | round(3)
-          }} -> {{ bucket_after | round(3) }}), автоматизація не втручається'
+          }} -> {{ bucket_after | round(3) }}, очікувалось +{{ applied_mm }} мм), автоматизація не втручається'
     - stop: Баланс уже поповнено самим Smart Irrigation
-  - variables:
-      applied_mm: "{{ (seconds / 60.0\n   * (state_attr(zone_sensor, 'throughput') | float(0))\n   /\
-        \ (state_attr(zone_sensor, 'size') | float(1))) | round(3) }}\n"
-  - condition: template
-    value_template: '{{ applied_mm > 0 }}'
   - variables:
       new_bucket: "{{ [ bucket_after + (applied_mm | float(0)),\n     state_attr(zone_sensor, 'maximum_bucket')\
         \ | float(24) ] | min | round(3) }}\n"
