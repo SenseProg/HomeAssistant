@@ -950,6 +950,15 @@ logger:
 # is just an ordinary empty directory, and writing clips into it would fill
 # /userdata - exactly the failure that took the whole system down earlier today.
 command_line:
+  # Вільне місце на розділі, де живе Home Assistant. Розділ 2.5 ГБ, і
+  # заповнений він уже одного разу клав дім (5 серпня, полив стояв добу).
+  - sensor:
+      name: Vilne mistse userdata
+      unique_id: userdata_free_mb
+      command: "df -Pm /userdata | awk 'NR==2{print $4}'"
+      unit_of_measurement: MB
+      state_class: measurement
+      scan_interval: 600
   # Newest motion clips as JSON, for the gallery card on the Останній рух
   # tab. Path is the www bind mount, so the links need no auth token.
   - sensor:
