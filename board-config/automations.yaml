@@ -99,9 +99,12 @@
     Фаза B, з записом DP 17 = 900 ДО старту зони, поки клапан закритий: клапан пробув відкритим усі
     13 хвилин без раннього закриття, а зупинив полив саме IU - спершу насос (10:54:09), потім клапан
     (10:54:13).
-    Тому запис таймера стоїть ПЕРЕД manual_run, значення - тривалість IU плюс 60 секунд запасу:
-    зупинку робить Home Assistant, а відлік контролера лишається страховкою, якщо HA впаде посеред
-    поливу. Писати DP у вже відкритий клапан тут навмисно не робимо - це неперевірений шлях.
+    Тому запис таймера стоїть ПЕРЕД manual_run, значення - тривалість IU плюс 180 секунд запасу.
+    Запас піднято з 60 до 180 секунд 2026-08-11: у першу ж ніч кожна зона відпрацювала приблизно на
+    хвилину довше за номінал (зона 2 - 50,3 хв при плані 49,35), тобто від апаратного відліку лишалося
+    менше секунд, ніж здавалося. Зупинку однаково робить Home Assistant, а відлік контролера лишається
+    страховкою, якщо HA впаде посеред поливу.
+    Писати DP у вже відкритий клапан тут навмисно не робимо - це неперевірений шлях.
     Ручні скрипти з дашборда задають таймер разом з відкриттям клапана від початку, тому недолив бачили
     лише на нічному розкладі.'
   triggers:
@@ -195,7 +198,7 @@
       data:
         device_id: bfb2143124def1078b549a
         dp: 13
-        value: '{{ (zona_1_seconds | int(0)) + 60 }}'
+        value: '{{ (zona_1_seconds | int(0)) + 180 }}'
     - action: irrigation_unlimited.manual_run
       data:
         entity_id: binary_sensor.irrigation_unlimited_c1_z1
@@ -223,7 +226,7 @@
       data:
         device_id: bfb2143124def1078b549a
         dp: 14
-        value: '{{ (zona_2_seconds | int(0)) + 60 }}'
+        value: '{{ (zona_2_seconds | int(0)) + 180 }}'
     - action: irrigation_unlimited.manual_run
       data:
         entity_id: binary_sensor.irrigation_unlimited_c1_z2
@@ -251,7 +254,7 @@
       data:
         device_id: bfb2143124def1078b549a
         dp: 17
-        value: '{{ (zona_5_seconds | int(0)) + 60 }}'
+        value: '{{ (zona_5_seconds | int(0)) + 180 }}'
     - action: irrigation_unlimited.manual_run
       data:
         entity_id: binary_sensor.irrigation_unlimited_c1_z4
@@ -671,8 +674,13 @@
     можна лишати ввімкненою і після виправлення прив''язки: вона просто перестане спрацьовувати.
 
     ЯК РАХУЄТЬСЯ. Тими самими числами, що й у самому модулі: мм = хвилини * продуктивність / площа.
-    Зони 1 і 2 - 40 л/хв на 200 м², зона 5 - 20 л/хв на 100 м², тобто однакові 12 мм/год. Результат
-    обрізається зверху максимальним балансом зони, інакше сервіс set_zone відхиляє значення.
+    Зони 1 і 2 - 40 л/хв на 200 м². Результат обрізається зверху максимальним балансом зони, інакше
+    сервіс set_zone відхиляє значення.
+
+    ЗОНА 5 СЮДИ НЕ ВХОДИТЬ навмисно. Їй штатний модуль зараховує сам: його внутрішній id 2 прив''язаний
+    саме до клапана 5. 11.08 о 05:15 обидва спрацювали разом і зона отримала 6,82 мм обліку на 3,41 мм
+    вилитої води, бо модуль дописує в ту саму секунду, коли клапан закрився, - тобто до першого заміру
+    балансу цією автоматизацією.
 
     Пробіги коротші за 30 секунд ігноруються: це не полив, а перевірка клапана або збій зв''язку.'
   triggers:
@@ -680,15 +688,14 @@
     entity_id:
     - switch.avtopoliv_kontroler_avtopoliv_klapan_1
     - switch.avtopoliv_kontroler_avtopoliv_klapan_2
-    - switch.avtopoliv_kontroler_avtopoliv_klapan_5
     from: 'on'
     to: 'off'
   conditions: []
   actions:
   - variables:
       zone_sensor: "{{ {'switch.avtopoliv_kontroler_avtopoliv_klapan_1': 'sensor.smart_irrigation_zona1',\n\
-        \  'switch.avtopoliv_kontroler_avtopoliv_klapan_2': 'sensor.smart_irrigation_zona2',\n  'switch.avtopoliv_kontroler_avtopoliv_klapan_5':\
-        \ 'sensor.smart_irrigation_zona5'}[trigger.entity_id] }}\n"
+        \  'switch.avtopoliv_kontroler_avtopoliv_klapan_2': 'sensor.smart_irrigation_zona2'}[trigger.entity_id]\
+        \ }}\n"
       seconds: "{{ (as_timestamp(trigger.to_state.last_changed)\n   - as_timestamp(trigger.from_state.last_changed))\
         \ | int(0) }}\n"
   - condition: template
@@ -702,21 +709,32 @@
   - delay: 00:00:20
   - variables:
       bucket_after: '{{ state_attr(zone_sensor, ''bucket'') | float(0) }}'
-  # Осторонь стаємо ЛИШЕ якщо баланс ЗРІС приблизно на очікувану величину. Перша
-  # версія перевіряла будь-яку зміну по модулю і 10.08 о 23:35 промовчала дарма:
-  # баланс зони 1 не зріс, а впав з -9.832 на -9.86 через звичайний перерахунок,
-  # і автоматизація зарахувала це за роботу штатного модуля. Половина очікуваного
-  # як поріг: дрібний дрейф його не перетне, а справжнє зарахування - перетне.
+  # Дві незалежні перевірки, чи не зарахував уже штатний модуль.
+  #
+  # Перша - за міткою last_irrigation. Вона надійніша за порівняння балансу, бо
+  # штатний модуль зараховує в ту саму секунду, коли клапан закрився, тобто ДО
+  # першого заміру балансу. Саме на цьому 11.08 о 05:15 сталося подвійне
+  # зарахування зони 5: модуль дописав +3.41, автоматизація за 20 секунд побачила
+  # "зростання нуль" і дописала ще стільки ж. Зона отримала 3,41 мм води і 6,82
+  # мм в облік.
+  #
+  # Друга - за зростанням балансу, як запобіжник, якщо мітка не оновиться.
+  - variables:
+      last_irr: '{{ state_attr(zone_sensor, ''last_irrigation'') }}'
+      last_irr_age: "{{ (as_timestamp(now()) - as_timestamp(last_irr, 0)) | int(999999)\n   if last_irr\
+        \ else 999999 }}\n"
   - if:
     - condition: template
-      value_template: '{{ (bucket_after - bucket_before) >= (applied_mm | float(0)) * 0.5 }}'
+      value_template: "{{ last_irr_age < 120\n   or (bucket_after - bucket_before) >= (applied_mm | float(0))\
+        \ * 0.5 }}\n"
     then:
     - action: system_log.write
       data:
         level: warning
         logger: homemate.poliv
         message: 'POLIV-БАЛАНС {{ zone_sensor }}: зарахував штатний модуль ({{ bucket_before | round(3)
-          }} -> {{ bucket_after | round(3) }}, очікувалось +{{ applied_mm }} мм), автоматизація не втручається'
+          }} -> {{ bucket_after | round(3) }}, очікувалось +{{ applied_mm }} мм, last_irrigation {{ last_irr_age
+          }} с тому), автоматизація не втручається'
     - stop: Баланс уже поповнено самим Smart Irrigation
   - variables:
       new_bucket: "{{ [ bucket_after + (applied_mm | float(0)),\n     state_attr(zone_sensor, 'maximum_bucket')\
@@ -734,3 +752,47 @@
         модуль промовчав)'
   mode: queued
   max: 10
+- id: irrigation_watchdog_master_without_valve
+  alias: 'Полив - сторож: майстер поливає, а клапан закритий'
+  description: 'Зупиняє полив, якщо Irrigation Unlimited вважає, що поливає, а жоден клапан не відкритий.
+    Це той стан, у якому насос працює в глухий кут.
+
+    НАВІЩО ОКРЕМО ВІД ЗАПИСУ ТАЙМЕРА. Запис DP лікує одну конкретну причину - апаратний відлік
+    контролера. Сторож ловить весь клас: обрив LocalTuya посеред поливу, відмову котушки клапана,
+    ручне закриття клапана під час циклу, збій контролера. У ніч проти 10.08 така ситуація тривала
+    близько 50 хвилин і ніхто її не помітив, бо check_back у Irrigation Unlimited перевіряє клапан
+    лише ~90 секунд після команди.
+
+    ВИТРИМКА ХВИЛИНА навмисна. Між зонами Irrigation Unlimited на кілька секунд лишає всі клапани
+    закритими при увімкненому майстрі - це нормальний перехід, і без витримки сторож рубав би кожен
+    багатозонний полив. Хвилини вистачає з запасом: 11.08 найдовший такий перехід тривав 17 секунд.
+
+    Зупиняє через той самий script.poliv_stop_all, що й кнопка на дашборді, тобто у правильному
+    порядку: спершу насос, потім клапани.'
+  triggers:
+  - trigger: template
+    value_template: "{{ is_state('binary_sensor.irrigation_unlimited_c1_m', 'on')\n   and not is_state('switch.avtopoliv_kontroler_avtopoliv_klapan_1',\
+      \ 'on')\n   and not is_state('switch.avtopoliv_kontroler_avtopoliv_klapan_2', 'on')\n   and not\
+      \ is_state('switch.avtopoliv_kontroler_avtopoliv_klapan_3', 'on')\n   and not is_state('switch.avtopoliv_kontroler_avtopoliv_klapan_4',\
+      \ 'on')\n   and not is_state('switch.avtopoliv_kontroler_avtopoliv_klapan_5', 'on') }}\n"
+    for: 00:01:00
+  conditions: []
+  actions:
+  - action: system_log.write
+    data:
+      level: warning
+      logger: homemate.poliv
+      message: 'POLIV-СТОРОЖ: майстер Irrigation Unlimited поливає вже хвилину без жодного відкритого
+        клапана - зупиняю. Насос = {{ states(''switch.mini_switch_k601_2_switch_1_2'') }}, зони IU:
+        z1={{ states(''binary_sensor.irrigation_unlimited_c1_z1'') }} z2={{ states(''binary_sensor.irrigation_unlimited_c1_z2'')
+        }} z3={{ states(''binary_sensor.irrigation_unlimited_c1_z3'') }} z4={{ states(''binary_sensor.irrigation_unlimited_c1_z4'')
+        }}'
+  - action: script.poliv_stop_all
+  - action: persistent_notification.create
+    data:
+      notification_id: poliv_storozh
+      title: Полив зупинено сторожем
+      message: 'Irrigation Unlimited поливав понад хвилину, хоча жоден клапан не був відкритий - насос
+        працював у глухий кут. Полив зупинено о {{ now().strftime(''%H:%M:%S'') }}. Перевірте живлення
+        24 В контролера, зв''язок LocalTuya і котушку клапана тієї зони, яка мала поливатися.'
+  mode: single

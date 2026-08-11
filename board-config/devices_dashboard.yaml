@@ -1746,7 +1746,7 @@ views:
         columns: full
       content: |-
         ## {{ states('sensor.poliv_stan_sistemi') }}
-        **Наступний полив:** {% set nr = state_attr('sun.sun', 'next_rising') %}{{ (as_timestamp(nr) - 4500) | timestamp_custom('%d.%m о %H:%M', true) if nr else '—' }} · старт розраховано так, щоб закінчити на схід сонця
+        **Наступний полив:** {% set nr = state_attr('sun.sun', 'next_rising') %}{% set total = (states('sensor.smart_irrigation_zona1') | float(0)) + (states('sensor.smart_irrigation_zona2') | float(0)) + (states('sensor.smart_irrigation_zona5') | float(0)) %}{% if nr and total > 0 %}{{ (as_timestamp(nr) - total) | timestamp_custom('%d.%m о %H:%M', true) }} · {{ (total/60) | round(0) }} хв на три зони, старт розрахований так, щоб закінчити на схід сонця{% elif nr %}поливу не заплановано — жодна зона не має дефіциту{% else %}—{% endif %}
         🕘 {{ states('input_text.poliv_ostannie_rishennia') }}
     - type: tile
       entity: weather.forecast_golovna
@@ -1779,7 +1779,7 @@ views:
       entity: sensor.smart_irrigation_zona1_bucket
       name: Баланс води
       unit: mm
-      min: -12
+      min: -16
       max: 24
       needle: true
       severity:
@@ -1789,7 +1789,7 @@ views:
       grid_options:
         columns: full
     - type: tile
-      entity: sensor.smart_irrigation_zona1
+      entity: sensor.poliv_zona_1_plan_hvylyn
       name: Полив на ранок
       icon: mdi:timer-sand
       grid_options:
@@ -1805,9 +1805,10 @@ views:
       grid_options:
         columns: full
       content: '{% set secs = states(''sensor.smart_irrigation_zona1'') | float(0) %}{% set b = states(''sensor.smart_irrigation_zona1_bucket'')
-        | float(0) %}{% if secs > 0 %}Ллємо {{ (secs/60) | round(1) }} хв: ґрунту бракує {{ (b | abs)
-        | round(2) }} мм.{% elif b > 0 %}Поливати не треба: запас {{ b | round(2) }} мм — дощу вистачило.{%
-        else %}Поливати не треба: дефіциту немає.{% endif %}'
+        | float(0) %}{% if b > 0 %}Поливати не треба: у ґрунті запас {{ b | round(2) }} мм.{%
+        elif b == 0 %}Поливати не треба: баланс нульовий.{% elif secs > 0 %}План на ранок {{ (secs/60)
+        | round(0) }} хв: ґрунту бракує {{ (b | abs) | round(2) }} мм.{% else %}Ґрунту бракує {{ (b
+        | abs) | round(2) }} мм, але тривалість ще не перерахована — це станеться о 19:55.{% endif %}'
     # Показує хід поливу, поки клапан відкритий. Відсоток і залишок бере з
     # Irrigation Unlimited (percent_complete 0-100, time_remaining), тому смуга
     # однаково працює і для кнопки "Полити зараз", і для нічного розкладу.
@@ -1871,7 +1872,7 @@ views:
       entity: sensor.smart_irrigation_zona2_bucket
       name: Баланс води
       unit: mm
-      min: -12
+      min: -16
       max: 24
       needle: true
       severity:
@@ -1881,7 +1882,7 @@ views:
       grid_options:
         columns: full
     - type: tile
-      entity: sensor.smart_irrigation_zona2
+      entity: sensor.poliv_zona_2_plan_hvylyn
       name: Полив на ранок
       icon: mdi:timer-sand
       grid_options:
@@ -1897,9 +1898,10 @@ views:
       grid_options:
         columns: full
       content: '{% set secs = states(''sensor.smart_irrigation_zona2'') | float(0) %}{% set b = states(''sensor.smart_irrigation_zona2_bucket'')
-        | float(0) %}{% if secs > 0 %}Ллємо {{ (secs/60) | round(1) }} хв: ґрунту бракує {{ (b | abs)
-        | round(2) }} мм.{% elif b > 0 %}Поливати не треба: запас {{ b | round(2) }} мм — дощу вистачило.{%
-        else %}Поливати не треба: дефіциту немає.{% endif %}'
+        | float(0) %}{% if b > 0 %}Поливати не треба: у ґрунті запас {{ b | round(2) }} мм.{%
+        elif b == 0 %}Поливати не треба: баланс нульовий.{% elif secs > 0 %}План на ранок {{ (secs/60)
+        | round(0) }} хв: ґрунту бракує {{ (b | abs) | round(2) }} мм.{% else %}Ґрунту бракує {{ (b
+        | abs) | round(2) }} мм, але тривалість ще не перерахована — це станеться о 19:55.{% endif %}'
     # Показує хід поливу, поки клапан відкритий. Відсоток і залишок бере з
     # Irrigation Unlimited (percent_complete 0-100, time_remaining), тому смуга
     # однаково працює і для кнопки "Полити зараз", і для нічного розкладу.
@@ -1963,7 +1965,7 @@ views:
       entity: sensor.smart_irrigation_zona5_bucket
       name: Баланс води
       unit: mm
-      min: -12
+      min: -16
       max: 24
       needle: true
       severity:
@@ -1973,7 +1975,7 @@ views:
       grid_options:
         columns: full
     - type: tile
-      entity: sensor.smart_irrigation_zona5
+      entity: sensor.poliv_zona_5_plan_hvylyn
       name: Полив на ранок
       icon: mdi:timer-sand
       grid_options:
@@ -1989,9 +1991,10 @@ views:
       grid_options:
         columns: full
       content: '{% set secs = states(''sensor.smart_irrigation_zona5'') | float(0) %}{% set b = states(''sensor.smart_irrigation_zona5_bucket'')
-        | float(0) %}{% if secs > 0 %}Ллємо {{ (secs/60) | round(1) }} хв: ґрунту бракує {{ (b | abs)
-        | round(2) }} мм.{% elif b > 0 %}Поливати не треба: запас {{ b | round(2) }} мм — дощу вистачило.{%
-        else %}Поливати не треба: дефіциту немає.{% endif %}'
+        | float(0) %}{% if b > 0 %}Поливати не треба: у ґрунті запас {{ b | round(2) }} мм.{%
+        elif b == 0 %}Поливати не треба: баланс нульовий.{% elif secs > 0 %}План на ранок {{ (secs/60)
+        | round(0) }} хв: ґрунту бракує {{ (b | abs) | round(2) }} мм.{% else %}Ґрунту бракує {{ (b
+        | abs) | round(2) }} мм, але тривалість ще не перерахована — це станеться о 19:55.{% endif %}'
     # Показує хід поливу, поки клапан відкритий. Відсоток і залишок бере з
     # Irrigation Unlimited (percent_complete 0-100, time_remaining), тому смуга
     # однаково працює і для кнопки "Полити зараз", і для нічного розкладу.
@@ -2329,8 +2332,8 @@ views:
         name: Зона 1
       - entity: sensor.zona_2_poliv_sogodni
         name: Зона 2
-      - entity: sensor.zona_3_poliv_sogodni
-        name: Зона 3
+      - entity: sensor.zona_5_poliv_sogodni
+        name: Зона 5
     - type: markdown
       grid_options:
         columns: full
