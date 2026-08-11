@@ -651,9 +651,12 @@ http:
     - ::1
 
 recorder:
-  # 30 days of 5-second inverter polling is what pushed the DB past 800 MB
-  # on a 2.5 GB partition. 14 still covers a fortnight of history.
-  purge_keep_days: 14
+  # 30 days of 5-second inverter polling pushed the DB past 800 MB on a
+  # 2.5 GB partition; 14 was not enough either - at ~130 MB a day it was
+  # heading for 1.9 GB with 291 MB free (measured 2026-08-10). Seven days
+  # stops the growth at roughly the current file size, because a purge
+  # reuses freed pages rather than shrinking the file.
+  purge_keep_days: 7
   # Reduce SQLite/eMMC write frequency while keeping adequate history resolution.
   commit_interval: 30
   auto_purge: true
