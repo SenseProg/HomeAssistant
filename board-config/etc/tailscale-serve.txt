@@ -1,0 +1,2 @@
+https://ok3568.tail27aa5e.ts.net (tailnet only)
+|-- / proxy http://127.0.0.1:8123
