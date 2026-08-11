@@ -868,3 +868,55 @@
         }} с, зона 5 {{ state_attr(''sensor.smart_irrigation_zona5'', ''bucket'') | round(2) }} мм /
         {{ states(''sensor.smart_irrigation_zona5'') }} с'
   mode: single
+- id: disk_userdata_warning
+  alias: Диск - попередження про заповнення /userdata
+  description: 'Попереджає, поки ще є доба запасу. 250 МБ обрано за виміряним
+    темпом росту бази (~130 МБ на добу), тобто приблизно доба до біди.
+    for: 30 хв, щоб короткий сплеск під час бекапу не смикав телефон.'
+  triggers:
+  - trigger: numeric_state
+    entity_id: sensor.vilne_mistse_userdata
+    below: 250
+    for: '00:30:00'
+  actions:
+  - action: notify.mobile_app_sm_s918b
+    data:
+      title: Місце на платі закінчується
+      message: >-
+        На /userdata лишилось {{ states('sensor.vilne_mistse_userdata') }} МБ.
+        Коли дійде до нуля, Home Assistant не зможе писати - минулого разу через
+        це стояв полив. Найшвидше допоможе зменшити зберігання бази.
+  - action: persistent_notification.create
+    data:
+      notification_id: disk_userdata
+      title: Місце на /userdata закінчується
+      message: >-
+        Лишилось {{ states('sensor.vilne_mistse_userdata') }} МБ з 2.5 ГБ.
+        База: перевірити purge_keep_days у recorder.
+  mode: single
+- id: disk_userdata_critical
+  alias: Диск - критично мало місця на /userdata
+  description: 'Остання межа. 120 МБ - це вже менше, ніж добовий приріст, тож
+    зволікати нема куди.'
+  triggers:
+  - trigger: numeric_state
+    entity_id: sensor.vilne_mistse_userdata
+    below: 120
+    for: '00:10:00'
+  actions:
+  - action: notify.mobile_app_sm_s918b
+    data:
+      title: КРИТИЧНО - диск плати майже повний
+      message: >-
+        Лишилось {{ states('sensor.vilne_mistse_userdata') }} МБ. Home Assistant
+        ось-ось не зможе писати на диск.
+      data:
+        ttl: 0
+        priority: high
+  - action: persistent_notification.create
+    data:
+      notification_id: disk_userdata_critical
+      title: КРИТИЧНО - /userdata майже повний
+      message: >-
+        Лишилось {{ states('sensor.vilne_mistse_userdata') }} МБ.
+  mode: single

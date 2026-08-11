@@ -1,0 +1,19 @@
+[Unit]
+Description=Start the NAS mounts, and keep starting them until they take
+# Every NFS mount on this board failed at boot on 2026-08-09 with
+# "mount.nfs: Network is unreachable", and systemd never retries a .mount unit -
+# so the camera archive stayed unmounted for a day and no motion clip was
+# written. Ordering cannot fix it on its own: systemd-networkd-wait-online is
+# masked here, so network-online.target is reached one second before the
+# interface has an address. This unit is the retry the mount units do not have.
+After=network.target
+
+[Service]
+Type=oneshot
+# Mount points are named by PATH, not by unit name, on purpose: the bind mount's
+# unit is userdata-hass-config-www-motion\x2dclips.mount and that backslash
+# escape does not survive being passed through systemd and then a shell - the
+# first version of this file silently skipped exactly that one mount. systemctl
+# converts a path to the right unit itself.
+ExecStart=/bin/sh -c 'for m in /userdata/hass/config/media/video /userdata/hass/config/www/motion-clips /mnt/homemate_media/foto /userdata/hass/config/backups; do mountpoint -q "$m" || systemctl start "$m" || true; done'
+SuccessExitStatus=0 1
