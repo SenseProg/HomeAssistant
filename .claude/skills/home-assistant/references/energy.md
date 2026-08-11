@@ -103,12 +103,29 @@ The per-device cost chart then showed a **−430 UAH bar on 8 August**. Note tha
 `state` stayed correct the whole time; only the statistics were wrong, so
 comparing `state` against `sum` is what actually finds this.
 
-Two fixes are needed together:
+The first attempt at a fix was `{{ [calc, this.state | float(0), 0] | max }}`
+plus a stricter `availability`. Both were necessary and neither was sufficient,
+because **a plain state-based template sensor is recomputed from scratch at every
+start**: `this.state` is unknown at that moment, so the accumulated hold is lost
+and the value drops to raw `calc`. That is exactly what produced a −55.89 UAH bar
+on 10 August — the hour was **09:00, not the 16:55 reboot**, and the real drop
+was −107.19 (the sensor had been frozen at 568.79 since 9 August 18:00, so the
+hold was that large). `availability` made it worse: while unavailable, the next
+render read `this.state` as `'unavailable'` → `0`, reopening the hole it closed.
 
-- make the value non-decreasing — `{{ [calc, this.state | float(0), 0] | max }}`;
-- tighten `availability` so a zeroed source blocks the sensor instead of feeding
-  garbage: `has_value(total) and states(total) | float(0) > 0`. `has_value` alone
-  is not enough, because a source that returns a valid `0` passes it.
+The working shape, in place since 2026-08-11 (`unique_id: cost_device_other`):
+
+- **trigger-based** template sensor — only these restore their state across a
+  restart, which is what lets `max()` hold through a reboot;
+- **`condition:` instead of `availability:`** — a failed condition simply skips
+  the update, so the sensor keeps its last good value rather than passing through
+  `unavailable`. Trade-off: dead sources freeze the number instead of showing
+  `unavailable`, which for a monetary total is the lesser evil;
+- triggers on all six sources, plus `time_pattern: /5` and `homeassistant: start`.
+
+Note that `template.reload` does **not** restore state — the entity is rebuilt and
+sits at `unknown` until the first trigger fires (up to five minutes). A real HA
+restart does restore it. Do not mistake the reload gap for a broken fix.
 
 Repair the already-written history with the recorder's own WebSocket command —
 one call fixes that point and everything after it:
@@ -118,8 +135,35 @@ recorder/adjust_sum_statistics
 statistic_id, start_time (exact hour), adjustment, adjustment_unit_of_measurement
 ```
 
+It is reversible: the opposite adjustment at the same hour undoes it. That
+matters, because the recorder database must never be copied for a backup — and
+`/userdata` has no room for one anyway.
+
 Beware the timezone when reading `period: day` results: `start` comes back in UTC,
 so a Kyiv day looks shifted one day earlier and you diagnose the wrong date.
+Equally, do not assume the drop happened at the reboot: read the **hourly** series
+and find the hour where `change` goes negative. On 10 August the board rebooted at
+16:55 but the damage was done at 09:00 by a service restart.
+
+## «Інше» is structurally understated, not just occasionally broken
+
+The 10 August numbers expose a deeper fault than the lost hold. Per-device
+`change` that day totalled ≈125.67 UAH against ≈112.50 UAH of total grid cost —
+**the metered devices out-ran the total**, so the raw difference is genuinely
+negative and `max()` was merely hiding it.
+
+The cause is topology. Every cost sensor derives the total from
+`sensor.inverter_total_energy_import`, i.e. from the Deye, while the electricity
+meter sits **upstream of the inverter** and the per-device meters see loads that
+never pass through it. Measured confirmation: on 7 August the meter recorded
+36.45 kWh against the inverter's 31.70; on 8 August, 33.37 against 24.50.
+
+So the meter — not the inverter — is the only source that sees everything bought
+from the grid, and it should become the single grid source, with the Deye kept for
+PV/battery/inverter-branch detail only. Blocking issue as of 2026-08-11:
+`sensor.energy_meter_total_energy` has had no statistics **since 9 August**, and
+the log shows `tuya_sharing: net work error = network error:(1010) token is
+expired`. Re-authenticate the Tuya integration before planning any of this.
 
 ## Troubleshooting missing daily energy
 

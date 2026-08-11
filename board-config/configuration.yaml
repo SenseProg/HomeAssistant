@@ -282,6 +282,81 @@ irrigation_unlimited:
 
 # --- Total load across all three phases (added 2026-08-02) ---
 template:
+  # --- «Інше»: скільки коштує все, на чому немає власного лічильника ---
+  #
+  # Різниця між усім, що куплено з мережі, і сумою п'яти пристроїв із власними
+  # лічильниками. Це світло, розетки, побутова техніка, насоси опалення, сама
+  # плата - усе, що ніхто окремо не міряє. Без цього рядка графік по пристроях
+  # створює хибне враження, ніби вони вичерпують увесь рахунок.
+  #
+  # ВАЖЛИВО про монотонність. Ця величина - різниця, і сама по собі вона НЕ
+  # монотонна: уночі полив нараховує гривні за нічним тарифом швидше, ніж росте
+  # загальний рахунок, і різниця просідає на копійки. Для state_class total
+  # кожне таке просідання recorder записує як від'ємну зміну, і на графіку
+  # витрат по пристроях з'являється стовпчик униз.
+  #
+  # 2026-08-08 о 14:00 це вилилось у справжню аварію даних: під час перезапуску
+  # sensor.vitrati_na_merezhu_razom на мить віддав нуль, різниця впала з 491 грн
+  # майже до нуля, і накопичувальна сума відв'язалась від стану рівно на
+  # 491.66 грн. На графіку 8 серпня лишився стовпчик -430 грн.
+  #
+  # Тодішній захист - max() із власним попереднім станом - тримає значення лише
+  # доти, доки HA працює. Звичайний template-сенсор рахується наново при
+  # кожному старті, this.state на той момент невідомий, і накопичений «підпір»
+  # губиться. Саме це сталося після перезавантаження плати 2026-08-10 о 16:55:
+  # -55.89 грн за 10 серпня.
+  #
+  # Тому сенсор тригерний: такий тип відновлює свій стан після перезапуску, і
+  # max() працює наскрізь. Другий бік захисту - condition замість availability.
+  # availability робив сенсор недоступним, а після повернення this.state читався
+  # як 'unavailable' → 0, тобто дірка лишалась відкритою. Умова на тригері
+  # просто не пускає поганий розрахунок усередину, і сенсор зберігає останнє
+  # достовірне значення.
+  #
+  # Побічний ефект, про який треба знати: якщо джерела надовго відваляться,
+  # сенсор не покаже 'unavailable', а завмре на останньому числі. Для
+  # накопичувальної суми в гривнях це менше зло, ніж від'ємний стрибок.
+  - trigger:
+      - trigger: state
+        entity_id:
+          - sensor.vitrati_na_merezhu_razom
+          - sensor.vitrati_boiler
+          - sensor.vitrati_zariadka_avto
+          - sensor.vitrati_tepla_pidloga_1
+          - sensor.vitrati_tepla_pidloga_2
+          - sensor.vitrati_nasos_polivu
+      # Страховка на випадок, якщо жодне джерело довго не змінюється, і
+      # перерахунок одразу після старту - стан на той момент уже відновлений.
+      - trigger: time_pattern
+        minutes: "/5"
+      - trigger: homeassistant
+        event: start
+    condition:
+      - condition: template
+        value_template: >
+          {{ has_value('sensor.vitrati_na_merezhu_razom')
+             and (states('sensor.vitrati_na_merezhu_razom') | float(0)) > 0
+             and has_value('sensor.vitrati_boiler')
+             and has_value('sensor.vitrati_zariadka_avto')
+             and has_value('sensor.vitrati_tepla_pidloga_1')
+             and has_value('sensor.vitrati_tepla_pidloga_2')
+             and has_value('sensor.vitrati_nasos_polivu') }}
+    sensor:
+      - name: "Витрати - інше без лічильника"
+        unique_id: cost_device_other
+        unit_of_measurement: "UAH"
+        device_class: monetary
+        state_class: total
+        state: >
+          {% set calc = (states('sensor.vitrati_na_merezhu_razom') | float(0))
+            - (states('sensor.vitrati_boiler') | float(0))
+            - (states('sensor.vitrati_zariadka_avto') | float(0))
+            - (states('sensor.vitrati_tepla_pidloga_1') | float(0))
+            - (states('sensor.vitrati_tepla_pidloga_2') | float(0))
+            - (states('sensor.vitrati_nasos_polivu') | float(0)) %}
+          {% set prev = this.state | float(0) %}
+          {{ [calc, prev, 0] | max | round(2) }}
+
   - sensor:
       # --- План поливу в хвилинах (додано 2026-08-11) ---
       #
@@ -493,50 +568,9 @@ template:
           {{ has_value('sensor.nasos_za_tarifom_den')
              and has_value('sensor.nasos_za_tarifom_nich') }}
 
-      # Різниця між усім, що куплено з мережі, і сумою п'яти пристроїв із
-      # власними лічильниками. Це світло, розетки, побутова техніка, насоси
-      # опалення, сама плата - усе, що ніхто окремо не міряє. Без цього рядка
-      # графік по пристроях створює хибне враження, ніби вони вичерпують увесь
-      # рахунок.
-      #
-      # ВАЖЛИВО про монотонність. Ця величина - різниця, і сама по собі вона НЕ
-      # монотонна: уночі полив нараховує гривні за нічним тарифом швидше, ніж
-      # росте загальний рахунок, і різниця просідає на копійки. Для state_class
-      # total кожне таке просідання Home Assistant трактує як скидання
-      # лічильника і перебудовує накопичувальну суму.
-      #
-      # 2026-08-08 о 14:00 це вилилось у справжню аварію даних: під час
-      # перезапуску sensor.vitrati_na_merezhu_razom на мить віддав нуль,
-      # різниця впала з 491 грн майже до нуля, і recorder зафіксував скидання.
-      # Накопичувальна сума відв'язалась від стану рівно на 491.66 грн, а на
-      # графіку витрат по пристроях 8 серпня з'явився стовпчик -430 грн.
-      #
-      # Захист подвійний: max() із власним попереднім станом не дає значенню
-      # спадати взагалі, а availability додатково вимагає, щоб загальний
-      # лічильник був більший за нуль - інакше сенсор стає недоступним і
-      # recorder просто не отримує сміттєвої точки.
-      - name: "Витрати - інше без лічильника"
-        unique_id: cost_device_other
-        unit_of_measurement: "UAH"
-        device_class: monetary
-        state_class: total
-        state: >
-          {% set calc = (states('sensor.vitrati_na_merezhu_razom') | float(0))
-            - (states('sensor.vitrati_boiler') | float(0))
-            - (states('sensor.vitrati_zariadka_avto') | float(0))
-            - (states('sensor.vitrati_tepla_pidloga_1') | float(0))
-            - (states('sensor.vitrati_tepla_pidloga_2') | float(0))
-            - (states('sensor.vitrati_nasos_polivu') | float(0)) %}
-          {% set prev = this.state | float(0) %}
-          {{ [calc, prev, 0] | max | round(2) }}
-        availability: >
-          {{ has_value('sensor.vitrati_na_merezhu_razom')
-             and (states('sensor.vitrati_na_merezhu_razom') | float(0)) > 0
-             and has_value('sensor.vitrati_boiler')
-             and has_value('sensor.vitrati_zariadka_avto')
-             and has_value('sensor.vitrati_tepla_pidloga_1')
-             and has_value('sensor.vitrati_tepla_pidloga_2')
-             and has_value('sensor.vitrati_nasos_polivu') }}
+      # «Витрати - інше без лічильника» жив тут до 2026-08-11. Тепер це
+      # тригерний сенсор на початку секції template: лише такий переживає
+      # перезапуск зі збереженим станом. Причина переїзду описана там.
 
       - name: "Загальне навантаження"
         unique_id: total_load_power
