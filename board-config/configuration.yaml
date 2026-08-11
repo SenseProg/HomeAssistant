@@ -641,6 +641,15 @@ template:
               * p / 1000) | round(3) }}
 
 # --- Recorder: keep detailed history longer for analysis (added 2026-08-02) ---
+# Home Assistant дістається ззовні через Tailscale Serve, а той проксіює запит
+# з 127.0.0.1. Без цих двох рядків HA вважав би локальним будь-кого, хто зайшов
+# ззовні, і «тільки локальний доступ» на облікових записах не значив би нічого.
+http:
+  use_x_forwarded_for: true
+  trusted_proxies:
+    - 127.0.0.1
+    - ::1
+
 recorder:
   # 30 days of 5-second inverter polling is what pushed the DB past 800 MB
   # on a 2.5 GB partition. 14 still covers a fortnight of history.
