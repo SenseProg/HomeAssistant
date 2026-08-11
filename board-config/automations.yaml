@@ -123,15 +123,45 @@
       \             'input_boolean.poliv_nd'][now().weekday()], 'on') }}\n"
   actions:
   - variables:
-      zona_1_seconds: "{% set smart = states('sensor.smart_irrigation_zona1') %} {% if is_number(smart)\
-        \ %}\n  {{ smart | int(0) }}\n{% else %}\n  {{ (states('input_number.poliv_zona_1_hvylyn') | int(25))\
-        \ * 60 }}\n{% endif %}"
-      zona_2_seconds: "{% set smart = states('sensor.smart_irrigation_zona2') %} {% if is_number(smart)\
-        \ %}\n  {{ smart | int(0) }}\n{% else %}\n  {{ (states('input_number.poliv_zona_2_hvylyn') | int(25))\
-        \ * 60 }}\n{% endif %}"
-      zona_5_seconds: "{% set smart = states('sensor.smart_irrigation_zona5') %} {% if is_number(smart)\
-        \ %}\n  {{ smart | int(0) }}\n{% else %}\n  {{ (states('input_number.poliv_zona_5_hvylyn') | int(25))\
-        \ * 60 }}\n{% endif %}"
+      # Додано перевірку знаку балансу 2026-08-11. Тривалість зберігається в
+      # зоні і перераховується ЛИШЕ на розрахунку Smart Irrigation, тому при
+      # додатному балансі там може лежати старе число: 11.08 зона 2 мала запас
+      # +2.63 мм і план 3021 секунду, порахований ще при дефіциті -10.07.
+      # Компонент такий випадок не обробляє - обнуляє тривалість тільки коли
+      # баланс став точно нулем, - тому не поливаємо зону, якій вода не потрібна.
+      zona_1_seconds: >-
+        {% set smart = states('sensor.smart_irrigation_zona1') %}
+        {% set bucket = state_attr('sensor.smart_irrigation_zona1', 'bucket') | float(-1) %}
+        {% if bucket >= 0 %}0
+        {% elif is_number(smart) %}{{ smart | int(0) }}
+        {% else %}{{ (states('input_number.poliv_zona_1_hvylyn') | int(25)) * 60 }}
+        {% endif %}
+      # Додано перевірку знаку балансу 2026-08-11. Тривалість зберігається в
+      # зоні і перераховується ЛИШЕ на розрахунку Smart Irrigation, тому при
+      # додатному балансі там може лежати старе число: 11.08 зона 2 мала запас
+      # +2.63 мм і план 3021 секунду, порахований ще при дефіциті -10.07.
+      # Компонент такий випадок не обробляє - обнуляє тривалість тільки коли
+      # баланс став точно нулем, - тому не поливаємо зону, якій вода не потрібна.
+      zona_2_seconds: >-
+        {% set smart = states('sensor.smart_irrigation_zona2') %}
+        {% set bucket = state_attr('sensor.smart_irrigation_zona2', 'bucket') | float(-1) %}
+        {% if bucket >= 0 %}0
+        {% elif is_number(smart) %}{{ smart | int(0) }}
+        {% else %}{{ (states('input_number.poliv_zona_2_hvylyn') | int(25)) * 60 }}
+        {% endif %}
+      # Додано перевірку знаку балансу 2026-08-11. Тривалість зберігається в
+      # зоні і перераховується ЛИШЕ на розрахунку Smart Irrigation, тому при
+      # додатному балансі там може лежати старе число: 11.08 зона 2 мала запас
+      # +2.63 мм і план 3021 секунду, порахований ще при дефіциті -10.07.
+      # Компонент такий випадок не обробляє - обнуляє тривалість тільки коли
+      # баланс став точно нулем, - тому не поливаємо зону, якій вода не потрібна.
+      zona_5_seconds: >-
+        {% set smart = states('sensor.smart_irrigation_zona5') %}
+        {% set bucket = state_attr('sensor.smart_irrigation_zona5', 'bucket') | float(-1) %}
+        {% if bucket >= 0 %}0
+        {% elif is_number(smart) %}{{ smart | int(0) }}
+        {% else %}{{ (states('input_number.poliv_zona_5_hvylyn') | int(25)) * 60 }}
+        {% endif %}
   - action: weather.get_forecasts
     target:
       entity_id: weather.forecast_golovna
@@ -795,4 +825,46 @@
       message: 'Irrigation Unlimited поливав понад хвилину, хоча жоден клапан не був відкритий - насос
         працював у глухий кут. Полив зупинено о {{ now().strftime(''%H:%M:%S'') }}. Перевірте живлення
         24 В контролера, зв''язок LocalTuya і котушку клапана тієї зони, яка мала поливатися.'
+  mode: single
+- id: irrigation_morning_recalculate
+  alias: Полив - ранковий перерахунок Smart Irrigation
+  description: 'Перераховує зони о 07:00, коли нічний полив уже завершився і зарахований.
+
+    НАВІЩО. Тривалість зберігається в зоні і перераховується ЛИШЕ на розрахунку. Автоматичний був
+    один - о 19:55, - тому цілий день на панелі й на картках висів учорашній план, який до реальності
+    вже не мав стосунку. 11.08 зона 2 показувала запас +2.63 мм і поруч "3021 секунда", бо це число
+    порахували ще при дефіциті -10.07.
+
+    Ранковий розрахунок робить денну картину чесною: після нього тривалість відповідає балансу, який
+    лишився після поливу.
+
+    НА НІЧНИЙ ПОЛИВ ЦЕ НЕ ВПЛИВАЄ. Полив бере тривалість з розрахунку о 19:55, а він відбувається
+    пізніше і перезаписує ранкову.
+
+    ПРО ПОГОДНІ ДАНІ. Кожен розрахунок застосовує накопичене випаровування і стирає використані дані.
+    Тепер доба ділиться на дві частини: 23:59-07:00 і 07:00-19:55. Сумарне випаровування від цього не
+    змінюється - воно просто застосовується двома порціями замість однієї.
+
+    Пропускаємо, якщо в цю мить іде полив: розрахунок посеред циклу міняв би тривалість зони, яку
+    Irrigation Unlimited уже виконує.'
+  triggers:
+  - trigger: time
+    at: 07:00:00
+  conditions:
+  - condition: state
+    entity_id: binary_sensor.irrigation_unlimited_c1_m
+    state: 'off'
+  actions:
+  - action: smart_irrigation.calculate_all_zones
+    data: {}
+  - delay: 00:00:20
+  - action: system_log.write
+    data:
+      level: warning
+      logger: homemate.poliv
+      message: 'POLIV-ПЕРЕРАХУНОК ранковий: зона 1 баланс {{ state_attr(''sensor.smart_irrigation_zona1'',
+        ''bucket'') | round(2) }} мм / {{ states(''sensor.smart_irrigation_zona1'') }} с, зона 2 {{
+        state_attr(''sensor.smart_irrigation_zona2'', ''bucket'') | round(2) }} мм / {{ states(''sensor.smart_irrigation_zona2'')
+        }} с, зона 5 {{ state_attr(''sensor.smart_irrigation_zona5'', ''bucket'') | round(2) }} мм /
+        {{ states(''sensor.smart_irrigation_zona5'') }} с'
   mode: single
