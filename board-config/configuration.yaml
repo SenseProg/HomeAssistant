@@ -649,6 +649,11 @@ http:
   trusted_proxies:
     - 127.0.0.1
     - ::1
+  # Автоматичний бан після 5 невдалих спроб входу. Типове значення -1 означає
+  # "не банити ніколи" - прийнятно, поки HA лише в локальній мережі, і ні,
+  # щойно вона стає досяжною ззовні. Бани лягають у ip_bans.yaml, звідти ж і
+  # знімаються.
+  login_attempts_threshold: 5
 
 recorder:
   # 30 days of 5-second inverter polling pushed the DB past 800 MB on a
