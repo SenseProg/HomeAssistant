@@ -96,7 +96,11 @@ _CRITICAL_ENTITY_IDS = {
 }
 _CRITICAL_ENTITY_PREFIXES = (
     "binary_sensor.irrigation_unlimited_",
-    "switch.avtopoliv_kontroler_switch_",
+    # Виправлено 2026-08-11: тут стояв switch.avtopoliv_kontroler_switch_ -
+    # застарілі хмарні дублі, які постійно unavailable. Агент отримував вісім
+    # мертвих сутностей як найважливіші у зрізі станів і в доборі історії, а
+    # справжніх клапанів у цьому переліку не було взагалі.
+    "switch.avtopoliv_kontroler_avtopoliv_klapan_",
 )
 _MAX_STATE_LINES = 1000
 _MAX_STATE_CHARS = 80000

@@ -134,11 +134,21 @@ forecast-precipitation skip threshold, and observed-watering feedback. Direct
 valve control in Smart Irrigation must remain disabled so that only Irrigation
 Unlimited owns the actuators.
 
-Create Smart Irrigation zones only for physical irrigation zones 1 and 2. Both
-commissioned zones use 250 m², 40 L/min, module `0: PyETO`, and sensor group
-`0: Група датчиків за замовчуванням`. Keep Smart Irrigation direct valve control
-disabled and map observed watering to `switch.avtopoliv_kontroler_switch_1` and
-`switch.avtopoliv_kontroler_switch_2`. The existing weekday automation remains
+Smart Irrigation zones exist for physical zones 1, 2 and 5. Zones 1 and 2 use
+200 m² at 40 L/min, zone 5 uses 100 m² at 20 L/min, all on module `0: PyETO` and
+sensor group `0: Група датчиків за замовчуванням`. Keep Smart Irrigation direct
+valve control disabled.
+
+Each zone's observed-watering link must point at the **LocalTuya** valve —
+`switch.avtopoliv_kontroler_avtopoliv_klapan_1`, `_2`, `_5`. Never at
+`switch.avtopoliv_kontroler_switch_N`: those are obsolete cloud duplicates that
+sit permanently `unavailable` and never emit a state change, so the linked-valve
+listener never fires and the zone is silently never credited. This exact mistake
+was live from 8 to 11 August 2026: zones 1 and 2 pointed at the cloud entities,
+their soil balance never recovered after watering, and the requested duration
+grew every day until it approached the one-hour ceiling. Zone 5 was linked
+correctly and was the only zone that worked, which is what made the fault
+visible. The instruction that caused it used to stand in this very paragraph. The existing weekday automation remains
 the only start source and runs 30 minutes before sunrise on enabled weekdays. It reads
 `sensor.smart_irrigation_zona1` and `sensor.smart_irrigation_zona2`, then
 queues the calculated durations on the corresponding Irrigation Unlimited zone
