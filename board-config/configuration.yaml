@@ -994,6 +994,23 @@ logger:
 # is just an ordinary empty directory, and writing clips into it would fill
 # /userdata - exactly the failure that took the whole system down earlier today.
 command_line:
+  # Стан файлової системи /userdata. Перевірка при завантаженні знята
+  # (fstab pass 0), інакше пошкоджений розділ не монтується і HA не
+  # стартує взагалі - тож роль сторожа виконує цей сенсор.
+  - binary_sensor:
+      name: Userdata FS poshkodzhena
+      unique_id: userdata_fs_clean
+      # Шукати саме "with errors", а не "clean": змонтована ext4 ЗАВЖДИ
+      # позначена "not clean" - вона стає чистою лише при відмонтуванні, тож
+      # перевірка на "clean" сигналила б тривогу цілодобово. Прапорець помилок
+      # у суперблоці - це окрема річ, і саме він тут важливий.
+      command: >-
+        sudo dumpe2fs -h /dev/mmcblk0p8 2>/dev/null
+        | grep -q "Filesystem state:.*with errors" && echo "ON" || echo "OFF"
+      payload_on: "ON"
+      payload_off: "OFF"
+      device_class: problem
+      scan_interval: 3600
   # Вільне місце на розділі, де живе Home Assistant. Розділ 2.5 ГБ, і
   # заповнений він уже одного разу клав дім (5 серпня, полив стояв добу).
   # Корінь тепер тримає базу recorder, тож стежити треба за обома розділами.

@@ -928,3 +928,29 @@
       message: >-
         «{{ trigger.to_state.name }}»: {{ trigger.to_state.state }} МБ.
   mode: single
+- id: userdata_fs_broken
+  alias: Диск - файлова система /userdata пошкоджена
+  description: 'Знеструмлення плати рано чи пізно псує ext4. Перевірка при
+    завантаженні знята навмисно (інакше HA взагалі не стартує), тому про
+    пошкодження треба дізнаватись звідси, а не з мертвого дому.'
+  triggers:
+  - trigger: state
+    entity_id: binary_sensor.userdata_fs_poshkodzhena
+    to: 'on'
+    for: '00:05:00'
+  actions:
+  - action: notify.mobile_app_sm_s918b
+    data:
+      title: Файлова система плати пошкоджена
+      message: >-
+        На /userdata зʼявились помилки - найімовірніше після знеструмлення.
+        Дім працює, але це треба полагодити: на платі запустити
+        bash /home/forlinx/fsck-userdata.sh
+  - action: persistent_notification.create
+    data:
+      notification_id: userdata_fs
+      title: /userdata потребує перевірки
+      message: >-
+        Суперблок у стані "not clean with errors". Ремонт:
+        bash /home/forlinx/fsck-userdata.sh (зупинить HA на кілька хвилин).
+  mode: single
