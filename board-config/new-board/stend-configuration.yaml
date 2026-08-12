@@ -1,0 +1,73 @@
+# Стенд на другій платі MB35x8 (RK3568-J).
+#
+# Це НЕ копія домашнього Home Assistant. Повна копія бойового конфігу лежить
+# поруч у config-full і чекає дня остаточного переїзду; запускати її паралельно
+# з домом не можна - вона має справжні ключі LocalTuya і почала б керувати
+# реальними клапанами, насосом і камерою одночасно з робочою платою.
+#
+# Тут навмисно немає default_config: він тягне за собою zeroconf, ssdp і dhcp,
+# тобто автовиявлення, яке полізло б до домашніх пристроїв. Перелічено лише те,
+# без чого не буде інтерфейсу.
+#
+# Датчик один - Terneo на 192.168.50.13. Обраний тому, що відповідає на
+# звичайний HTTP-запит без сесії: два клієнти йому не заважають, тож стенд
+# нічого не відбирає у дому. Клапани LocalTuya чи інвертор Deye так не можна -
+# вони тримають ексклюзивне зʼєднання.
+
+homeassistant:
+  name: Стенд MB35x8
+  time_zone: Europe/Kyiv
+  unit_system: metric
+  country: UA
+  currency: UAH
+
+frontend:
+http:
+config:
+system_health:
+history:
+logbook:
+sun:
+
+recorder:
+  # Стенду історія майже не потрібна, а місця на /userdata небагато.
+  purge_keep_days: 3
+  commit_interval: 30
+
+logger:
+  default: warning
+
+sensor:
+  - platform: rest
+    name: Terneo temperatura
+    unique_id: stend_terneo_temp
+    resource: http://192.168.50.13/api.cgi
+    method: POST
+    # Заголовок Content-Type тут не ставити: вбудований веб-сервер Terneo на
+    # нього відповідає порожнім тілом. Перевірено - без заголовка працює.
+    payload: '{"cmd":4}'
+    value_template: "{{ (value_json['t.0'] | float(0)) / 10 }}"
+    unit_of_measurement: "°C"
+    device_class: temperature
+    state_class: measurement
+    scan_interval: 30
+
+  # Другий термометр того ж пристрою. Ключа t.5 у відповіді немає взагалі -
+  # cmd=4 повертає лише t.0 і t.7, тож перша спроба давала unknown.
+  #
+  # Масштаб обох значень не підтверджений: t.0/10 = 61.0, а термостат
+  # вимкнений, отже для підлоги це забагато. Звірити нема з чим - штатна
+  # інтеграція terneo на робочій платі показує для цих полів unknown. Тому
+  # тут сирі значення, поділені на 10, і їх треба один раз порівняти з
+  # екраном самого термостата.
+  - platform: rest
+    name: Terneo druhyi datchyk
+    unique_id: stend_terneo_t7
+    resource: http://192.168.50.13/api.cgi
+    method: POST
+    payload: '{"cmd":4}'
+    value_template: "{{ (value_json['t.7'] | float(0)) / 10 }}"
+    unit_of_measurement: "°C"
+    device_class: temperature
+    state_class: measurement
+    scan_interval: 30
