@@ -1,0 +1,55 @@
+# Жива копія дому на другій платі MB35x8.
+#
+# Ця плата НЕ керує пристроями. Усі стани приходять з робочої плати
+# (192.168.50.141) через інтеграцію Remote Home-Assistant: вона підписується на
+# події по websocket і відтворює сутності у себе. Тому копія жива - вона
+# оновлюється разом з домом, а не раз на добу.
+#
+# Чому не просто запустити тут копію бойового конфігу: у ньому справжні ключі
+# LocalTuya, і дві Home Assistant почали б одночасно тримати зʼєднання з тими
+# самими клапанами, насосом і камерою. Повна копія лежить поруч у config-full
+# і чекає дня справжнього переїзду.
+#
+# Тут навмисно немає default_config - він тягне zeroconf, ssdp і dhcp, тобто
+# автовиявлення, яке полізло б до домашніх пристроїв напряму.
+
+homeassistant:
+  name: Копія дому
+  time_zone: Europe/Kyiv
+  unit_system: metric
+  country: UA
+  currency: UAH
+
+frontend:
+http:
+config:
+system_health:
+history:
+logbook:
+sun:
+
+recorder:
+  # Копії глибока історія не потрібна, а місця на /userdata обмаль.
+  purge_keep_days: 2
+  commit_interval: 30
+
+logger:
+  default: warning
+
+# Один датчик, який плата читає САМА, напряму з заліза. Він тут не заради
+# даних - вони й так прийдуть з дзеркала - а щоб було видно, що плата тримає
+# звʼязок з обладнанням власними силами, а не лише переспівує чужі стани.
+sensor:
+  - platform: rest
+    name: Sanvuzol pidloha (pryamo z prystroyu)
+    unique_id: kopiya_terneo_direct
+    resource: http://192.168.50.13/api.cgi
+    method: POST
+    # Заголовок Content-Type не ставити: Terneo відповідає на нього порожнім
+    # тілом. Перевірено на живому пристрої.
+    payload: '{"cmd":4}'
+    value_template: "{{ (value_json['t.0'] | float(0)) / 10 }}"
+    unit_of_measurement: "°C"
+    device_class: temperature
+    state_class: measurement
+    scan_interval: 30
