@@ -131,16 +131,27 @@ static neighbour entry with the camera's real MAC changed nothing, so the
 traffic is dropped below IP. The board's cable goes to a segment that does not
 bridge to theirs.
 
-Until the cable moves, two units work around it:
-`camera-relay.service` on the spare board (in `board-config/systemd/`) and
-`isolated-hosts-route.service` here. The spare board masquerades, because plain
-forwarding is not enough — the camera would answer `192.168.50.141` directly
-and the reply would die in the same isolated segment.
+Until the cable moves, the workaround has two halves. On the spare board,
+`camera-relay.service` (in `board-config/systemd/`) forwards and masquerades —
+masquerading is not optional, because with plain forwarding the camera would
+answer `192.168.50.141` directly and the reply would die in the same isolated
+segment. On this board, the three host routes live in the `routes:` block of
+`netplan-01-netcfg.yaml`, and `sysctl-99-isolated-hosts.conf` keeps
+`accept_redirects` off so the relay cannot be told to hand the path back.
 
-Both are stopgaps and both have an `ExecStop`, so
-`systemctl disable --now` reverts them. Delete them once the house board is
-plugged into a port that reaches that segment; that also removes the house's
-dependency on the spare board staying powered on.
+The routes were first written as a oneshot unit, and that was wrong. `eth0`
+lost carrier at 14:13 and again at 14:32 on 2026-08-14; each time networkd
+re-configured the link and flushed every route it did not own, and the unit
+never re-ran, because `RemainAfterExit=yes` left systemd believing it was still
+active. The camera went unreachable again with the service still reporting
+`active`. Anything that must survive this board's link flapping belongs in
+netplan, not in a oneshot unit.
+
+Note when retiring the workaround: nothing on this side needs stopping — remove
+the `routes:` block and re-apply. On the spare board `camera-relay.service` has
+an `ExecStop`, so `systemctl disable --now` reverts it cleanly. Retire both once
+this board is plugged into a port that reaches that segment; that also ends the
+house's dependency on the spare board staying powered on.
 
 ## What is not in this directory
 
