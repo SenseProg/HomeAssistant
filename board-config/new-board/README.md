@@ -153,6 +153,42 @@ an `ExecStop`, so `systemctl disable --now` reverts it cleanly. Retire both once
 this board is plugged into a port that reaches that segment; that also ends the
 house's dependency on the spare board staying powered on.
 
+## Remote access: Tailscale, and a public Cloudflare tunnel
+
+Two paths exist on this board, and they are not equivalent.
+
+**Tailscale** is the private one. `tailscaled` must run with
+`--tun=userspace-networking` (`default-tailscaled` here) because this kernel
+has no `CONFIG_TUN` and no `/dev/net/tun` — the same reason WireGuard cannot be
+used at all. The node is `ok3568-house` on the `roman.d.kovtun@gmail.com`
+tailnet. Note that in userspace mode the board cannot reach its own `100.x`
+address; only peers can, so testing from the board itself will always look
+broken.
+
+Serve is not enabled on that tailnet yet, so there is no `https://…ts.net`
+hostname and Home Assistant has to be reached as
+`http://<tailscale-ip>:8123` — with the port. A phone opening the address
+without it lands on port 80, where nothing listens; the daemon log shows
+exactly that: `could not connect to local backend server at 127.0.0.1:80`.
+
+**The Cloudflare quick tunnel** is the public one, chosen deliberately because
+it needs no account and no domain. `cloudflared-quick.service` runs
+`cloudflared-quick.sh`, which starts the tunnel and then publishes the hostname
+Cloudflare issued to `/userdata/hass/config/www/cloudflare-url.txt`, readable
+from a phone at `/local/cloudflare-url.txt`. That indirection is not decoration:
+an account-less tunnel gets a **new random hostname on every start**, so without
+it the address is lost at the first reboot.
+
+Understand what it means while it is enabled: this Home Assistant opens
+irrigation valves and starts a pump, and it is now reachable by anyone on the
+internet who has the hostname. The only barriers are the HA login page and
+`login_attempts_threshold: 5`. Two-factor authentication on the HA accounts is
+strongly advised. `systemctl disable --now cloudflared-quick` removes the
+exposure completely.
+
+The upgrade path, when a domain exists, is a named tunnel behind Cloudflare
+Access, which asks for an emailed code before Home Assistant is ever reached.
+
 ## What is not in this directory
 
 `f_emul.service` and `a_emul.service` — the Freezemate and Aquamate Qt

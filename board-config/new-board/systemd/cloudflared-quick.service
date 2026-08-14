@@ -1,0 +1,28 @@
+[Unit]
+Description=Cloudflare quick tunnel exposing Home Assistant on a public URL
+# WHAT THIS DOES, PLAINLY: it publishes this Home Assistant - which opens
+# irrigation valves and starts a pump - to the open internet. The only thing
+# between a stranger and the house is the HA login page, plus the ban after
+# five failed attempts (login_attempts_threshold in configuration.yaml).
+# Enable two-factor authentication on the HA accounts if this stays on.
+#
+# A quick tunnel needs no Cloudflare account, which is why it was chosen, but
+# Cloudflare gives it no uptime guarantee and issues a NEW hostname on every
+# start. The wrapper script publishes the current one to
+# /local/cloudflare-url.txt so it can be read from a phone.
+#
+# The stable alternative is a named tunnel: it needs a Cloudflare account and a
+# domain, and it can sit behind Cloudflare Access, which asks for an emailed
+# code before Home Assistant is ever reached.
+After=network-online.target home-assistant.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=forlinx
+ExecStart=/home/forlinx/cloudflared-quick.sh
+Restart=always
+RestartSec=20
+
+[Install]
+WantedBy=multi-user.target
