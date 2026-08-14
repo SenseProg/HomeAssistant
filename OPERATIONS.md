@@ -2,11 +2,43 @@
 
 ## Remote access
 
-The board already runs ZeroTier, but is not joined to a network. Use a private
-ZeroTier network rather than exposing TCP 8123 or SSH directly to the internet.
-After joining, authorize node `46faf402eb` in ZeroTier Central, restrict routes
-to the Home Assistant host, and verify both SSH and `http://<zerotier-ip>:8123`.
-Only then disable SSH password authentication.
+Remote access is Tailscale. Set up on the board that runs the house on
+2026-08-14; the ZeroTier plan this section used to describe was never carried
+out, and ZeroTier is not installed on that board at all.
+
+| node | tailscale IP | what it is |
+| --- | --- | --- |
+| `ok3568-house` | `100.68.135.27` | the board running the house |
+| `ok3568` | `100.105.3.102` | the spare board |
+
+Home Assistant is published inside the tailnet only, over HTTPS with a real
+Let's Encrypt certificate, at `https://ok3568-house.tail27aa5e.ts.net`
+(`tailscale serve --bg 8123`). The `http:` block already sets
+`use_x_forwarded_for` with `127.0.0.1` as a trusted proxy, which is exactly
+what the serve proxy needs. Nothing is forwarded on the router and TCP 8123 is
+not exposed to the internet - which matters more here than on an ordinary HA
+host, because this instance opens irrigation valves and starts a pump.
+
+Two constraints specific to this hardware:
+
+- `tailscaled` **must** run with `--tun=userspace-networking` (set in
+  `/etc/default/tailscaled`). The vendor kernel is built without `CONFIG_TUN`
+  and there is no `/dev/net/tun`, so the normal kernel path cannot work. The
+  house board was found on 2026-08-14 with an empty `FLAGS` line, trying to
+  open an interface that does not exist. This is also why WireGuard is not an
+  option here at all: it needs the same device.
+- Userspace mode carries every TCP stream in user space, so it is slower than
+  kernel mode. Fine for the HA UI, SSH and camera stills; not for bulk copies.
+
+**Disable key expiry** on `ok3568-house` in the admin console; it cannot be
+done from the CLI. The node was found logged out on 2026-08-14 with
+`invalid key: API key does not exist` - an expired node key had silently
+removed every remote path to the house, and nobody noticed until it was needed.
+
+Keep the spare board on the tailnet as a second way in. It sits on the same LAN
+and reaches the house board directly, and it is the path that was actually used
+on 2026-08-14 while the house board's own addressing was in flux. This board
+has no usable debug UART, so one remote path is not enough.
 
 ## Network topology and presence
 
