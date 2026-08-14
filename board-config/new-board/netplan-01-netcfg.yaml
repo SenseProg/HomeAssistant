@@ -2,13 +2,17 @@ network:
         version: 2
         ethernets:
                 eth0:
-                        # DHCP з домашнього роутера - заводський шлюз 192.168.0.1
-                        # у цій мережі не існує, тому плата була без інтернету.
-                        dhcp4: true
-                        # Заводська адреса лишається другою: доступ до плати йде
-                        # через неї зі старої плати, і якщо DHCP колись не
-                        # відповість, цей шлях уціліє.
-                        addresses: [192.168.0.123/24]
+                        # .141 first and .168 second on purpose. The NAS exports its
+                        # shares to 192.168.50.141 only, and Linux picks the FIRST
+                        # address as the source for outgoing traffic - with .168
+                        # first, every NFS mount was refused (measured 2026-08-14).
+                        # .168 stays as a lifeline so a wrong .141 cannot strand
+                        # the board: this SoM has no usable debug UART.
+                        dhcp4: false
+                        addresses: [192.168.50.141/24, 192.168.50.168/24]
+                        gateway4: 192.168.50.1
+                        nameservers:
+                                addresses: [192.168.50.1, 1.1.1.1]
                         optional: true
                 eth1:
                         dhcp4: true

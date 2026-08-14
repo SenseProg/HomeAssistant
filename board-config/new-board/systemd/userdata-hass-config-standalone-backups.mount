@@ -1,0 +1,15 @@
+[Unit]
+Description=Home Assistant backups stored directly on CloudMate NAS
+# Canonical path - see the media-video unit for why.
+After=network-online.target
+Wants=network-online.target
+
+[Mount]
+What=192.168.50.25:/HomeAssistant/MB35x8/backups
+Where=/userdata/hass/config-standalone/backups
+Type=nfs
+Options=rw,sync,soft,timeo=100,retrans=3,noatime,nolock,_netdev
+TimeoutSec=30
+
+[Install]
+WantedBy=multi-user.target

@@ -695,7 +695,11 @@ recorder:
   # heading for 1.9 GB with 291 MB free (measured 2026-08-10). Seven days
   # stops the growth at roughly the current file size, because a purge
   # reuses freed pages rather than shrinking the file.
-  purge_keep_days: 3
+  # 2026-08-13: the HA venv (1.2 GB) moved off /userdata to the root
+  # partition, leaving 2.0 GB free here instead of 846 MB. At the ~130 MB
+  # a day measured above, seven days lands near 0.9 GB - so the three-day
+  # value forced by the old cramped partition is no longer needed.
+  purge_keep_days: 7
   # Reduce SQLite/eMMC write frequency while keeping adequate history resolution.
   commit_interval: 30
   auto_purge: true
