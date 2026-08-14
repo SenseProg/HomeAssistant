@@ -97,6 +97,51 @@ emulator logs one `dutyCycle: START` line three times a second with no rotation
 of its own; the file had reached 450 MB. It needs `su forlinx forlinx` because
 logrotate refuses a directory that is group-writable by anyone but root.
 
+## `mirror-alias-ip.service` is disabled, and must stay that way
+
+That unit exists on the board and adds `192.168.50.142/24` to `eth0`. It dates
+from when this board was a stand on DHCP whose lease kept moving; its own
+comment says "the main address still comes from the router", which stopped
+being true when the board took a static one.
+
+On 2026-08-14 it added `.142` back and `.142` ended up *primary*, ahead of the
+netplan addresses. Every NFS mount dropped within minutes, because outgoing
+traffic to the NAS then left as `.142`:
+
+```
+ip route get 192.168.50.25   ->   src 192.168.50.142
+```
+
+It is now `disabled`. Note that `systemctl stop` alone does not remove the
+address — the unit is `RemainAfterExit=yes` with no `ExecStop`. Use
+`netplan apply` to flush it and restore the configured order.
+
+This is the same class of fault as `netplan-fallback` above: a unit that
+quietly redefines the network on top of netplan. When something on this board
+loses its address or picks a surprising one, look for a unit before suspecting
+the router.
+
+## The camera sits in a segment this board cannot reach
+
+Measured 2026-08-14. From this board, `192.168.50.2` (Tenda AC10), `.175` and
+`.201` (the Hikvision camera) answered **0 of 10** pings, while the NAS on the
+same interface answered 10 of 10. The spare board reached all three. It is not
+the cable — `rx_errors` and `rx_crc_errors` are both `0` — and it is not ARP: a
+static neighbour entry with the camera's real MAC changed nothing, so the
+traffic is dropped below IP. The board's cable goes to a segment that does not
+bridge to theirs.
+
+Until the cable moves, two units work around it:
+`camera-relay.service` on the spare board (in `board-config/systemd/`) and
+`isolated-hosts-route.service` here. The spare board masquerades, because plain
+forwarding is not enough — the camera would answer `192.168.50.141` directly
+and the reply would die in the same isolated segment.
+
+Both are stopgaps and both have an `ExecStop`, so
+`systemctl disable --now` reverts them. Delete them once the house board is
+plugged into a port that reaches that segment; that also removes the house's
+dependency on the spare board staying powered on.
+
 ## What is not in this directory
 
 `f_emul.service` and `a_emul.service` — the Freezemate and Aquamate Qt
