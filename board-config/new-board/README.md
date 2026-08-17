@@ -171,23 +171,40 @@ hostname and Home Assistant has to be reached as
 without it lands on port 80, where nothing listens; the daemon log shows
 exactly that: `could not connect to local backend server at 127.0.0.1:80`.
 
-**The Cloudflare quick tunnel** is the public one, chosen deliberately because
-it needs no account and no domain. `cloudflared-quick.service` runs
-`cloudflared-quick.sh`, which starts the tunnel and then publishes the hostname
-Cloudflare issued to `/userdata/hass/config/www/cloudflare-url.txt`, readable
-from a phone at `/local/cloudflare-url.txt`. That indirection is not decoration:
-an account-less tunnel gets a **new random hostname on every start**, so without
-it the address is lost at the first reboot.
+**The Cloudflare named tunnel** is the public one, on `sonyachny.pp.ua`
+(registered at NIC.UA, delegated to Cloudflare on 2026-08-17).
+`cloudflared-ha.service` runs tunnel `ha-house` with the ingress rules in
+`cloudflared-config.yml`: `ha.sonyachny.pp.ua` reaches Home Assistant, and
+anything else that arrives at the tunnel gets a 404 rather than being quietly
+forwarded. It registers four connections — two through Kyiv, two through
+Frankfurt — and opens no port on the router.
 
-Understand what it means while it is enabled: this Home Assistant opens
-irrigation valves and starts a pump, and it is now reachable by anyone on the
-internet who has the hostname. The only barriers are the HA login page and
-`login_attempts_threshold: 5`. Two-factor authentication on the HA accounts is
-strongly advised. `systemctl disable --now cloudflared-quick` removes the
-exposure completely.
+The credentials (`~/.cloudflared/cert.pem` and the tunnel's `<uuid>.json`) stay
+on the board and are deliberately not in this repository. To rebuild the tunnel
+elsewhere, run `cloudflared tunnel login` again; the config here is enough to
+describe what it should serve.
 
-The upgrade path, when a domain exists, is a named tunnel behind Cloudflare
-Access, which asks for an emailed code before Home Assistant is ever reached.
+It replaced `cloudflared-quick.service`, kept here for reference, which needed
+no account but was issued a **new random `trycloudflare.com` hostname on every
+start**. Its wrapper published the current one to
+`/userdata/hass/config/www/cloudflare-url.txt` (`/local/cloudflare-url.txt` from
+a phone) precisely because the address died at each reboot. That file now holds
+the fixed hostname instead.
+
+Understand what a public tunnel means here: this Home Assistant opens
+irrigation valves and starts a pump. Until Cloudflare Access is configured in
+front of it, the only barriers are the HA login page and
+`login_attempts_threshold: 5` — enable two-factor authentication on the HA
+accounts. `systemctl disable --now cloudflared-ha` removes the exposure
+completely.
+
+One trap worth writing down: a tunnel's DNS record must be **proxied** (orange
+cloud). It resolves to `<uuid>.cfargotunnel.com`, which has no public address of
+its own and only works through Cloudflare's network. While the zone was still
+`Pending`, Cloudflare served that CNAME unproxied, so the hostname resolved to
+`fd10:aec2:5dae::` — a private address — and nothing connected. The record was
+already marked Proxied in the dashboard; proxying simply is not applied until
+the zone goes Active.
 
 ## What is not in this directory
 
