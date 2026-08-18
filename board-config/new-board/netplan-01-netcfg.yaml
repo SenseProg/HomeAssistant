@@ -32,6 +32,14 @@ network:
                                   via: 192.168.50.150
                                 - to: 192.168.50.175/32
                                   via: 192.168.50.150
+                                # The irrigation controller is reachable from
+                                # other LAN clients, but direct ARP from this
+                                # board gets no reply after the controller
+                                # reconnects to Wi-Fi. Routing this single host
+                                # through the main ASUS was verified on
+                                # 2026-08-15: ping 3/3 and LocalTuya TCP/6668.
+                                - to: 192.168.50.221/32
+                                  via: 192.168.50.1
                 eth1:
                         dhcp4: true
                         optional: true

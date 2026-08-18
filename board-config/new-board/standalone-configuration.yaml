@@ -15,7 +15,24 @@ homeassistant:
   # is an NFS mount of the NAS (systemd unit userdata-hass-config-media-video.mount),
   # so motion clips never land on the board's own 2.5 GB partition.
   allowlist_external_dirs:
+    # These MUST be the canonical config-standalone paths, not the
+    # /userdata/hass/config ones. switch-mode.sh makes config a symlink, and
+    # Home Assistant resolves the requested path to its real location before
+    # comparing it against this list, while the list itself is compared as
+    # written. So a clip aimed at /userdata/hass/config/media/video/... becomes
+    # /userdata/hass/config-standalone/media/video/... and matches nothing.
+    #
+    # Measured 2026-08-17: this is why every motion clip and snapshot failed
+    # with "no access to path" from the moment of the move onwards - on the old
+    # board config was a real directory, so the paths matched and it worked.
+    # The /userdata/hass/config forms are kept too, harmlessly, in case the
+    # symlink is ever removed.
+    - /userdata/hass/config-standalone/media/video
+    - /userdata/hass/config-standalone/www/motion
+    - /userdata/hass/config-standalone/www/motion-clips
     - /userdata/hass/config/media/video
+    - /userdata/hass/config/www/motion
+    - /userdata/hass/config/www/motion-clips
 
 # Read-only local telemetry from the Tenda access point and range extender.
 rest: !include network_monitoring.yaml
@@ -1085,5 +1102,5 @@ shell_command:
   # folder is still bad manners - and if the mount ever silently fell away
   # this would be running against the board's own disk.
   prepare_motion_dir: "d=/userdata/hass/config/media/video/ha-motion; mkdir -p $d/$(date +%Y-%m-%d); find $d -mindepth 1 -maxdepth 1 -type d -mtime +14 -exec rm -rf {} +"
-  rebuild_clip_gallery: "/home/forlinx/hass-venv-314/bin/python /userdata/hass/config/scripts-gen-gallery.py"
+  rebuild_clip_gallery: "/userdata/hass/venv/bin/python /userdata/hass/config/scripts-gen-gallery.py"
   update_motion_snapshot: "cd /userdata/hass/config/www/motion && ls -t motion_*.jpg 2>/dev/null | head -1 | xargs -I{} cp {} latest.jpg && ls -t motion_*.jpg 2>/dev/null | tail -n +31 | xargs -r rm --"

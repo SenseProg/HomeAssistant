@@ -212,3 +212,65 @@ the zone goes Active.
 emulators — run from `/home/forlinx/matebox` on this board and are `enabled` and
 active. They are not part of the house, but they are not abandoned either, and
 `/opt/qt6.8.1` cannot be removed while they run: both link against it.
+
+## The clip archive stopped at the minute of the move, and why
+
+No motion clip was written between `2026-08-13 14:40` — the minute Home
+Assistant was disabled on the original board — and 2026-08-17. Two separate
+faults, both created by the move itself:
+
+**`allowlist_external_dirs` was compared against the wrong paths.** Home
+Assistant resolves a requested file path to its real location before checking
+it, but compares the allowlist entries exactly as written. `switch-mode.sh`
+makes `/userdata/hass/config` a symlink, so a clip aimed at
+`/userdata/hass/config/media/video/...` became
+`/userdata/hass/config-standalone/media/video/...` and matched nothing —
+`Can't write ..., no access to path!` on a directory that was, on paper,
+allowed. On the original board `config` was a real directory and the paths
+matched, which is why it had always worked. The allowlist now carries the
+canonical `config-standalone` paths; the old forms are kept as well, harmlessly.
+
+**The gallery rebuild pointed at the other board's interpreter.**
+`shell_command.rebuild_clip_gallery` invoked
+`/home/forlinx/hass-venv-314/bin/python`, which exists only on the original
+board, so it failed silently on every motion event. It now uses
+`/userdata/hass/venv/bin/python`. Rebuilt by hand afterwards: 7 days, 2207
+clips.
+
+Note that `pyhik` does not recover on its own. After the camera has been
+unreachable for a while its retry interval grows — 154 consecutive failures had
+pushed it to 775 s between attempts — and it will not reconnect promptly even
+once the camera answers again. Restart Home Assistant after restoring the path
+to the camera, or the entities stay `unavailable` for a quarter of an hour.
+
+## The relay is still required: measured again on 2026-08-18
+
+After the house board's cable was moved, its link improved from 10 Mb/s to
+100 Mb/s, so something physical did change. The segmentation did not. With the
+three relay routes removed, `192.168.50.201`, `.2` and `.175` answered **0 of
+4** pings and the camera's ARP entry stayed `INCOMPLETE` — no reply at layer 2
+at all — while the NAS on the same interface was unaffected. The routes were
+restored immediately.
+
+So the spare board must stay powered for the camera to work. The remaining test
+is to give the house board the exact cable and port the spare board uses, rather
+than a different port; failing that, its unused `eth1` is worth trying.
+
+## Two Home Assistants ran at once on 2026-08-18, briefly
+
+The house board dropped off the network on 2026-08-17 19:08 and stayed dark for
+seventeen hours. It had not crashed — uptime showed it had been running the
+whole time — only its link was gone. Home Assistant was started on the spare
+board to keep the house working, and `ha.sonyachny.pp.ua` was repointed to a
+second tunnel there (`ha-spare`, kept in this repository for reference).
+
+When the house board's link returned, its own Home Assistant was still enabled
+and active, so for a while both boards held LocalTuya sessions to the same
+valves and pump — the one failure mode the handover notes call out as able to
+break something physical. Nothing was actuated in that window. The duplicate was
+stopped, the DNS record was repointed back at `ha-house`, and the spare board's
+tunnel was disabled.
+
+Home Assistant on the spare board is deliberately left `disabled` at boot. If it
+is ever started again as a stand-in, check first that the house board is not
+answering on `.141` or `.168`.

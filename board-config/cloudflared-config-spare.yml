@@ -1,0 +1,19 @@
+# Named tunnel publishing Home Assistant from the SPARE board.
+#
+# The house board went off the network on 2026-08-17 19:08 and stayed down, so
+# Home Assistant was started here to keep the house running. Its tunnel
+# credentials could not be copied - they live on that board and it is
+# unreachable - so this is a second tunnel, ha-spare, and ha.sonyachny.pp.ua
+# was repointed at it.
+#
+# WHEN THE HOUSE BOARD COMES BACK it will start its own tunnel (ha-house) and
+# the DNS record will still point here. Repoint it there and stop this one,
+# or the address will keep serving the spare board instead of the house.
+tunnel: 4f0b920a-7827-4848-bee4-3d0cd4c8b9db
+credentials-file: /home/forlinx/.cloudflared/4f0b920a-7827-4848-bee4-3d0cd4c8b9db.json
+no-autoupdate: true
+
+ingress:
+  - hostname: ha.sonyachny.pp.ua
+    service: http://127.0.0.1:8123
+  - service: http_status:404
