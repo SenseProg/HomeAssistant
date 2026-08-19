@@ -274,3 +274,48 @@ tunnel was disabled.
 Home Assistant on the spare board is deliberately left `disabled` at boot. If it
 is ever started again as a stand-in, check first that the house board is not
 answering on `.141` or `.168`.
+
+## The relay is gone: it was the cable all along, 2026-08-18
+
+Swapping the two boards' Ethernet cables end for end — the same cable and port
+the spare board had been using, not merely a different port — gave this board
+direct access to the segment it had never reached. With all three relay routes
+removed, the camera answered **4 of 4** and its ARP entry resolved to the real
+MAC `10:12:fb:f7:95:ad`, `REACHABLE`. Simply moving the cable to another port a
+day earlier had raised the link from 10 Mb/s to 100 Mb/s but changed nothing
+about what was reachable, which is what made the cable itself the suspect.
+
+The `routes:` block is out of `netplan-01-netcfg.yaml`, `camera-relay.service`
+is retired, and the files for the spare board are removed from this repository
+because that board has left the site. `sysctl-99-isolated-hosts.conf` stays: it
+only turns off `accept_redirects`, which is harmless and mildly safer.
+
+There is no fallback board any more. Tailscale on this board is the only
+independent way in if the tunnel or the LAN address misbehaves — treat it as
+part of the system, not a convenience.
+
+## `external_url` was never set
+
+The companion app had not contacted this instance in two days, and push
+notifications had nowhere to return to: `external_url` was `None` while
+`internal_url` pointed at `http://192.168.50.141:8123`. Both are now in
+`configuration.yaml` — `external_url` is the tunnel hostname, since nothing is
+forwarded on the router and that is the only way in from outside.
+
+Two phones are registered as companion apps: `SM-S918B` and `M2006C3MNG` — the
+latter is a Redmi 9C NFC, which is worth writing down because Home Assistant
+names its 93 entities after the model code, so searching the registry for
+"redmi" finds nothing.
+
+## Do not run `tailscale login` to repair a session
+
+On 2026-08-19 the node was found logged out with `invalid key: API key does not
+exist` — the second time. Restarting `tailscaled` restored it from the stored
+credentials. Running `tailscale login` afterwards, to be thorough, forced a
+fresh authentication and threw the working session away; recovering it needed
+`sudo tailscale switch <id>`, since the profile was still on disk.
+
+Check `sudo tailscale switch --list` first. And the underlying cause is still
+open: `key expires: 2027-02-10`. Disable key expiry on `ok3568-house` in the
+admin console — it cannot be done from the CLI, and until it is, the node will
+fall out of the tailnet again on its own.

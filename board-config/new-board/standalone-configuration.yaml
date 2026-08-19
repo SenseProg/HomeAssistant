@@ -11,6 +11,13 @@ assist_pipeline:
 # Keep schedules and log timestamps aligned with the physical installation.
 homeassistant:
   time_zone: Europe/Kyiv
+  # Added 2026-08-18. external_url was unset, so the companion app had no
+  # address to use away from home and push notifications had no callback
+  # to come back to - the app had not contacted this instance in two days.
+  # This is the Cloudflare tunnel hostname; nothing is forwarded on the
+  # router, so it is the only way in from outside.
+  external_url: https://ha.sonyachny.pp.ua
+  internal_url: http://192.168.50.141:8123
   # camera.record refuses to write anywhere outside this list. The path below
   # is an NFS mount of the NAS (systemd unit userdata-hass-config-media-video.mount),
   # so motion clips never land on the board's own 2.5 GB partition.

@@ -26,12 +26,6 @@ network:
                         # Delete this block once the cable moves to a port that
                         # reaches that segment.
                         routes:
-                                - to: 192.168.50.201/32
-                                  via: 192.168.50.150
-                                - to: 192.168.50.2/32
-                                  via: 192.168.50.150
-                                - to: 192.168.50.175/32
-                                  via: 192.168.50.150
                                 # The irrigation controller is reachable from
                                 # other LAN clients, but direct ARP from this
                                 # board gets no reply after the controller
