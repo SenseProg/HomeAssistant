@@ -319,3 +319,47 @@ Check `sudo tailscale switch --list` first. And the underlying cause is still
 open: `key expires: 2027-02-10`. Disable key expiry on `ok3568-house` in the
 admin console — it cannot be done from the CLI, and until it is, the node will
 fall out of the tailnet again on its own.
+
+## A dead RTC took the Tuya integration down for weeks
+
+All 37 entities of the official `tuya` integration were `unavailable`, and a
+re-authentication done in the app changed nothing. The integration was not the
+fault. The chain, in order:
+
+The RTC cannot be read at all — `timedatectl` answers `Failed to read RTC:
+Invalid argument`, the battery is dead — so every boot starts from whatever the
+clock happens to hold. `systemd-timesyncd` should correct that, but on
+2026-08-20 it was found `enabled / inactive`: at boot it had logged `No network
+connectivity`, then timed out against `ntp.ubuntu.com`, and never came back.
+The clock was sitting in **June 2024**.
+
+Nothing looked broken until TLS did. Tuya's certificate is valid from
+`Aug 20 2025` to `Sep 10 2026`, so to a board living in 2024 it was *not yet
+valid*:
+
+```
+SSLError: certificate verify failed: certificate is not yet valid
+```
+
+No request ever reached Tuya, which is why the token could not be refreshed and
+why re-authentication could not possibly succeed — the QR was genuine, the
+board simply could not talk to the server behind it. After the clock was
+corrected the error changed to `(1010) token is expired`, which is Tuya
+answering rather than the connection failing, and the re-auth then worked
+first try.
+
+`timesync-retry.service`/`.timer` is the guard: it checks 90 s after boot and
+every ten minutes after that, and restarts `systemd-timesyncd` whenever the
+clock is not synchronised. It follows `nas-mounts.service` — on this board the
+network comes up late, so anything that matters needs a retry rather than a
+single attempt at boot. It does not replace the battery; it removes the
+consequences of its death.
+
+Worth remembering when something authenticates against a remote service and
+fails for no visible reason: check `date` on the board before suspecting the
+credentials.
+
+Result: 43 tuya entities, 35 live, 10 devices. The plug this started from is
+registered as `T34-Smart Plug+` — `switch.t34_smart_plug_switch_1` plus
+voltage, current, power and total-energy sensors. Searching the registry for
+"t34-smartplug" finds nothing; the name carries a space and a plus sign.

@@ -1,0 +1,20 @@
+[Unit]
+Description=Keep nudging systemd-timesyncd until the clock is actually synchronised
+# The RTC on this board cannot be read at all - timedatectl answers "Failed to
+# read RTC: Invalid argument", the battery is dead - so every boot starts from a
+# wrong clock and only NTP can correct it.
+#
+# On 2026-08-20 systemd-timesyncd was found "enabled / inactive": at boot it
+# logged "No network connectivity", then timed out against ntp.ubuntu.com, and
+# never recovered. The clock sat two years in the past. Nothing looked broken
+# until TLS did: every certificate appeared "not yet valid", which killed the
+# Tuya integration outright - 37 entities unavailable and a re-authentication
+# that could not possibly succeed, because the request never reached Tuya.
+#
+# This is the same shape as nas-mounts.service: the thing that must survive this
+# board's network being late at boot needs a retry, not a single attempt.
+After=network.target
+
+[Service]
+Type=oneshot
+ExecStart=/bin/sh -c 'timedatectl show -p NTPSynchronized --value 2>/dev/null | grep -q yes && exit 0; logger -t timesync-retry "clock not synchronised - restarting systemd-timesyncd"; systemctl restart systemd-timesyncd; sleep 25; timedatectl show -p NTPSynchronized --value 2>/dev/null | grep -q yes && logger -t timesync-retry "clock synchronised: $(date)" || logger -t timesync-retry "still not synchronised"'
