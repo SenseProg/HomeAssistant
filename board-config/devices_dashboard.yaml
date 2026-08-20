@@ -2338,6 +2338,82 @@ views:
       grid_options:
         columns: full
       content: 'Єдиний захист: автостоп після 3 годин безперервної роботи.'
+- title: Свердловина
+  path: well
+  icon: mdi:water-pump
+  type: sections
+  max_columns: 4
+  dense_section_placement: true
+  sections:
+  # Насос свердловини - розетка T34-Smart Plug+ з вимірюванням, заведена через
+  # офіційну інтеграцію tuya 2026-08-20. Тримається окремо від Автополиву
+  # свідомо: свердловина живить не тільки полив, і змішувати їх на одній вкладці
+  # означало б, що вимкнений полив виглядає як вимкнена вода.
+  #
+  # Плиток чотири, а не одна, бо розетка віддає напругу, струм, потужність і
+  # накопичену енергію. Сам вимикач каже лише те, що подано живлення; чи насос
+  # справді качає, видно тільки по потужності.
+  - type: grid
+    column_span: 4
+    cards:
+    - type: heading
+      heading: Насос свердловини
+      icon: mdi:water-pump
+      grid_options:
+        columns: full
+    - type: markdown
+      grid_options:
+        columns: full
+      content: |-
+        {% set on = is_state('switch.t34_smart_plug_switch_1', 'on') %}
+        {% set w = states('sensor.t34_smart_plug_power') | float(0) %}
+        {% set v = states('sensor.t34_smart_plug_voltage') | float(0) %}
+        ## {% if not on %}Вимкнено{% elif w > 20 %}Качає — {{ w | round(0) }} Вт{% else %}Живлення є, насос не качає{% endif %}
+        {% if on and v > 0 %}Напруга {{ v | round(0) }} В{% elif on %}Напруга не вимірюється{% endif %}
+    - type: tile
+      entity: switch.t34_smart_plug_switch_1
+      name: Живлення насоса
+      icon: mdi:water-pump
+      color: blue
+      grid_options:
+        columns: full
+        rows: 1
+  - type: grid
+    column_span: 2
+    cards:
+    - type: heading
+      heading: Споживання
+      icon: mdi:flash
+      grid_options:
+        columns: full
+    - type: tile
+      entity: sensor.t34_smart_plug_power
+      name: Потужність
+      icon: mdi:flash
+      grid_options:
+        columns: 6
+        rows: 1
+    - type: tile
+      entity: sensor.t34_smart_plug_current
+      name: Струм
+      icon: mdi:current-ac
+      grid_options:
+        columns: 6
+        rows: 1
+    - type: tile
+      entity: sensor.t34_smart_plug_voltage
+      name: Напруга
+      icon: mdi:sine-wave
+      grid_options:
+        columns: 6
+        rows: 1
+    - type: tile
+      entity: sensor.t34_smart_plug_total_energy
+      name: Спожито всього
+      icon: mdi:counter
+      grid_options:
+        columns: 6
+        rows: 1
 - title: Заряджання авто
   path: ev-charging
   icon: mdi:ev-station
