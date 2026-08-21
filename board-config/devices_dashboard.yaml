@@ -1243,9 +1243,10 @@ views:
         \ | float(0) | round(1) }} с ·\nтемпература {{ states('sensor.inverter_temperature') }} °C.\n\n\
         [Відкрити детальну панель «Потужність»](/power-dashboard/inverter)\n"
     - type: custom:sunsynk-power-flow-card
-      cardstyle: lite
+      cardstyle: full
       panel_mode: false
       large_font: true
+      card_height: 550px
       show_solar: false
       inverter:
         modern: true
@@ -1260,11 +1261,15 @@ views:
         animation_speed: 6
         max_power: 5000
       load:
+        essential_name: Через інвертор
         show_daily: true
         animation_speed: 8
         max_power: 15000
         show_absolute: false
       grid:
+        grid_name: Мережа — разом
+        show_nonessential: true
+        nonessential_name: Поза інвертором
         show_daily_buy: true
         show_daily_sell: true
         animation_speed: 8
@@ -1283,13 +1288,12 @@ views:
         battery_temp_182: sensor.inverter_battery_temperature
         day_battery_charge_70: sensor.inverter_today_battery_charge
         day_battery_discharge_71: sensor.inverter_today_battery_discharge
-        grid_ct_power_172: sensor.inverter_grid_power
+        grid_ct_power_172: sensor.merezha_potuzhnist_usogo_vvodu
         grid_power_169: sensor.inverter_grid_power
-        grid_ct_power_l2: sensor.inverter_grid_l2_power
-        grid_ct_power_l3: sensor.inverter_grid_l3_power
+        nonessential_power: sensor.spozhivannia_poza_invertorom
         grid_voltage: sensor.inverter_grid_l1_voltage
         grid_connected_status_194: sensor.inverter_device_relay
-        day_grid_import_76: sensor.inverter_today_energy_import
+        day_grid_import_76: sensor.energy_meter_budinok_spozhito_sogodni
         day_grid_export_77: sensor.inverter_today_energy_export
         essential_power: sensor.inverter_load_power
         load_power_l1: sensor.inverter_load_l1_power

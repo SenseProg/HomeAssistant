@@ -19,6 +19,9 @@ BOARD_HOST = os.environ.get("HA_BOARD_HOST", "forlinx@192.168.50.141")
 SSH_KEY = Path(
     os.environ.get("HA_SSH_KEY", r"C:\SPB_Data\.ssh\mb35x8_ed25519")
 ).expanduser()
+HA_VENV = os.environ.get("HA_VENV", "/userdata/hass/venv")
+HA_CONFIG_ROOT = os.environ.get("HA_CONFIG_ROOT", "/userdata/hass/config")
+HA_TOKEN_FILE = os.environ.get("HA_TOKEN_FILE", "/home/forlinx/.ha_token")
 
 IRRIGATION_CONTROLLER_IP = "192.168.50.221"
 IRRIGATION_CONTROLLER_MAC = "38:2c:e5:2d:5b:32"
@@ -210,10 +213,10 @@ def repo_board_sync(files: Iterable[str] | None = None) -> dict[str, Any]:
 
 def board_health() -> dict[str, Any]:
     """Read the board, HA, storage, swap, journal cap, and timer health."""
-    command = """
-printf 'ha_version='; /home/forlinx/hass-venv-314/bin/hass --version 2>/dev/null || true
+    command = f"""
+printf 'ha_version='; {shlex.quote(HA_VENV)}/bin/hass --version 2>/dev/null || true
 printf 'ha_service='; systemctl is-active home-assistant 2>/dev/null || true
-printf 'ha_http='; curl -s -o /dev/null -w '%{http_code}' --max-time 5 http://localhost:8123/ || true; printf '\n'
+printf 'ha_http='; curl -s -o /dev/null -w '%{{http_code}}' --max-time 5 http://localhost:8123/ || true; printf '\n'
 printf 'uptime='; uptime -p 2>/dev/null || true
 printf 'journal_cap='; grep -E '^SystemMaxUse=' /etc/systemd/journald.conf 2>/dev/null | tail -n1 | cut -d= -f2
 printf 'root='; df -P / 2>/dev/null | tail -n1
@@ -382,11 +385,154 @@ printf 'well_pump_errors_10m='; sudo journalctl -u home-assistant --since '-10 m
     }
 
 
+def energy_flow_health() -> dict[str, Any]:
+    """Read the whole-site/inverter power split without changing HA.
+
+    The three-phase inlet meter is upstream of Deye. Therefore the Deye grid
+    sensor is only one branch of the site and must never be presented as total
+    grid demand. The remote helper reads a small allow-list through HA's local
+    API; the access token is consumed on the board and is never returned.
+    """
+    entity_ids = (
+        "sensor.zagalne_navantazhennia",
+        "sensor.merezha_potuzhnist_usogo_vvodu",
+        "sensor.inverter_grid_power",
+        "sensor.spozhivannia_poza_invertorom",
+        "sensor.inverter_load_power",
+        "sensor.inverter_battery_power",
+        "sensor.inverter_pv_power",
+    )
+    remote_script = f"""
+import json
+import os
+import urllib.request
+
+ids = {entity_ids!r}
+token_path = {HA_TOKEN_FILE!r}
+if not os.path.isfile(token_path):
+    print(json.dumps({{'_error': 'token_missing', 'token_file': token_path}}))
+    raise SystemExit(0)
+token = open(token_path, encoding='utf-8').read().strip()
+request = urllib.request.Request(
+    'http://localhost:8123/api/states',
+    headers={{'Authorization': 'Bearer ' + token}},
+)
+with urllib.request.urlopen(request, timeout=10) as response:
+    states = {{item['entity_id']: item for item in json.load(response)}}
+result = {{}}
+for entity_id in ids:
+    item = states.get(entity_id)
+    result[entity_id] = None if item is None else {{
+        'state': item.get('state'),
+        'unit': item.get('attributes', {{}}).get('unit_of_measurement'),
+        'last_updated': item.get('last_updated'),
+    }}
+print(json.dumps(result, ensure_ascii=False))
+""".strip()
+    command = (
+        f"{shlex.quote(HA_VENV)}/bin/python -c "
+        + shlex.quote(remote_script)
+    )
+    transport = _ssh(command, timeout=60)
+    if not transport["ok"]:
+        return {
+            "healthy": False,
+            "reason": "transport_error",
+            "sources": {},
+            "transport": transport,
+        }
+
+    try:
+        states = json.loads(transport["stdout"])
+    except json.JSONDecodeError:
+        return {
+            "healthy": False,
+            "reason": "invalid_home_assistant_response",
+            "sources": {},
+            "transport": transport,
+        }
+
+    if states.get("_error"):
+        return {
+            "healthy": False,
+            "reason": states["_error"],
+            "token_file": states.get("token_file"),
+            "sources": {},
+            "transport": transport,
+        }
+
+    def number(entity_id: str) -> float | None:
+        item = states.get(entity_id)
+        if not isinstance(item, dict):
+            return None
+        raw = item.get("state")
+        if raw in (None, "unknown", "unavailable"):
+            return None
+        try:
+            return float(raw)
+        except (TypeError, ValueError):
+            return None
+
+    total_kw = number("sensor.zagalne_navantazhennia")
+    total_w = number("sensor.merezha_potuzhnist_usogo_vvodu")
+    inverter_grid_w = number("sensor.inverter_grid_power")
+    outside_w = number("sensor.spozhivannia_poza_invertorom")
+    expected_outside_w = (
+        max(total_kw * 1000 - inverter_grid_w, 0)
+        if total_kw is not None and inverter_grid_w is not None
+        else None
+    )
+    balance_error_w = (
+        outside_w - expected_outside_w
+        if outside_w is not None and expected_outside_w is not None
+        else None
+    )
+    templates_ready = total_w is not None and outside_w is not None
+    healthy = (
+        total_kw is not None
+        and inverter_grid_w is not None
+        and templates_ready
+        and balance_error_w is not None
+        and abs(balance_error_w) <= 5
+    )
+    return {
+        "healthy": healthy,
+        "topology": (
+            "grid inlet = inverter grid branch + consumption outside inverter; "
+            "inverter then splits to protected load, battery and PV"
+        ),
+        "sources": states,
+        "balance": {
+            "grid_total_w": total_w if total_w is not None else (
+                total_kw * 1000 if total_kw is not None else None
+            ),
+            "inverter_grid_branch_w": inverter_grid_w,
+            "outside_inverter_w": outside_w,
+            "expected_outside_inverter_w": expected_outside_w,
+            "balance_error_w": balance_error_w,
+            "inverter_load_w": number("sensor.inverter_load_power"),
+            "battery_w": number("sensor.inverter_battery_power"),
+            "pv_w": number("sensor.inverter_pv_power"),
+        },
+        "templates_ready": templates_ready,
+        "criteria": {
+            "source": "whole-site total comes from the upstream three-phase meter",
+            "split": "outside inverter = whole-site grid power - Deye grid branch",
+            "tolerance_w": 5,
+            "dashboard": (
+                "Sunsynk full card maps grid_ct_power_172 to whole-site power, "
+                "grid_power_169 to Deye and nonessential_power to the difference"
+            ),
+        },
+        "transport": transport,
+    }
+
+
 def validate_config() -> dict[str, Any]:
     """Run the official HA config checker without restarting the service."""
     command = (
-        "/home/forlinx/hass-venv-314/bin/hass --script check_config "
-        "-c /userdata/hass/config"
+        f"{shlex.quote(HA_VENV)}/bin/hass --script check_config "
+        f"-c {shlex.quote(HA_CONFIG_ROOT)}"
     )
     return _ssh(command, timeout=180)
 
@@ -496,7 +642,8 @@ def project_summary() -> dict[str, Any]:
         "board": BOARD_HOST,
         "ssh_key": str(SSH_KEY),
         "home_assistant_url": "http://192.168.50.141:8123/",
-        "config_root": "/userdata/hass/config",
+        "config_root": HA_CONFIG_ROOT,
+        "venv": HA_VENV,
         "protected": [".storage", "secrets.yaml", "*.db", "tokens", "credentials"],
         "sync_targets": SYNC_TARGETS,
     }

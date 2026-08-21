@@ -1,18 +1,20 @@
-# Home Assistant — MB35x8 / RK3568J
+# Home Assistant — MB35x8 / виробнича плата
 
-Home Assistant для дому, що працює на власній платі **MB35x8** з модулем
-**Forlinx RK3568J**. Тут лежить конфігурація плати та супровідні матеріали.
+Home Assistant для дому, що працює на актуальній виробничій платі **MB35x8**.
+Власник ідентифікує фізичну заміну як RK3588; перенесена ОС досі повертає старі
+позначення `OK3568-C/RK3568`. Тут лежить конфігурація плати та супровідні
+матеріали.
 
 ## Що це за система
 
 | | |
 |---|---|
-| Плата | MB35x8 v1.0 (власна розробка, Altium) + Forlinx RK3568J SoM |
+| Плата | Актуальна виробнича MB35x8; фізично RK3588 зі слів власника, перенесена ОС повідомляє OK3568-C/RK3568 |
 | Hostname / IP | `ok3568` / `192.168.50.141` |
 | ОС | **Ubuntu 20.04.6 LTS**, ядро 4.19.206, aarch64, 4 ядра, 3.8 ГБ RAM |
 | Home Assistant | Core **2026.7.4**, Python 3.14.6 у venv |
 | Веб-інтерфейс | http://192.168.50.141:8123 |
-| Встановлено | `/home/forlinx/hass-venv-314`, конфіг у `/userdata/hass/config` |
+| Встановлено | `/userdata/hass/venv` → `/home/forlinx/hass-venv`; `/userdata/hass/config` → `config-standalone` |
 | Служба | `home-assistant.service`, автозапуск увімкнено |
 
 ## Чому Core у venv, а не Docker
@@ -50,7 +52,7 @@ Home Assistant для дому, що працює на власній платі
 4. Після копіювання виконати:
 
    ```bash
-   /home/forlinx/hass-venv-314/bin/hass --script check_config -c /userdata/hass/config
+   /userdata/hass/venv/bin/hass --script check_config -c /userdata/hass/config
    ```
 
 5. Лише після успішної перевірки перезапускати `home-assistant.service`, а потім
@@ -169,7 +171,8 @@ GitHub (жорсткий ліміт 100 МБ на файл). Лежить на N
 
 MCP-сервер показує стан плати, Git, останні журнали HA, запускає офіційний
 `check_config`, читає інвентар фіксованих пристроїв, перевіряє LocalTuya-канали
-поливу та свердловинного насоса і порівнює SHA-256 файлів плати з
+поливу та свердловинного насоса, баланс «мережа / Deye / поза інвертором» і
+порівнює SHA-256 файлів плати з
 `board-config/`. Він навмисно не вміє редагувати live-файли, `.storage`, БД
 recorder, локальні ключі, реквізити або токени.
 
@@ -180,6 +183,7 @@ python mcp-server/cli.py git
 python mcp-server/cli.py health
 python mcp-server/cli.py irrigation-health
 python mcp-server/cli.py well-pump-health
+python mcp-server/cli.py energy-flow-health
 python mcp-server/cli.py sync
 python mcp-server/cli.py inventory Deye
 python mcp-server/cli.py validate

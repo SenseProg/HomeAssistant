@@ -11,11 +11,35 @@ assist_pipeline:
 # Keep schedules and log timestamps aligned with the physical installation.
 homeassistant:
   time_zone: Europe/Kyiv
+  # Added 2026-08-18. external_url was unset, so the companion app had no
+  # address to use away from home and push notifications had no callback
+  # to come back to - the app had not contacted this instance in two days.
+  # This is the Cloudflare tunnel hostname; nothing is forwarded on the
+  # router, so it is the only way in from outside.
+  external_url: https://ha.sonyachny.pp.ua
+  internal_url: http://192.168.50.141:8123
   # camera.record refuses to write anywhere outside this list. The path below
   # is an NFS mount of the NAS (systemd unit userdata-hass-config-media-video.mount),
   # so motion clips never land on the board's own 2.5 GB partition.
   allowlist_external_dirs:
+    # These MUST be the canonical config-standalone paths, not the
+    # /userdata/hass/config ones. switch-mode.sh makes config a symlink, and
+    # Home Assistant resolves the requested path to its real location before
+    # comparing it against this list, while the list itself is compared as
+    # written. So a clip aimed at /userdata/hass/config/media/video/... becomes
+    # /userdata/hass/config-standalone/media/video/... and matches nothing.
+    #
+    # Measured 2026-08-17: this is why every motion clip and snapshot failed
+    # with "no access to path" from the moment of the move onwards - on the old
+    # board config was a real directory, so the paths matched and it worked.
+    # The /userdata/hass/config forms are kept too, harmlessly, in case the
+    # symlink is ever removed.
+    - /userdata/hass/config-standalone/media/video
+    - /userdata/hass/config-standalone/www/motion
+    - /userdata/hass/config-standalone/www/motion-clips
     - /userdata/hass/config/media/video
+    - /userdata/hass/config/www/motion
+    - /userdata/hass/config/www/motion-clips
 
 # Read-only local telemetry from the Tenda access point and range extender.
 rest: !include network_monitoring.yaml
@@ -586,6 +610,34 @@ template:
              and states('sensor.energy_meter_phase_b_power_2') not in ['unknown', 'unavailable']
              and states('sensor.energy_meter_phase_c_power_2') not in ['unknown', 'unavailable'] }}
 
+      # Фізична топологія вводу:
+      #   мережа (трифазний лічильник) -> інвертор Deye + споживачі поза Deye.
+      # Deye бачить тільки власну гілку, тому його sensor.inverter_grid_power не
+      # можна показувати як повне споживання з мережі. Обидва сенсори нижче у W,
+      # щоб картка потоку могла без додаткових перетворень показати розгалуження.
+      - name: "Мережа - потужність усього вводу"
+        unique_id: grid_total_input_power_w
+        unit_of_measurement: "W"
+        device_class: power
+        state_class: measurement
+        state: >
+          {{ ((states('sensor.zagalne_navantazhennia') | float(0)) * 1000) | round(0) }}
+        availability: >
+          {{ has_value('sensor.zagalne_navantazhennia') }}
+
+      - name: "Споживання поза інвертором"
+        unique_id: power_outside_inverter
+        unit_of_measurement: "W"
+        device_class: power
+        state_class: measurement
+        state: >
+          {% set total = (states('sensor.zagalne_navantazhennia') | float(0)) * 1000 %}
+          {% set inverter_branch = states('sensor.inverter_grid_power') | float(0) %}
+          {{ [total - inverter_branch, 0] | max | round(0) }}
+        availability: >
+          {{ has_value('sensor.zagalne_navantazhennia')
+             and has_value('sensor.inverter_grid_power') }}
+
       - name: "Загальний струм"
         unique_id: total_load_current
         unit_of_measurement: "A"
@@ -695,6 +747,10 @@ recorder:
   # heading for 1.9 GB with 291 MB free (measured 2026-08-10). Seven days
   # stops the growth at roughly the current file size, because a purge
   # reuses freed pages rather than shrinking the file.
+  # 2026-08-13: the HA venv (1.2 GB) moved off /userdata to the root
+  # partition, leaving 2.0 GB free here instead of 846 MB. At the ~130 MB
+  # a day measured above, seven days lands near 0.9 GB - so the three-day
+  # value forced by the old cramped partition is no longer needed.
   purge_keep_days: 7
   # Reduce SQLite/eMMC write frequency while keeping adequate history resolution.
   commit_interval: 30
@@ -989,8 +1045,36 @@ logger:
 # is just an ordinary empty directory, and writing clips into it would fill
 # /userdata - exactly the failure that took the whole system down earlier today.
 command_line:
+  # Стан файлової системи /userdata. Перевірка при завантаженні знята
+  # (fstab pass 0), інакше пошкоджений розділ не монтується і HA не
+  # стартує взагалі - тож роль сторожа виконує цей сенсор.
+  - binary_sensor:
+      name: Userdata FS poshkodzhena
+      unique_id: userdata_fs_clean
+      # Шукати саме "with errors", а не "clean": змонтована ext4 ЗАВЖДИ
+      # позначена "not clean" - вона стає чистою лише при відмонтуванні, тож
+      # перевірка на "clean" сигналила б тривогу цілодобово. Прапорець помилок
+      # у суперблоці - це окрема річ, і саме він тут важливий.
+      command: >-
+        sudo dumpe2fs -h /dev/mmcblk0p8 2>/dev/null
+        | grep -q "Filesystem state:.*with errors" && echo "ON" || echo "OFF"
+      payload_on: "ON"
+      payload_off: "OFF"
+      device_class: problem
+      scan_interval: 3600
   # Вільне місце на розділі, де живе Home Assistant. Розділ 2.5 ГБ, і
   # заповнений він уже одного разу клав дім (5 серпня, полив стояв добу).
+  # Корінь тепер тримає базу recorder, тож стежити треба за обома розділами.
+  # Вільне місце на розділі, де живе Home Assistant. Розділ 2.5 ГБ, і
+  # заповнений він уже одного разу клав дім (5 серпня, полив стояв добу).
+  # Корінь тепер тримає базу recorder, тож стежити треба за обома розділами.
+  - sensor:
+      name: Vilne mistse korenia
+      unique_id: root_free_mb
+      command: "df -Pm / | awk 'NR==2{print $4}'"
+      unit_of_measurement: MB
+      state_class: measurement
+      scan_interval: 600
   - sensor:
       name: Vilne mistse userdata
       unique_id: userdata_free_mb
@@ -1053,5 +1137,5 @@ shell_command:
   # folder is still bad manners - and if the mount ever silently fell away
   # this would be running against the board's own disk.
   prepare_motion_dir: "d=/userdata/hass/config/media/video/ha-motion; mkdir -p $d/$(date +%Y-%m-%d); find $d -mindepth 1 -maxdepth 1 -type d -mtime +14 -exec rm -rf {} +"
-  rebuild_clip_gallery: "/home/forlinx/hass-venv-314/bin/python /userdata/hass/config/scripts-gen-gallery.py"
+  rebuild_clip_gallery: "/userdata/hass/venv/bin/python /userdata/hass/config/scripts-gen-gallery.py"
   update_motion_snapshot: "cd /userdata/hass/config/www/motion && ls -t motion_*.jpg 2>/dev/null | head -1 | xargs -I{} cp {} latest.jpg && ls -t motion_*.jpg 2>/dev/null | tail -n +31 | xargs -r rm --"

@@ -8,6 +8,7 @@ from mcp.server.fastmcp import FastMCP
 
 from project_tools import (
     board_health,
+    energy_flow_health,
     git_status,
     incidents,
     irrigation_health,
@@ -45,6 +46,12 @@ def ha_irrigation_health() -> dict:
 def ha_well_pump_health() -> dict:
     """Check well-pump LocalTuya readiness without switching the pump."""
     return well_pump_health()
+
+
+@mcp.tool()
+def ha_energy_flow_health() -> dict:
+    """Check whole-grid, Deye-branch, and outside-inverter power balance."""
+    return energy_flow_health()
 
 
 @mcp.tool()

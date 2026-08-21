@@ -2,14 +2,20 @@
 
 ## Runtime
 
-- Board: MB35x8 v1.0 carrier with Forlinx RK3568J SoM.
+- Board: current MB35x8 production replacement, identified by the owner as
+  RK3588. The migrated Linux image still reports `Forlinx OK3568-C Board` and
+  `rockchip,rk3568`; preserve this discrepancy as an observed fact rather than
+  choosing another deployment target from the stale label.
 - OS: Ubuntu 20.04.6 LTS, kernel 4.19.206, aarch64, 4 cores, 3.8 GiB RAM.
-- Host/IP: `ok3568`, `192.168.50.141` on `eth1`.
-- Home Assistant: Core 2026.7.4 in `/home/forlinx/hass-venv-314` using
+- Host/IP: legacy hostname `ok3568`, `192.168.50.141` on `eth0`; `.168` is a
+  secondary address on the same interface.
+- Home Assistant: Core 2026.7.4 in `/userdata/hass/venv` (a symlink to
+  `/home/forlinx/hass-venv`) using
   Python 3.14.6.
-- Config: `/userdata/hass/config`.
+- Config: `/userdata/hass/config`, a symlink to
+  `/userdata/hass/config-standalone`.
 - Service: `home-assistant.service`.
-- HA timezone: `Europe/Kyiv`; board OS timezone: `Asia/Shanghai`.
+- HA and board OS timezone: `Europe/Kyiv`.
 
 ## Storage and memory
 

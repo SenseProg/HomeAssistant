@@ -152,3 +152,96 @@ well_pump_errors_10m=0
     result = project_tools.well_pump_health()
 
     assert result["well_pump_ready"] is False
+
+
+def test_energy_flow_health_splits_whole_site_from_deye(monkeypatch) -> None:
+    states = {
+        "sensor.zagalne_navantazhennia": {
+            "state": "1.55", "unit": "kW", "last_updated": "2026-08-21T07:00:00Z"
+        },
+        "sensor.merezha_potuzhnist_usogo_vvodu": {
+            "state": "1550", "unit": "W", "last_updated": "2026-08-21T07:00:00Z"
+        },
+        "sensor.inverter_grid_power": {
+            "state": "803", "unit": "W", "last_updated": "2026-08-21T07:00:00Z"
+        },
+        "sensor.spozhivannia_poza_invertorom": {
+            "state": "747", "unit": "W", "last_updated": "2026-08-21T07:00:00Z"
+        },
+        "sensor.inverter_load_power": {
+            "state": "726", "unit": "W", "last_updated": "2026-08-21T07:00:00Z"
+        },
+        "sensor.inverter_battery_power": {
+            "state": "-18", "unit": "W", "last_updated": "2026-08-21T07:00:00Z"
+        },
+        "sensor.inverter_pv_power": {
+            "state": "0", "unit": "W", "last_updated": "2026-08-21T07:00:00Z"
+        },
+    }
+    monkeypatch.setattr(
+        project_tools,
+        "_ssh",
+        lambda command, timeout=30: {
+            "ok": True,
+            "returncode": 0,
+            "stdout": json.dumps(states),
+            "stderr": "",
+        },
+    )
+
+    result = project_tools.energy_flow_health()
+
+    assert result["healthy"] is True
+    assert result["balance"]["grid_total_w"] == 1550
+    assert result["balance"]["inverter_grid_branch_w"] == 803
+    assert result["balance"]["outside_inverter_w"] == 747
+    assert result["balance"]["balance_error_w"] == 0
+
+
+def test_energy_flow_health_requires_deployed_templates(monkeypatch) -> None:
+    states = {
+        "sensor.zagalne_navantazhennia": {"state": "0.90", "unit": "kW"},
+        "sensor.merezha_potuzhnist_usogo_vvodu": None,
+        "sensor.inverter_grid_power": {"state": "810", "unit": "W"},
+        "sensor.spozhivannia_poza_invertorom": None,
+    }
+    monkeypatch.setattr(
+        project_tools,
+        "_ssh",
+        lambda command, timeout=30: {
+            "ok": True,
+            "returncode": 0,
+            "stdout": json.dumps(states),
+            "stderr": "",
+        },
+    )
+
+    result = project_tools.energy_flow_health()
+
+    assert result["healthy"] is False
+    assert result["templates_ready"] is False
+    assert result["balance"]["expected_outside_inverter_w"] == 90
+
+
+def test_energy_flow_health_reports_missing_board_token(monkeypatch) -> None:
+    monkeypatch.setattr(
+        project_tools,
+        "_ssh",
+        lambda *_args, **_kwargs: {
+            "ok": True,
+            "returncode": 0,
+            "stdout": json.dumps(
+                {
+                    "_error": "token_missing",
+                    "token_file": "/home/forlinx/.ha_token",
+                }
+            ),
+            "stderr": "",
+        },
+    )
+
+    result = project_tools.energy_flow_health()
+
+    assert result["healthy"] is False
+    assert result["reason"] == "token_missing"
+    assert result["sources"] == {}

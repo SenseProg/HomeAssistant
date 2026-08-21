@@ -27,6 +27,34 @@
   `sensor.t34_smart_plug_nasos_sverdlovini_spozhito`, whose source is that local
   power entity. Keep the unsuffixed Tuya entities only as cloud controls.
 
+## Whole-site power flow and the Deye branch
+
+The three-phase meter at `.219` is upstream of Deye and measures the entire
+property. `sensor.inverter_grid_power` measures only the branch entering Deye.
+The instantaneous topology is therefore:
+
+```
+grid inlet = Deye grid branch + consumption outside Deye
+Deye = protected house load + battery + PV (when installed)
+```
+
+The dashboard uses these reproducible template sensors:
+
+- `sensor.merezha_potuzhnist_usogo_vvodu` —
+  `sensor.zagalne_navantazhennia * 1000`, W;
+- `sensor.spozhivannia_poza_invertorom` — whole inlet minus
+  `sensor.inverter_grid_power`, clamped at zero to suppress update-order noise.
+
+For `custom:sunsynk-power-flow-card`, map `grid_ct_power_172` to the whole inlet,
+`grid_power_169` to the Deye branch, and `nonessential_power` to the difference.
+Use `cardstyle: full`: the installed card does not render the nonessential branch
+in its lite or compact layouts. The full layout has been visually verified with
+the live example `1550 W total = 803 W Deye + 747 W outside Deye`.
+
+Run `ha_energy_flow_health` or `python mcp-server/cli.py energy-flow-health` to
+check the split. Do not silently substitute Deye import for the whole-site grid
+value on the diagram or in daily purchase totals.
+
 ## Well-pump cadence and energy
 
 The T34 well-pump plug uses LocalTuya 3.5 with a one-second scan. Recorder still

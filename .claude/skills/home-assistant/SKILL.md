@@ -1,9 +1,9 @@
 ---
 name: home-assistant
-description: Safely inspect, operate, diagnose, and update the Home Assistant Core 2026.7.4 deployment on the MB35x8/Forlinx RK3568J board at 192.168.50.141. Use for Home Assistant YAML, dashboards, automations, integrations, irrigation, well-water and pump monitoring, energy, network inventory, ASUS DHCP naming, NAS backups/logs, voice/Claude integration, board health, repository-to-board synchronization, and any request to add, rename, troubleshoot, deploy, validate, reload, or restart this smart-home system.
+description: Safely inspect, operate, diagnose, and update the production Home Assistant Core 2026.7.4 deployment at 192.168.50.141, including its migrated standalone config and venv. Use for Home Assistant YAML, dashboards, automations, integrations, irrigation, well-water and pump monitoring, energy, network inventory, NAS backups/logs, voice/Claude integration, board health, repository synchronization, deployment, validation, reloads, and restarts.
 ---
 
-# Home Assistant on MB35x8
+# Production Home Assistant on MB35x8
 
 ## Start with the project MCP
 
@@ -15,7 +15,9 @@ board/repository hash comparison. It intentionally has no tool that edits
 
 If the MCP server is not registered, run the same checks with
 `python mcp-server/cli.py health`, `sync`, `git`, `inventory`, `logs`, or
-`validate`, `irrigation-health`, or `well-pump-health` from the repository root.
+`validate`, `irrigation-health`, `well-pump-health`, or `energy-flow-health`
+from the repository root. Use `energy-flow-health` before changing the Deye
+power-flow card or treating the inverter grid sensor as whole-site demand.
 
 ## Read the relevant reference
 
@@ -50,6 +52,11 @@ If the MCP server is not registered, run the same checks with
 9. Do not add `-b 192.168.50.111` to SSH. That bridge no longer exists.
 10. Do not reconfigure or flash the board to obtain Docker. The vendor kernel
     lacks overlayfs, veth, and required cgroups.
+11. The owner identifies the current physical replacement as RK3588, while its
+    migrated Linux image currently reports `Forlinx OK3568-C` and
+    `rockchip,rk3568`. Treat `.141` as the production target, but record both
+    facts and do not infer that a different host is production from the stale
+    hostname or Device Tree label alone.
 
 ## Connection and canonical paths
 
@@ -62,10 +69,10 @@ ssh.exe -i $key -o BatchMode=yes forlinx@192.168.50.141
 
 | Item | Value |
 |---|---|
-| Board | MB35x8 v1.0 + Forlinx RK3568J, Ubuntu 20.04.6, aarch64 |
+| Board | Current MB35x8 production replacement; owner: RK3588; migrated OS currently reports OK3568-C/RK3568 |
 | HA | Core 2026.7.4, Python 3.14.6 |
-| Venv | `/home/forlinx/hass-venv-314` |
-| Config | `/userdata/hass/config` |
+| Venv | `/userdata/hass/venv` → `/home/forlinx/hass-venv` |
+| Config | `/userdata/hass/config` → `/userdata/hass/config-standalone` |
 | Service | `home-assistant.service` |
 | UI | `http://192.168.50.141:8123/` |
 | Repository | `SenseProg/HomeAssistant`, local clone `E:\Work\Pojects\HA` |
@@ -119,7 +126,7 @@ silently replace the other.
 Config validation:
 
 ```bash
-/home/forlinx/hass-venv-314/bin/hass --script check_config -c /userdata/hass/config
+/userdata/hass/venv/bin/hass --script check_config -c /userdata/hass/config
 ```
 
 After a required restart, allow up to 90 seconds, then verify:
