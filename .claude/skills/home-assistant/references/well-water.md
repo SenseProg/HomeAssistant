@@ -66,6 +66,13 @@ the card reports launch count plus total runtime for 24 hours and 7 days. Keep
 the inactive track visually subordinate; grey must never represent an active
 pump interval.
 
+Hourly estimated water is rendered by `well-hourly-water-card` from deltas of
+the own integrated-energy history, not by `mini-graph-card` over the cumulative
+water helper. It uses 24 stable one-hour buckets, applies the calibration offset
+at `2026-08-20T23:23:18+03:00`, and displays litres per hour. The complete
+calculated-water section is intentionally the first section of the well
+dashboard because daily, weekly, and 30-day water use are primary information.
+
 Local history begins around 08:17 Europe/Kyiv on 2026-08-21. Older cloud history
 remains in the unsuffixed power entity and must not be described as deleted.
 
