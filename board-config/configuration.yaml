@@ -47,6 +47,11 @@ rest: !include network_monitoring.yaml
 # Load frontend themes from the themes folder
 frontend:
   themes: !include_dir_merge_named themes
+  # This project keeps Lovelace itself in storage mode. In HA 2026.7 YAML
+  # resources are ignored in that mode, so load our repository-owned card as
+  # a frontend module without changing or overwriting storage resources.
+  extra_module_url:
+    - /local/home-energy-flow-card.js?v=20260821-2
 
 input_number:
   poliv_zona_1_hvylyn:

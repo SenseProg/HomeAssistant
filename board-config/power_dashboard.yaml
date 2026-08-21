@@ -15,80 +15,35 @@ views:
   dense_section_placement: true
   sections:
   # --- Секція 0 · Потік енергії ---
-  # column_span 2 замість 4: карта потоку масштабується за шириною секції,
-  # на всю ширину вона виростала до ~470 px і давила решту сторінки.
+  # Власна карта навмисно займає всю ширину: схема читається зліва направо,
+  # а гілка поза інвертором відходить одразу після основного лічильника.
   - type: grid
-    column_span: 2
+    column_span: 4
     cards:
-    - type: heading
-      heading: Потік енергії просто зараз
-      icon: mdi:transmission-tower
-      grid_options:
-        columns: full
-    - type: custom:sunsynk-power-flow-card
-      # Лише full-макет картки показує окрему гілку nonessential load.
-      cardstyle: full
-      panel_mode: false
-      large_font: true
-      card_height: 550px
-      show_solar: false
-      inverter:
-        modern: true
-        three_phase: true
-        model: deye
-        autarky: power
-      battery:
-        energy: 10000
-        shutdown_soc: 15
-        show_daily: true
-        invert_power: false
-        animation_speed: 6
-        max_power: 5000
-      load:
-        essential_name: Через інвертор
-        show_daily: true
-        animation_speed: 8
-        max_power: 15000
-        show_absolute: false
-      grid:
-        grid_name: Мережа — разом
-        show_nonessential: true
-        nonessential_name: Поза інвертором
-        show_daily_buy: true
-        show_daily_sell: true
-        animation_speed: 8
-        max_power: 15000
-        invert_grid: false
+    - type: custom:home-energy-flow-card
+      title: Потік енергії просто зараз
       entities:
-        inverter_status_59: sensor.inverter_device_state
-        inverter_power_175: sensor.inverter_power
-        inverter_voltage_154: sensor.inverter_output_l2_voltage
-        load_frequency_192: sensor.inverter_load_frequency
-        dc_transformer_temp_90: sensor.inverter_dc_temperature
-        battery_soc_184: sensor.inverter_battery
-        battery_power_190: sensor.inverter_battery_power
-        battery_voltage_183: sensor.inverter_battery_voltage
-        battery_current_191: sensor.inverter_battery_current
-        battery_temp_182: sensor.inverter_battery_temperature
-        day_battery_charge_70: sensor.inverter_today_battery_charge
-        day_battery_discharge_71: sensor.inverter_today_battery_discharge
-        grid_ct_power_172: sensor.merezha_potuzhnist_usogo_vvodu
-        grid_power_169: sensor.inverter_grid_power
-        nonessential_power: sensor.spozhivannia_poza_invertorom
-        grid_voltage: sensor.inverter_grid_l1_voltage
-        grid_connected_status_194: sensor.inverter_device_relay
-        day_grid_import_76: sensor.energy_meter_budinok_spozhito_sogodni
-        day_grid_export_77: sensor.inverter_today_energy_export
-        essential_power: sensor.inverter_load_power
-        load_power_l1: sensor.inverter_load_l1_power
-        load_power_l2: sensor.inverter_load_l2_power
-        load_power_l3: sensor.inverter_load_l3_power
-        day_load_energy_84: sensor.inverter_today_load_consumption
+        main_power: sensor.merezha_potuzhnist_usogo_vvodu
+        inverter_input_power: sensor.inverter_grid_power
+        outside_power: sensor.spozhivannia_poza_invertorom
+        house_power: sensor.inverter_load_power
+        inverter_status: sensor.inverter_device_state
+        inverter_voltage: sensor.inverter_output_l2_voltage
+        inverter_frequency: sensor.inverter_load_frequency
+        battery_soc: sensor.inverter_battery
+        battery_power: sensor.inverter_battery_power
+        pv1_voltage: sensor.inverter_pv1_voltage
+        pv1_current: sensor.inverter_pv1_current
+        pv2_voltage: sensor.inverter_pv2_voltage
+        pv2_current: sensor.inverter_pv2_current
+        total_day_energy: sensor.energy_meter_budinok_spozhito_sogodni
+        inverter_grid_day_energy: sensor.inverter_today_energy_import
+        house_day_energy: sensor.inverter_today_load_consumption
+        battery_charge_day_energy: sensor.inverter_today_battery_charge
+        battery_discharge_day_energy: sensor.inverter_today_battery_discharge
       grid_options:
         columns: full
   # --- Секція 1 · Hero ---
-  # Теж 2 колонки — стає праворуч від карти потоку. Інакше dense-розміщення
-  # підтягує сюди «Хто бере потужність» і ламає парність наступних секцій.
   - type: grid
     column_span: 2
     cards:
