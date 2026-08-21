@@ -15,5 +15,5 @@ Type=oneshot
 # escape does not survive being passed through systemd and then a shell - the
 # first version of this file silently skipped exactly that one mount. systemctl
 # converts a path to the right unit itself.
-ExecStart=/bin/sh -c 'for m in /userdata/hass/config/media/video /userdata/hass/config/www/motion-clips /mnt/homemate_media/foto /userdata/hass/config/backups; do mountpoint -q "$m" || systemctl start "$m" || true; done'
+ExecStart=/bin/sh -c 'for m in /userdata /userdata/hass/config/media/video /userdata/hass/config/www/motion-clips /mnt/homemate_media/foto /userdata/hass/config/backups; do mountpoint -q "$m" || systemctl start "$m" || true; done'
 SuccessExitStatus=0 1

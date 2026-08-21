@@ -1,0 +1,1141 @@
+
+# Loads default set of integrations. Do not remove.
+default_config:
+
+# Preserve the raw 16 kHz WAV for every Assist voice run. The Claude chat panel
+# exposes this private archive only to authenticated administrators so a long
+# dictation can be played back and sent through STT again.
+assist_pipeline:
+  debug_recording_dir: /userdata/hass/config/.private/claude-code-conversation/voice-recordings
+
+# Keep schedules and log timestamps aligned with the physical installation.
+homeassistant:
+  time_zone: Europe/Kyiv
+  # Added 2026-08-18. external_url was unset, so the companion app had no
+  # address to use away from home and push notifications had no callback
+  # to come back to - the app had not contacted this instance in two days.
+  # This is the Cloudflare tunnel hostname; nothing is forwarded on the
+  # router, so it is the only way in from outside.
+  external_url: https://ha.sonyachny.pp.ua
+  internal_url: http://192.168.50.141:8123
+  # camera.record refuses to write anywhere outside this list. The path below
+  # is an NFS mount of the NAS (systemd unit userdata-hass-config-media-video.mount),
+  # so motion clips never land on the board's own 2.5 GB partition.
+  allowlist_external_dirs:
+    # These MUST be the canonical config-standalone paths, not the
+    # /userdata/hass/config ones. switch-mode.sh makes config a symlink, and
+    # Home Assistant resolves the requested path to its real location before
+    # comparing it against this list, while the list itself is compared as
+    # written. So a clip aimed at /userdata/hass/config/media/video/... becomes
+    # /userdata/hass/config-standalone/media/video/... and matches nothing.
+    #
+    # Measured 2026-08-17: this is why every motion clip and snapshot failed
+    # with "no access to path" from the moment of the move onwards - on the old
+    # board config was a real directory, so the paths matched and it worked.
+    # The /userdata/hass/config forms are kept too, harmlessly, in case the
+    # symlink is ever removed.
+    - /userdata/hass/config-standalone/media/video
+    - /userdata/hass/config-standalone/www/motion
+    - /userdata/hass/config-standalone/www/motion-clips
+    - /userdata/hass/config/media/video
+    - /userdata/hass/config/www/motion
+    - /userdata/hass/config/www/motion-clips
+
+# Read-only local telemetry from the Tenda access point and range extender.
+rest: !include network_monitoring.yaml
+
+# Load frontend themes from the themes folder
+frontend:
+  themes: !include_dir_merge_named themes
+
+input_number:
+  poliv_zona_1_hvylyn:
+    name: Зона 1 - хвилин поливу
+    min: 1
+    max: 60
+    step: 1
+    icon: mdi:timer-outline
+  poliv_zona_2_hvylyn:
+    name: Зона 2 - хвилин поливу
+    min: 1
+    max: 60
+    step: 1
+    icon: mdi:timer-outline
+  poliv_zona_3_hvylyn:
+    name: Зона 3 - хвилин поливу
+    min: 1
+    max: 60
+    step: 1
+    icon: mdi:timer-outline
+  # Зони 4 і 5 додані 2026-08-03 на прохання - вони фізично існують.
+  # У Smart Irrigation НЕ заведені навмисно: там лишаються тільки зони 1 і 2,
+  # решта керується вручну з дашборда.
+  poliv_zona_4_hvylyn:
+    name: Зона 4 - хвилин поливу
+    min: 1
+    max: 60
+    step: 1
+    icon: mdi:timer-outline
+  poliv_zona_5_hvylyn:
+    name: Зона 5 - хвилин поливу
+    min: 1
+    max: 60
+    step: 1
+    icon: mdi:timer-outline
+
+  # Показ лічильника енергії насоса на момент старту сесії поливу.
+  # Заповнюється автоматизацією "Полив - фіксація лічильника на старті сесії".
+  nasos_energiia_start:
+    name: Насос - лічильник на старті сесії
+    min: 0
+    max: 1000000
+    step: 0.001
+    mode: box
+    icon: mdi:counter
+
+  # --- Розклад заряджання авто (додано 2026-08-09) ---
+  # Струм, який виставляється на станцію на початку вікна. 32 А - апаратна межа
+  # цієї однофазної станції, тобто близько 7,4 кВт при 230 В.
+  zariadka_strum_rozklad:
+    name: Заряджання - струм у вікні розкладу
+    min: 8
+    max: 32
+    step: 1
+    unit_of_measurement: A
+    icon: mdi:current-ac
+
+# --- Розклад заряджання авто: межі вікна (додано 2026-08-09) ---
+# Типово збігається з нічним тарифом 23:00-06:59, бо кіловат уночі вдвічі
+# дешевший. Значення редагуються на дашборді, YAML правити не треба.
+input_datetime:
+  zariadka_pochatok:
+    name: Заряджання - початок вікна
+    has_date: false
+    has_time: true
+    icon: mdi:clock-start
+  zariadka_kinets:
+    name: Заряджання - кінець вікна
+    has_date: false
+    has_time: true
+    icon: mdi:clock-end
+
+# ВИДАЛЕНО 2026-08-08: input_select.poliv_ruchna_zona ("Ручний пуск - яку зону
+# відкривати"). Насос вмикають часто й довільно - фізичною кнопкою на модулі,
+# тумблером в інтерфейсі, зі шланга через водяну розетку. Це нормальний перебіг
+# подій, а не аварія, тому жодного вибору зони і жодних умов для ручного пуску
+# більше немає: увімкнули насос - він просто працює.
+#
+# Разом із цим helper видалено дві автоматизації, які на ньому трималися:
+# irrigation_manual_pump_opens_valve (примусово відкривала клапан обраної зони)
+# та irrigation_pump_without_open_valve (глушила насос через 3 хвилини роботи
+# без клапана). Єдиним обмеженням лишається irrigation_pump_max_runtime_3h.
+
+# Master commissioning gate. It starts off on first creation and is checked by
+# every scheduled/weather-driven irrigation automation. Manual controls and
+# emergency stop remain available independently.
+input_boolean:
+  # Set by the 21:00 rain question, read and cleared by the morning run.
+  # Off means "water normally" - so a missed evening check (HA down, no rain
+  # forecast) never silently cancels irrigation.
+  poliv_propustyty_zavtra:
+    name: Полив - пропустити завтрашній ранок
+    icon: mdi:weather-rainy
+  poliv_avtomatika_dozvolena:
+    name: Автоматичний полив дозволено
+    icon: mdi:sprinkler-variant
+
+  # --- Розклад поливу: дні тижня (додано 2026-08-03) ---
+  poliv_pn:
+    name: Полив - понеділок
+    icon: mdi:calendar
+  poliv_vt:
+    name: Полив - вівторок
+    icon: mdi:calendar
+  poliv_sr:
+    name: Полив - середа
+    icon: mdi:calendar
+  poliv_cht:
+    name: Полив - четвер
+    icon: mdi:calendar
+  poliv_pt:
+    name: Полив - п'ятниця
+    icon: mdi:calendar
+  poliv_sb:
+    name: Полив - субота
+    icon: mdi:calendar
+  poliv_nd:
+    name: Полив - неділя
+    icon: mdi:calendar
+  # Які зони бере розклад. Тривалість кожної - з input_number вище.
+  poliv_zona_1_vkl:
+    name: Зона 1 у розкладі
+    icon: mdi:sprinkler
+  poliv_zona_2_vkl:
+    name: Зона 2 у розкладі
+    icon: mdi:sprinkler
+  poliv_zona_5_vkl:
+    name: Зона 5 у розкладі
+    icon: mdi:sprinkler
+
+  # --- Розклад заряджання авто (додано 2026-08-09) ---
+  # Станція має власні таймери set_delay_time і set_define_time, але вони
+  # відлічують час ВІД ПІДКЛЮЧЕННЯ авто, а не за годинником. Щоб ловити нічний
+  # тариф, розклад веде Home Assistant.
+  zariadka_rozklad:
+    name: Заряджання авто за розкладом
+    icon: mdi:calendar-clock
+
+# --- Журнал рішень про полив (додано 2026-08-08) ---
+# Автоматизація розкладу пише сюди підсумок останнього рішення. До цього
+# рішення жило тільки в пуші на телефон: якщо пуш не побачили, на дашборді
+# не лишалося жодного сліду, чому полив не відбувся.
+input_text:
+  poliv_ostannie_rishennia:
+    name: Полив - останнє рішення
+    icon: mdi:clipboard-text-clock
+    max: 255
+
+# --- Розподіл споживання на день і ніч (додано 2026-08-08) ---
+#
+# Energy-дашборд рахує загальну вартість, але не показує, скільки з неї
+# припало на дорогий денний тариф, а скільки на дешевий нічний, і не рахує
+# гривні по окремих пристроях. utility_meter із двома тарифами розводить
+# кожен лічильник на дві гілки; перемикає їх автоматизація
+# "tarif_peremknuty_lichylnyky" о 07:00 і о 23:00 - ті самі межі, що й у
+# sensor.tarif_elektroenergii_zaraz.
+#
+# Лічильники БЕЗ cycle - наростаючі назавжди, з них будуються графіки витрат
+# (statistics-graph зі stat_type change сам рахує приріст за день чи місяць).
+# Лічильники з cycle: daily/monthly дають готові числа "сьогодні" і "цей
+# місяць" без звернення до статистики.
+#
+# ВАЖЛИВО: лічильники починають рахувати з моменту створення. Історію до
+# 2026-08-08 розділити на день і ніч неможливо - у статистиці збережена лише
+# сумарна вартість без розбиття за тарифом.
+utility_meter:
+  merezha_za_tarifom:
+    name: Мережа за тарифом
+    source: sensor.inverter_total_energy_import
+    tariffs: [den, nich]
+  merezha_dobovyi:
+    name: Мережа за добу
+    source: sensor.inverter_total_energy_import
+    cycle: daily
+    tariffs: [den, nich]
+  merezha_misiachnyi:
+    name: Мережа за місяць
+    source: sensor.inverter_total_energy_import
+    cycle: monthly
+    tariffs: [den, nich]
+
+  boiler_za_tarifom:
+    name: Бойлер за тарифом
+    source: sensor.boiler_spozhito
+    tariffs: [den, nich]
+  zariadka_za_tarifom:
+    name: Зарядка авто за тарифом
+    source: sensor.zariadka_avto_spozhito
+    tariffs: [den, nich]
+  pidloha_1_za_tarifom:
+    name: Тепла підлога 1 за тарифом
+    source: sensor.terneo_1_heating_energy
+    tariffs: [den, nich]
+  pidloha_2_za_tarifom:
+    name: Тепла підлога 2 за тарифом
+    source: sensor.terneo_2_heating_energy
+    tariffs: [den, nich]
+  nasos_za_tarifom:
+    name: Насос поливу за тарифом
+    source: sensor.nasos_polivu_spozhito
+    tariffs: [den, nich]
+
+automation: !include automations.yaml
+script: !include scripts.yaml
+scene: !include scenes.yaml
+
+# Irrigation Unlimited is the execution layer. It owns the three zone valves
+# and the master pump, but has no active schedule until commissioning. Negative
+# pre/postamble values guarantee valve-first start and pump-first stop.
+irrigation_unlimited:
+  granularity: 5
+  refresh_interval: 30
+  history:
+    enabled: true
+    span: 30
+    refresh_interval: 60
+  controllers:
+    - name: Система поливу
+      controller_id: poliv
+      entity_id: switch.mini_switch_k601_2_switch_1_2
+      preamble: "-00:00:03"
+      postamble: "-00:00:03"
+      queue_manual: true
+      show_sequence_status: true
+      all_zones_config:
+        minimum: "00:01:00"
+        maximum: "01:00:00"
+        show:
+          timeline: true
+      zones:
+        - name: Зона 1
+          zone_id: zona_1
+          entity_id: switch.avtopoliv_kontroler_avtopoliv_klapan_1
+          duration: "00:25:00"
+        - name: Зона 2
+          zone_id: zona_2
+          entity_id: switch.avtopoliv_kontroler_avtopoliv_klapan_2
+          duration: "00:25:00"
+        - name: Зона 3
+          zone_id: zona_3
+          entity_id: switch.avtopoliv_kontroler_avtopoliv_klapan_3
+          duration: "00:10:00"
+        # Зона 5 у IU потрібна лише заради ЧЕРГИ і майстер-насоса.
+        # У Smart Irrigation вона НЕ заведена навмисно - тривалість фіксована.
+        - name: Зона 5
+          zone_id: zona_5
+          entity_id: switch.avtopoliv_kontroler_avtopoliv_klapan_5
+          duration: "00:25:00"
+      sequences:
+        - name: Розумний полив
+          sequence_id: rozumnyi_poliv
+          enabled: true
+          zones:
+            - zone_id: zona_1
+            - zone_id: zona_2
+            - zone_id: zona_3
+
+# --- Total load across all three phases (added 2026-08-02) ---
+template:
+  # --- «Інше»: скільки коштує все, на чому немає власного лічильника ---
+  #
+  # Різниця між усім, що куплено з мережі, і сумою п'яти пристроїв із власними
+  # лічильниками. Це світло, розетки, побутова техніка, насоси опалення, сама
+  # плата - усе, що ніхто окремо не міряє. Без цього рядка графік по пристроях
+  # створює хибне враження, ніби вони вичерпують увесь рахунок.
+  #
+  # ВАЖЛИВО про монотонність. Ця величина - різниця, і сама по собі вона НЕ
+  # монотонна: уночі полив нараховує гривні за нічним тарифом швидше, ніж росте
+  # загальний рахунок, і різниця просідає на копійки. Для state_class total
+  # кожне таке просідання recorder записує як від'ємну зміну, і на графіку
+  # витрат по пристроях з'являється стовпчик униз.
+  #
+  # 2026-08-08 о 14:00 це вилилось у справжню аварію даних: під час перезапуску
+  # sensor.vitrati_na_merezhu_razom на мить віддав нуль, різниця впала з 491 грн
+  # майже до нуля, і накопичувальна сума відв'язалась від стану рівно на
+  # 491.66 грн. На графіку 8 серпня лишився стовпчик -430 грн.
+  #
+  # Тодішній захист - max() із власним попереднім станом - тримає значення лише
+  # доти, доки HA працює. Звичайний template-сенсор рахується наново при
+  # кожному старті, this.state на той момент невідомий, і накопичений «підпір»
+  # губиться. Саме це сталося після перезавантаження плати 2026-08-10 о 16:55:
+  # -55.89 грн за 10 серпня.
+  #
+  # Тому сенсор тригерний: такий тип відновлює свій стан після перезапуску, і
+  # max() працює наскрізь. Другий бік захисту - condition замість availability.
+  # availability робив сенсор недоступним, а після повернення this.state читався
+  # як 'unavailable' → 0, тобто дірка лишалась відкритою. Умова на тригері
+  # просто не пускає поганий розрахунок усередину, і сенсор зберігає останнє
+  # достовірне значення.
+  #
+  # Побічний ефект, про який треба знати: якщо джерела надовго відваляться,
+  # сенсор не покаже 'unavailable', а завмре на останньому числі. Для
+  # накопичувальної суми в гривнях це менше зло, ніж від'ємний стрибок.
+  - trigger:
+      - trigger: state
+        entity_id:
+          - sensor.vitrati_na_merezhu_razom
+          - sensor.vitrati_boiler
+          - sensor.vitrati_zariadka_avto
+          - sensor.vitrati_tepla_pidloga_1
+          - sensor.vitrati_tepla_pidloga_2
+          - sensor.vitrati_nasos_polivu
+      # Страховка на випадок, якщо жодне джерело довго не змінюється, і
+      # перерахунок одразу після старту - стан на той момент уже відновлений.
+      - trigger: time_pattern
+        minutes: "/5"
+      - trigger: homeassistant
+        event: start
+    condition:
+      - condition: template
+        value_template: >
+          {{ has_value('sensor.vitrati_na_merezhu_razom')
+             and (states('sensor.vitrati_na_merezhu_razom') | float(0)) > 0
+             and has_value('sensor.vitrati_boiler')
+             and has_value('sensor.vitrati_zariadka_avto')
+             and has_value('sensor.vitrati_tepla_pidloga_1')
+             and has_value('sensor.vitrati_tepla_pidloga_2')
+             and has_value('sensor.vitrati_nasos_polivu') }}
+    sensor:
+      - name: "Витрати - інше без лічильника"
+        unique_id: cost_device_other
+        unit_of_measurement: "UAH"
+        device_class: monetary
+        state_class: total
+        state: >
+          {% set calc = (states('sensor.vitrati_na_merezhu_razom') | float(0))
+            - (states('sensor.vitrati_boiler') | float(0))
+            - (states('sensor.vitrati_zariadka_avto') | float(0))
+            - (states('sensor.vitrati_tepla_pidloga_1') | float(0))
+            - (states('sensor.vitrati_tepla_pidloga_2') | float(0))
+            - (states('sensor.vitrati_nasos_polivu') | float(0)) %}
+          {% set prev = this.state | float(0) %}
+          {{ [calc, prev, 0] | max | round(2) }}
+
+  - sensor:
+      # --- План поливу в хвилинах (додано 2026-08-11) ---
+      #
+      # sensor.smart_irrigation_zonaN має device_class: duration і одиницю "s",
+      # тому плитка на дашборді показувала "2 949 s". Поряд, у текстовому
+      # поясненні, те саме число вже було у хвилинах - два формати одного
+      # значення на одній картці. Ці три сенсори дають хвилини одразу.
+      #
+      # Значення оновлюється лише на перерахунку Smart Irrigation (щодня о
+      # 19:55 або кнопкою), тому вдень воно показує план, складений напередодні
+      # ввечері. Після ранкового поливу він уже неактуальний - саме тому
+      # текстовий підпис на картці зони показує його тільки тоді, коли полив ще
+      # попереду.
+      # Назва латиницею навмисно: entity_id збирається зі слага назви, і для
+      # кирилиці його довелося б угадувати. Підпис на дашборді задає сама
+      # картка ("Полив на ранок"), тому назва сенсора видно не буде.
+      - name: "Poliv zona 1 plan hvylyn"
+        unique_id: poliv_zona_1_plan_hvylyn
+        unit_of_measurement: "хв"
+        icon: mdi:timer-sand
+        state: >
+          {{ ((states('sensor.smart_irrigation_zona1') | float(0)) / 60) | round(0) }}
+        availability: >
+          {{ has_value('sensor.smart_irrigation_zona1') }}
+      # Назва латиницею навмисно: entity_id збирається зі слага назви, і для
+      # кирилиці його довелося б угадувати. Підпис на дашборді задає сама
+      # картка ("Полив на ранок"), тому назва сенсора видно не буде.
+      - name: "Poliv zona 2 plan hvylyn"
+        unique_id: poliv_zona_2_plan_hvylyn
+        unit_of_measurement: "хв"
+        icon: mdi:timer-sand
+        state: >
+          {{ ((states('sensor.smart_irrigation_zona2') | float(0)) / 60) | round(0) }}
+        availability: >
+          {{ has_value('sensor.smart_irrigation_zona2') }}
+      # Назва латиницею навмисно: entity_id збирається зі слага назви, і для
+      # кирилиці його довелося б угадувати. Підпис на дашборді задає сама
+      # картка ("Полив на ранок"), тому назва сенсора видно не буде.
+      - name: "Poliv zona 5 plan hvylyn"
+        unique_id: poliv_zona_5_plan_hvylyn
+        unit_of_measurement: "хв"
+        icon: mdi:timer-sand
+        state: >
+          {{ ((states('sensor.smart_irrigation_zona5') | float(0)) / 60) | round(0) }}
+        availability: >
+          {{ has_value('sensor.smart_irrigation_zona5') }}
+
+      # --- Вартість у гривнях (додано 2026-08-08) ---
+      #
+      # Кожен лічильник utility_meter уже розведений на денну і нічну гілку,
+      # тому множення на ставку точне, а не усереднене: денні кВт-год множаться
+      # на денну ставку, нічні - на нічну. Ставки беруться з тих самих
+      # input_number, що й sensor.tarif_elektroenergii_zaraz, тому правка ставки
+      # на вкладці "Тариф" одразу перераховує всі ці сенсори.
+      #
+      # state_class: total дає довгострокову статистику, тому картка
+      # statistics-graph зі stat_type "change" сама покаже витрати за день або
+      # за місяць у розрізі обраного періоду.
+      - name: "Витрати вдень сьогодні"
+        unique_id: cost_day_today
+        unit_of_measurement: "UAH"
+        device_class: monetary
+        state_class: total
+        state: >
+          {{ ((states('sensor.merezha_dobovyi_den') | float(0))
+            * (states('input_number.tarif_den_07_00_22_59') | float(0))) | round(2) }}
+        availability: >
+          {{ has_value('sensor.merezha_dobovyi_den') }}
+
+      - name: "Витрати вночі сьогодні"
+        unique_id: cost_night_today
+        unit_of_measurement: "UAH"
+        device_class: monetary
+        state_class: total
+        state: >
+          {{ ((states('sensor.merezha_dobovyi_nich') | float(0))
+            * (states('input_number.tarif_nich_23_00_06_59') | float(0))) | round(2) }}
+        availability: >
+          {{ has_value('sensor.merezha_dobovyi_nich') }}
+
+      - name: "Витрати вдень цього місяця"
+        unique_id: cost_day_month
+        unit_of_measurement: "UAH"
+        device_class: monetary
+        state_class: total
+        state: >
+          {{ ((states('sensor.merezha_misiachnyi_den') | float(0))
+            * (states('input_number.tarif_den_07_00_22_59') | float(0))) | round(2) }}
+        availability: >
+          {{ has_value('sensor.merezha_misiachnyi_den') }}
+
+      - name: "Витрати вночі цього місяця"
+        unique_id: cost_night_month
+        unit_of_measurement: "UAH"
+        device_class: monetary
+        state_class: total
+        state: >
+          {{ ((states('sensor.merezha_misiachnyi_nich') | float(0))
+            * (states('input_number.tarif_nich_23_00_06_59') | float(0))) | round(2) }}
+        availability: >
+          {{ has_value('sensor.merezha_misiachnyi_nich') }}
+
+      # Наростаючі гілки день/ніч окремо - потрібні саме для графіка:
+      # statistics-graph зі stat_type "change" будує з них стовпчики за день
+      # або за місяць і показує співвідношення дорогого й дешевого тарифу.
+      - name: "Витрати вдень разом"
+        unique_id: cost_day_total
+        unit_of_measurement: "UAH"
+        device_class: monetary
+        state_class: total
+        state: >
+          {{ ((states('sensor.merezha_za_tarifom_den') | float(0))
+            * (states('input_number.tarif_den_07_00_22_59') | float(0))) | round(2) }}
+        availability: >
+          {{ has_value('sensor.merezha_za_tarifom_den') }}
+
+      - name: "Витрати вночі разом"
+        unique_id: cost_night_total
+        unit_of_measurement: "UAH"
+        device_class: monetary
+        state_class: total
+        state: >
+          {{ ((states('sensor.merezha_za_tarifom_nich') | float(0))
+            * (states('input_number.tarif_nich_23_00_06_59') | float(0))) | round(2) }}
+        availability: >
+          {{ has_value('sensor.merezha_za_tarifom_nich') }}
+
+      - name: "Витрати на мережу разом"
+        unique_id: cost_grid_total
+        unit_of_measurement: "UAH"
+        device_class: monetary
+        state_class: total
+        state: >
+          {{ ((states('sensor.merezha_za_tarifom_den') | float(0))
+              * (states('input_number.tarif_den_07_00_22_59') | float(0))
+            + (states('sensor.merezha_za_tarifom_nich') | float(0))
+              * (states('input_number.tarif_nich_23_00_06_59') | float(0))) | round(2) }}
+        availability: >
+          {{ has_value('sensor.merezha_za_tarifom_den')
+             and has_value('sensor.merezha_za_tarifom_nich') }}
+
+      - name: "Витрати - бойлер"
+        unique_id: cost_device_boiler
+        unit_of_measurement: "UAH"
+        device_class: monetary
+        state_class: total
+        state: >
+          {{ ((states('sensor.boiler_za_tarifom_den') | float(0))
+              * (states('input_number.tarif_den_07_00_22_59') | float(0))
+            + (states('sensor.boiler_za_tarifom_nich') | float(0))
+              * (states('input_number.tarif_nich_23_00_06_59') | float(0))) | round(2) }}
+        availability: >
+          {{ has_value('sensor.boiler_za_tarifom_den')
+             and has_value('sensor.boiler_za_tarifom_nich') }}
+
+      - name: "Витрати - зарядка авто"
+        unique_id: cost_device_ev
+        unit_of_measurement: "UAH"
+        device_class: monetary
+        state_class: total
+        state: >
+          {{ ((states('sensor.zariadka_za_tarifom_den') | float(0))
+              * (states('input_number.tarif_den_07_00_22_59') | float(0))
+            + (states('sensor.zariadka_za_tarifom_nich') | float(0))
+              * (states('input_number.tarif_nich_23_00_06_59') | float(0))) | round(2) }}
+        availability: >
+          {{ has_value('sensor.zariadka_za_tarifom_den')
+             and has_value('sensor.zariadka_za_tarifom_nich') }}
+
+      - name: "Витрати - тепла підлога 1"
+        unique_id: cost_device_floor1
+        unit_of_measurement: "UAH"
+        device_class: monetary
+        state_class: total
+        state: >
+          {{ ((states('sensor.pidloha_1_za_tarifom_den') | float(0))
+              * (states('input_number.tarif_den_07_00_22_59') | float(0))
+            + (states('sensor.pidloha_1_za_tarifom_nich') | float(0))
+              * (states('input_number.tarif_nich_23_00_06_59') | float(0))) | round(2) }}
+        availability: >
+          {{ has_value('sensor.pidloha_1_za_tarifom_den')
+             and has_value('sensor.pidloha_1_za_tarifom_nich') }}
+
+      - name: "Витрати - тепла підлога 2"
+        unique_id: cost_device_floor2
+        unit_of_measurement: "UAH"
+        device_class: monetary
+        state_class: total
+        state: >
+          {{ ((states('sensor.pidloha_2_za_tarifom_den') | float(0))
+              * (states('input_number.tarif_den_07_00_22_59') | float(0))
+            + (states('sensor.pidloha_2_za_tarifom_nich') | float(0))
+              * (states('input_number.tarif_nich_23_00_06_59') | float(0))) | round(2) }}
+        availability: >
+          {{ has_value('sensor.pidloha_2_za_tarifom_den')
+             and has_value('sensor.pidloha_2_za_tarifom_nich') }}
+
+      - name: "Витрати - насос поливу"
+        unique_id: cost_device_pump
+        unit_of_measurement: "UAH"
+        device_class: monetary
+        state_class: total
+        state: >
+          {{ ((states('sensor.nasos_za_tarifom_den') | float(0))
+              * (states('input_number.tarif_den_07_00_22_59') | float(0))
+            + (states('sensor.nasos_za_tarifom_nich') | float(0))
+              * (states('input_number.tarif_nich_23_00_06_59') | float(0))) | round(2) }}
+        availability: >
+          {{ has_value('sensor.nasos_za_tarifom_den')
+             and has_value('sensor.nasos_za_tarifom_nich') }}
+
+      # «Витрати - інше без лічильника» жив тут до 2026-08-11. Тепер це
+      # тригерний сенсор на початку секції template: лише такий переживає
+      # перезапуск зі збереженим станом. Причина переїзду описана там.
+
+      - name: "Загальне навантаження"
+        unique_id: total_load_power
+        unit_of_measurement: "kW"
+        device_class: power
+        state_class: measurement
+        state: >
+          {{ (states('sensor.energy_meter_phase_a_power_2') | float(0)
+            + states('sensor.energy_meter_phase_b_power_2') | float(0)
+            + states('sensor.energy_meter_phase_c_power_2') | float(0)) | round(3) }}
+        availability: >
+          {{ states('sensor.energy_meter_phase_a_power_2') not in ['unknown', 'unavailable']
+             and states('sensor.energy_meter_phase_b_power_2') not in ['unknown', 'unavailable']
+             and states('sensor.energy_meter_phase_c_power_2') not in ['unknown', 'unavailable'] }}
+
+      # Фізична топологія вводу:
+      #   мережа (трифазний лічильник) -> інвертор Deye + споживачі поза Deye.
+      # Deye бачить тільки власну гілку, тому його sensor.inverter_grid_power не
+      # можна показувати як повне споживання з мережі. Обидва сенсори нижче у W,
+      # щоб картка потоку могла без додаткових перетворень показати розгалуження.
+      - name: "Мережа - потужність усього вводу"
+        unique_id: grid_total_input_power_w
+        unit_of_measurement: "W"
+        device_class: power
+        state_class: measurement
+        state: >
+          {{ ((states('sensor.zagalne_navantazhennia') | float(0)) * 1000) | round(0) }}
+        availability: >
+          {{ has_value('sensor.zagalne_navantazhennia') }}
+
+      - name: "Споживання поза інвертором"
+        unique_id: power_outside_inverter
+        unit_of_measurement: "W"
+        device_class: power
+        state_class: measurement
+        state: >
+          {% set total = (states('sensor.zagalne_navantazhennia') | float(0)) * 1000 %}
+          {% set inverter_branch = states('sensor.inverter_grid_power') | float(0) %}
+          {{ [total - inverter_branch, 0] | max | round(0) }}
+        availability: >
+          {{ has_value('sensor.zagalne_navantazhennia')
+             and has_value('sensor.inverter_grid_power') }}
+
+      - name: "Загальний струм"
+        unique_id: total_load_current
+        unit_of_measurement: "A"
+        device_class: current
+        state_class: measurement
+        state: >
+          {{ (states('sensor.energy_meter_phase_a_current_2') | float(0)
+            + states('sensor.energy_meter_phase_b_current_2') | float(0)
+            + states('sensor.energy_meter_phase_c_current_2') | float(0)) | round(2) }}
+        availability: >
+          {{ states('sensor.energy_meter_phase_a_current_2') not in ['unknown', 'unavailable']
+             and states('sensor.energy_meter_phase_b_current_2') not in ['unknown', 'unavailable']
+             and states('sensor.energy_meter_phase_c_current_2') not in ['unknown', 'unavailable'] }}
+
+      # --- Насос поливу (додано 2026-08-03) ---------------------------------
+      # Потужність і наростаючий лічильник живуть як UI-помічники в .storage
+      # (див. коментар нижче). Тут - лише те, чого там немає.
+      # Насос на фазі B: встановлено по стрибку +1.1 кВт саме на цій фазі на
+      # 6 незалежних вмиканнях/вимиканнях 2026-08-03; фази A і C не реагували.
+      # Напруга, яку реально бачить насос: він на фазі B (встановлено тим самим
+      # вимірюванням). Це показ домового лічильника, а не самого насоса.
+      # Враховує всі вісім клапанів, а не лише перші три: полив зони 4 або 5
+      # раніше показувався як "АВАРІЯ — НАСОС БЕЗ КЛАПАНА".
+      #
+      # Стану "аварія" тут більше немає взагалі. Насос без жодного відкритого
+      # клапана - це полив зі шланга через водяну розетку, звичайна щоденна
+      # справа, а не збій. Якщо працює насос і відкрита зона - показуємо зону,
+      # якщо тільки насос - показуємо шланг.
+      - name: "Полив - стан системи"
+        unique_id: irrigation_system_status
+        icon: >-
+          {% set klapan = namespace(any=false) %}
+          {% for n in range(1, 9) %}
+            {% if is_state('switch.avtopoliv_kontroler_avtopoliv_klapan_' ~ n, 'on') %}
+              {% set klapan.any = true %}
+            {% endif %}
+          {% endfor %}
+          {% if is_state('switch.mini_switch_k601_2_switch_1_2', 'on') %}
+            mdi:sprinkler-variant
+          {% elif klapan.any %}
+            mdi:valve-open
+          {% else %}
+            mdi:water-off
+          {% endif %}
+        state: >-
+          {% set pump = is_state('switch.mini_switch_k601_2_switch_1_2', 'on') %}
+          {% set zone = namespace(id=0) %}
+          {% for n in range(1, 9) %}
+            {% if zone.id == 0
+                  and is_state('switch.avtopoliv_kontroler_avtopoliv_klapan_' ~ n, 'on') %}
+              {% set zone.id = n %}
+            {% endif %}
+          {% endfor %}
+          {% if pump and zone.id %}ПОЛИВАЄ — ЗОНА {{ zone.id }}
+          {% elif pump %}ПОЛИВАЄ — ШЛАНГ
+          {% elif zone.id %}ПІДГОТОВКА/ЗУПИНКА — ЗОНА {{ zone.id }}
+          {% else %}ЗУПИНЕНО
+          {% endif %}
+
+      - name: "Насос поливу - напруга"
+        unique_id: pump_voltage_phase_b
+        unit_of_measurement: "V"
+        device_class: voltage
+        state_class: measurement
+        state: >
+          {{ states('sensor.energy_meter_phase_b_voltage_2') | float(0) | round(1) }}
+        availability: >
+          {{ states('sensor.energy_meter_phase_b_voltage_2')
+             not in ['unknown', 'unavailable'] }}
+
+      - name: "Насос поливу - спожито за сесію"
+        unique_id: pump_energy_session
+        unit_of_measurement: "kWh"
+        icon: mdi:lightning-bolt
+        state: >
+          {% set tot = states('sensor.nasos_polivu_spozhito') | float(0) %}
+          {% set base = states('input_number.nasos_energiia_start') | float(0) %}
+          {{ [tot - base, 0] | max | round(3) }}
+
+      - name: "Насос поливу - енергія сьогодні"
+        unique_id: pump_energy_today
+        unit_of_measurement: "kWh"
+        icon: mdi:lightning-bolt
+        state: >
+          {% set p = states('input_number.nasos_polivu_potuzhnist') | float(1100) %}
+          {{ ((states('sensor.nasos_polivu_robota_sogodni') | float(0))
+              * p / 1000) | round(3) }}
+
+# --- Recorder: keep detailed history longer for analysis (added 2026-08-02) ---
+# Home Assistant дістається ззовні через Tailscale Serve, а той проксіює запит
+# з 127.0.0.1. Без цих двох рядків HA вважав би локальним будь-кого, хто зайшов
+# ззовні, і «тільки локальний доступ» на облікових записах не значив би нічого.
+http:
+  use_x_forwarded_for: true
+  trusted_proxies:
+    - 127.0.0.1
+    - ::1
+  # Автоматичний бан після 5 невдалих спроб входу. Типове значення -1 означає
+  # "не банити ніколи" - прийнятно, поки HA лише в локальній мережі, і ні,
+  # щойно вона стає досяжною ззовні. Бани лягають у ip_bans.yaml, звідти ж і
+  # знімаються.
+  login_attempts_threshold: 5
+
+recorder:
+  # 30 days of 5-second inverter polling pushed the DB past 800 MB on a
+  # 2.5 GB partition; 14 was not enough either - at ~130 MB a day it was
+  # heading for 1.9 GB with 291 MB free (measured 2026-08-10). Seven days
+  # stops the growth at roughly the current file size, because a purge
+  # reuses freed pages rather than shrinking the file.
+  # 2026-08-13: the HA venv (1.2 GB) moved off /userdata to the root
+  # partition, leaving 2.0 GB free here instead of 846 MB. At the ~130 MB
+  # a day measured above, seven days lands near 0.9 GB - so the three-day
+  # value forced by the old cramped partition is no longer needed.
+  purge_keep_days: 7
+  # Reduce SQLite/eMMC write frequency while keeping adequate history resolution.
+  commit_interval: 30
+  auto_purge: true
+  exclude:
+    domains:
+      - update
+      - automation
+      - script
+      - persistent_notification
+    # Dynamic client-list attributes are useful on the live dashboard but
+    # would create needless SQLite/eMMC churn when devices roam between APs.
+    entities:
+      - sensor.tenda_ap_clients
+      - sensor.tenda_ap_status
+      - sensor.tenda_ap_security
+      - sensor.tenda_repeater_status
+      - sensor.tenda_repeater_clients
+      # STOP-RECORDER-BLOAT (2026-08-08): the Deye reports 203 entities every
+      # 5 s. These per-phase voltages and currents are referenced by no
+      # dashboard, template or automation - they were simply filling the disk.
+      # The ones the Інвертор tab and Energy dashboard do use are NOT here.
+      - number.inverter_battery_generator_charging_current
+      - number.inverter_battery_generator_charging_start_voltage
+      - number.inverter_battery_grid_charging_current
+      - number.inverter_battery_grid_charging_start_voltage
+      - number.inverter_battery_low_voltage
+      - number.inverter_battery_max_charging_current
+      - number.inverter_battery_max_discharging_current
+      - number.inverter_battery_restart_voltage
+      - number.inverter_battery_shutdown_voltage
+      - number.inverter_grid_voltage_protection_high
+      - number.inverter_grid_voltage_protection_low
+      - number.inverter_program_1_voltage
+      - number.inverter_program_2_voltage
+      - number.inverter_program_3_voltage
+      - number.inverter_program_4_voltage
+      - number.inverter_program_5_voltage
+      - number.inverter_program_6_voltage
+      - number.inverter_smartload_off_voltage
+      - number.inverter_smartload_on_voltage
+      - select.inverter_grid_voltage
+      - sensor.inverter_external_ct1_current
+      - sensor.inverter_external_ct2_current
+      - sensor.inverter_external_ct3_current
+      - sensor.inverter_generator_l1_voltage
+      - sensor.inverter_generator_l2_voltage
+      - sensor.inverter_generator_l3_voltage
+      - sensor.inverter_internal_ct1_current
+      - sensor.inverter_internal_ct2_current
+      - sensor.inverter_internal_ct3_current
+      - sensor.inverter_load_l1_voltage
+      - sensor.inverter_load_l2_voltage
+      - sensor.inverter_load_l3_voltage
+      - sensor.inverter_output_l1_current
+      - sensor.inverter_output_l1_voltage
+      - sensor.inverter_output_l2_current
+      - sensor.inverter_output_l3_current
+      - sensor.inverter_output_l3_voltage
+      - sensor.inverter_pv1_current
+      - sensor.inverter_pv1_voltage
+      - sensor.inverter_pv2_current
+      - sensor.inverter_pv2_voltage
+
+# --- Separate YAML dashboard with instantaneous power graphs ---
+lovelace:
+  resources:
+    - url: /hacsfiles/sunsynk-power-flow-card/sunsynk-power-flow-card.js
+      type: module
+    # Встановлені вручну в www/community (повз HACS), тому шлях /local/,
+    # а не /hacsfiles/ - той алias обслуговує лише репозиторії, які знає HACS.
+    - url: /local/community/mushroom/mushroom.js
+      type: module
+    - url: /local/community/card-mod/card-mod.js
+      type: module
+    - url: /local/community/mini-graph-card/mini-graph-card-bundle.js
+      type: module
+  mode: storage
+  dashboards:
+    # url_path свідомо лишається power-dashboard: перейменування зламало б усі
+    # наявні посилання, зокрема кнопку «Витрати» на головній сторінці «Огляд».
+    power-dashboard:
+      mode: yaml
+      title: Енергія
+      icon: mdi:home-lightning-bolt
+      show_in_sidebar: true
+      filename: power_dashboard.yaml
+    pristroi-dashboard:
+      mode: yaml
+      title: Пристрої
+      icon: mdi:devices
+      show_in_sidebar: true
+      filename: devices_dashboard.yaml
+    ohliad-dashboard:
+      mode: yaml
+      title: Огляд
+      icon: mdi:home-variant
+      show_in_sidebar: true
+      filename: overview_dashboard.yaml
+
+sensor:
+  - platform: integration
+    source: sensor.zariadka_7_5kvt_device_kw
+    name: Зарядка авто - спожито
+    unique_id: ev_charger_energy_total
+    unit_time: h
+    method: left
+    round: 3
+    max_sub_interval: "00:01:00"
+  - platform: history_stats
+    name: "Насос поливу - робота сьогодні"
+    entity_id: switch.mini_switch_k601_2_switch_1_2
+    state: "on"
+    type: time
+    start: "{{ today_at('00:00') }}"
+    end: "{{ now() }}"
+  - platform: history_stats
+    name: "Зона 1 - полив сьогодні"
+    entity_id: switch.avtopoliv_kontroler_avtopoliv_klapan_1
+    state: "on"
+    type: time
+    start: "{{ today_at('00:00') }}"
+    end: "{{ now() }}"
+  - platform: history_stats
+    name: "Зона 2 - полив сьогодні"
+    entity_id: switch.avtopoliv_kontroler_avtopoliv_klapan_2
+    state: "on"
+    type: time
+    start: "{{ today_at('00:00') }}"
+    end: "{{ now() }}"
+  - platform: history_stats
+    name: "Зона 3 - полив сьогодні"
+    entity_id: switch.avtopoliv_kontroler_avtopoliv_klapan_3
+    state: "on"
+    type: time
+    start: "{{ today_at('00:00') }}"
+    end: "{{ now() }}"
+  # Додано 2026-08-11: зони 5 тут не було, тому графік "Робота сьогодні" мовчав
+  # про зону, яка поливається за розкладом, зате показував зону 3, яка зараз не
+  # використовується взагалі.
+  - platform: history_stats
+    name: "Зона 5 - полив сьогодні"
+    entity_id: switch.avtopoliv_kontroler_avtopoliv_klapan_5
+    state: "on"
+    type: time
+    start: "{{ today_at('00:00') }}"
+    end: "{{ now() }}"
+
+# The AsusWRT library emits the same deprecation warning every 30 seconds.
+# Keep real errors visible without filling the local journal with duplicates.
+# ЗАСТОСОВАНО І ПРИБРАНО 2026-08-11: одноразовий компонент homemate_fixup
+# виправив прив'язку зон Smart Irrigation (інцидент 0cfd77b0). Журнал показав,
+# що зонам 1 і 2 були прив'язані застарілі хмарні дублі
+# switch.avtopoliv_kontroler_switch_1 і _2, які постійно unavailable і подій не
+# дають, - через це полив цих зон не зараховувався з 8 серпня. Замінено на
+# фізичні клапани switch.avtopoliv_kontroler_avtopoliv_klapan_1 і _2.
+# Зона 5 вже була прив'язана правильно, її не чіпали.
+
+logger:
+  logs:
+    aioasuswrt.asuswrt: error
+    # Temporary 2026-08-05: capture the exact Tuya QR-login error code/message.
+    # Remove once the cloud re-authentication succeeds.
+    homeassistant.components.tuya: debug
+    # ЗНИЖЕНО 2026-08-09 після аварії: на рівні debug ця бібліотека пише КОЖЕН
+    # MQTT-пакет хмари Tuya (кілька разів на секунду). За чотири доби лог виріс
+    # до 74 МБ і разом із базою recorder заповнив розділ /userdata на 100%.
+    # Home Assistant після цього не міг навіть створити файл блокування і падав
+    # у циклі рестартів з OSError: [Errno 28] No space left on device.
+    # Діагностика QR-логіну лишається на homeassistant.components.tuya вище -
+    # вона на порядки менш балакуча.
+    tuya_sharing: warning
+    # УВІМКНЕНО 2026-08-10 для інциденту 0cfd77b0. У журналі не було жодного
+    # рядка рівня info, тому про роботу observed watering можна було лише
+    # здогадуватися за результатом - bucket, який не поповнився. На рівні info
+    # модуль пише два потрібні рядки: скільки клапанів він узагалі відстежує
+    # ("tracking N linked valve(s)" при старті) і скільки міліметрів зарахував
+    # кожній зоні після закриття клапана. Компонент рахує раз на добу о 19:55
+    # плюс події клапанів, тому балакучості, як у tuya_sharing, тут немає.
+    # Вимкнути, коли зарахування зонам 1 і 2 буде налагоджене. Рівень info тут
+    # лишається навмисно: саме він показує рядок зарахування "zone N -> +X mm",
+    # за яким автоматизація POLIV-БАЛАНС звіряється зі штатним модулем.
+    # Рівень debug знято 2026-08-11: він був потрібен, щоб довести, що подія
+    # відкриття клапана до зон 1 і 2 не доходить. Це доведено, більше не треба.
+    custom_components.smart_irrigation: info
+
+# --- Per-device energy accounting (added 2026-08-03) ---
+#
+# УВАГА: два сенсори бойлера створені як UI-помічники (config entries у
+# .storage/core.config_entries), а НЕ цим файлом - на момент створення до плати
+# не було SSH, лише REST API. Тому тут вони лише задокументовані. Якщо колись
+# доведеться піднімати конфіг з нуля, розкоментуй блок нижче І видали
+# відповідні помічники в UI, інакше сутності задублюються.
+#
+# Тепла підлога власних сенсорів не потребує: термостати Terneo самі віддають
+# sensor.terneo_N_heating_energy у кВт-год (час замикання реле помножений на
+# power_watts=2000, прошиту в самому термостаті - це оцінка, не вимір).
+#
+# Бойлер Midea лічильника енергії не має. Модель потужності:
+#   * heating = False                    -> 0 Вт
+#   * heating = True, heating_power > 0  -> heating_power (2200 Вт, верхній тен)
+#   * heating = True, heating_power = 0  -> 800 Вт (працює лише нижній тен)
+# Обидві цифри звірені зі стрибком загального лічильника будинку 2026-08-03:
+# вимкнення верхнього тена давало -2.18 і -1.92 кВт, нижнього - близько -0.75 кВт.
+#
+# template:
+#   - sensor:
+#       - name: "Бойлер - потужність"
+#         unique_id: boiler_power_estimated
+#         unit_of_measurement: "W"
+#         device_class: power
+#         state_class: measurement
+#         state: >
+#           {% set e = 'water_heater.144036023323246_water_heater' %}
+#           {% set hp = state_attr(e, 'heating_power') | float(0) %}
+#           {{ 0 if not state_attr(e, 'heating') else (hp if hp > 0 else 800) }}
+#
+# sensor:
+#   - platform: integration
+#     source: sensor.boiler_potuzhnist
+#     name: Бойлер - спожито
+#     unique_id: boiler_energy_total
+#     unit_prefix: k
+#     unit_time: h
+#     method: left
+#     round: 3
+#     max_sub_interval: "00:01:00"
+
+# --- Насос поливу: облік енергії (додано 2026-08-03) ---
+#
+# Так само як бойлер, ці сутності створені як UI-помічники в .storage, а не тут:
+#   input_number.nasos_polivu_potuzhnist        - калібрувальна потужність, Вт
+#   sensor.nasos_polivu_potuzhnist_zaraz        - template, миттєва потужність
+#   sensor.nasos_polivu_spozhito                - Riemann left -> кВт-год
+#
+# Реле Tuya Mini switch K601 лічильника енергії НЕ має (перевірено: у пристрою
+# лише switch, timer і power_on_behavior). Тому енергія = час роботи реле,
+# помножений на потужність.
+#
+# Потужність 1100 Вт ВИМІРЯНА 2026-08-03 по стрибку sensor.zagalne_navantazhennia,
+# а не взята зі стелі:
+#   * контрольований пуск (клапан -> насос, по 90 с) : 8.453 - 7.46  = 994 Вт
+#   * реальний пуск 19:11:39 (41 вимір)              : 3.521 - 2.095 = 1426 Вт
+#   * реальний пуск 19:13:19                         : 3.214 - 2.095 = 1119 Вт
+# Взято медіану. Значення міняється з дашборда, YAML для цього правити не треба.
+#
+# Насос видно у HA двічі. ГОЛОВНА - локальна сутність; хмарна лише резерв:
+#   {% set l = states('switch.mini_switch_k601_2_switch_1_2') %}
+#   {% set c = states('switch.mini_switch_k601_2_switch_1') %}
+#   {% set on = (l == 'on') if l in ['on','off'] else (c == 'on') %}
+# Спершу була проста OR-логіка, але вона хибна: якщо локальна вже сказала off,
+# а хмарна ще тримає застаріле on, облік нараховував би неіснуюче споживання.
+
+# --- Двозонний тариф на електроенергію (додано 2026-08-03) ---
+#
+# Було: плоска ціна 2.5 грн/кВт-год у налаштуваннях Energy-дашборда
+# (number_energy_price). Тобто ВЕСЬ день рахувався за нічною ставкою, і денне
+# споживання недооцінювалося рівно вдвічі.
+#
+# Стало: Energy-дашборд бере ціну з сутності (entity_energy_price), а не число.
+# Помічники (UI, .storage - як і решта):
+#   input_number.tarif_den_07_00_22_59   = 5.00 грн/кВт-год
+#   input_number.tarif_nich_23_00_06_59  = 2.50 грн/кВт-год
+#   sensor.tarif_elektroenergii_zaraz    - template, перемикається за годиною:
+#       {% set h = now().hour %}
+#       {{ ден if 7 <= h < 23 else ніч }}
+#   Межі перевірені: 03:00->2.5, 07:00->5.0, 14:00->5.0, 22:00->5.0, 23:00->2.5.
+#
+# Ставки редагуються з дашборда "Потужність" -> вкладка "Тариф".
+#
+# ВАЖЛИВО: перерахунок діє лише на споживання ПІСЛЯ 2026-08-03. Історія
+# статистики вартості заднім числом не переписується - там лишається 2.5 грн.
+
+# --- Камера "Двір": перегляд моменту виявлення руху (додано 2026-08-04) ---
+#
+# Hikvision сам не зберігає кадри для HA - camera.cam1 віддає лише живий потік.
+# При кожному спрацюванні binary_sensor.cam1_motion автоматизація
+# "hikvision_motion_snapshot" (automations.yaml) робить camera.snapshot і кладе
+# файл у www/motion/ (роздається як /local/motion/motion_*.jpg), а також
+# оновлює www/motion/latest.jpg. Окрема вкладка дашборда "Останній рух"
+# (devices_dashboard.yaml, path: motion) показує latest.jpg через звичайний
+# markdown-image БЕЗ jinja/cache-busting - той варіант з timestamp-текстом і
+# query-параметром постійно ловив InvalidStateError у sections-грід (див.
+# GOTCHA у dashboards.md) і картка зникала. Час останнього руху натомість
+# видно на вкладці Камера (рядок "Рух", secondary_info: last-changed).
+# НЕ через platform: local_file - той більше не підтримує YAML-налаштування
+# в цій версії HA ("does not support platform setup").
+# shell_command.update_motion_snapshot лишає останні 30 знімків, старі видаляє.
+
+# --- Camera clips: is the NAS video share actually mounted? (added 2026-08-05) ---
+# Guard for the motion-clip automation. If the NAS is unreachable the mount point
+# is just an ordinary empty directory, and writing clips into it would fill
+# /userdata - exactly the failure that took the whole system down earlier today.
+command_line:
+  # Стан файлової системи /userdata. Перевірка при завантаженні знята
+  # (fstab pass 0), інакше пошкоджений розділ не монтується і HA не
+  # стартує взагалі - тож роль сторожа виконує цей сенсор.
+  - binary_sensor:
+      name: Userdata FS poshkodzhena
+      unique_id: userdata_fs_clean
+      # Шукати саме "with errors", а не "clean": змонтована ext4 ЗАВЖДИ
+      # позначена "not clean" - вона стає чистою лише при відмонтуванні, тож
+      # перевірка на "clean" сигналила б тривогу цілодобово. Прапорець помилок
+      # у суперблоці - це окрема річ, і саме він тут важливий.
+      command: >-
+        sudo dumpe2fs -h /dev/mmcblk0p8 2>/dev/null
+        | grep -q "Filesystem state:.*with errors" && echo "ON" || echo "OFF"
+      payload_on: "ON"
+      payload_off: "OFF"
+      device_class: problem
+      scan_interval: 3600
+  # Вільне місце на розділі, де живе Home Assistant. Розділ 2.5 ГБ, і
+  # заповнений він уже одного разу клав дім (5 серпня, полив стояв добу).
+  # Корінь тепер тримає базу recorder, тож стежити треба за обома розділами.
+  # Вільне місце на розділі, де живе Home Assistant. Розділ 2.5 ГБ, і
+  # заповнений він уже одного разу клав дім (5 серпня, полив стояв добу).
+  # Корінь тепер тримає базу recorder, тож стежити треба за обома розділами.
+  - sensor:
+      name: Vilne mistse korenia
+      unique_id: root_free_mb
+      command: "df -Pm / | awk 'NR==2{print $4}'"
+      unit_of_measurement: MB
+      state_class: measurement
+      scan_interval: 600
+  - sensor:
+      name: Vilne mistse userdata
+      unique_id: userdata_free_mb
+      command: "df -Pm /userdata | awk 'NR==2{print $4}'"
+      unit_of_measurement: MB
+      state_class: measurement
+      scan_interval: 600
+  # Newest motion clips as JSON, for the gallery card on the Останній рух
+  # tab. Path is the www bind mount, so the links need no auth token.
+  - sensor:
+      name: Motion clips list
+      unique_id: motion_clips_list
+      command: >-
+        cd /userdata/hass/config/www/motion-clips 2>/dev/null &&
+        ls -t */ruh_*.mp4 2>/dev/null | head -40 |
+        awk -F/ '{split($2,a,"_"); t=substr(a[2],1,2)":"substr(a[2],3,2)":"substr(a[2],5,2);
+        printf "%s{\"d\":\"%s\",\"t\":\"%s\",\"f\":\"%s\"}", (NR>1?",":""), $1, t, $2}'
+        | awk 'BEGIN{printf "{\"clips\":["} {printf "%s", $0} END{printf "]}"}'
+      value_template: "ok"
+      json_attributes:
+        - clips
+      scan_interval: 120
+  - binary_sensor:
+      name: NAS videoarkhiv zmontovanyi
+      unique_id: nas_video_mount_ok
+      command: mountpoint -q /userdata/hass/config/media/video && echo ON || echo OFF
+      payload_on: "ON"
+      payload_off: "OFF"
+      scan_interval: 300
+  - binary_sensor:
+      name: CloudMate NAS Online
+      unique_id: cloudmate_nas_online
+      command: 'ping -W 1 -c 1 192.168.50.25 > /dev/null 2>&1 && echo ON || echo OFF'
+      payload_on: "ON"
+      payload_off: "OFF"
+      scan_interval: 30
+      device_class: connectivity
+      icon: mdi:nas
+  - binary_sensor:
+      name: TCL TV Online
+      unique_id: tcl_tv_online
+      command: 'ping -W 1 -c 1 192.168.50.175 > /dev/null 2>&1 && echo ON || echo OFF'
+      payload_on: "ON"
+      payload_off: "OFF"
+      scan_interval: 30
+      device_class: connectivity
+      icon: mdi:television
+  - binary_sensor:
+      name: Hikvision Camera Online
+      unique_id: hikvision_camera_online
+      command: 'ping -W 1 -c 1 192.168.50.201 > /dev/null 2>&1 && echo ON || echo OFF'
+      payload_on: "ON"
+      payload_off: "OFF"
+      scan_interval: 30
+      device_class: connectivity
+      icon: mdi:cctv
+
+shell_command:
+  # Keep the clip folder bounded. It lives on the NAS, but an unbounded
+  # folder is still bad manners - and if the mount ever silently fell away
+  # this would be running against the board's own disk.
+  prepare_motion_dir: "d=/userdata/hass/config/media/video/ha-motion; mkdir -p $d/$(date +%Y-%m-%d); find $d -mindepth 1 -maxdepth 1 -type d -mtime +14 -exec rm -rf {} +"
+  rebuild_clip_gallery: "/userdata/hass/venv/bin/python /userdata/hass/config/scripts-gen-gallery.py"
+  update_motion_snapshot: "cd /userdata/hass/config/www/motion && ls -t motion_*.jpg 2>/dev/null | head -1 | xargs -I{} cp {} latest.jpg && ls -t motion_*.jpg 2>/dev/null | tail -n +31 | xargs -r rm --"

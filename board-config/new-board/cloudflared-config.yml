@@ -1,0 +1,17 @@
+# Named tunnel for Home Assistant on sonyachny.pp.ua.
+#
+# Replaces the account-less quick tunnel, which was issued a new random
+# trycloudflare.com hostname on every start and could not sit behind any
+# authentication. This one keeps one hostname across reboots and can be put
+# behind Cloudflare Access.
+#
+# Only ha.sonyachny.pp.ua is served. Anything else that reaches this tunnel
+# gets a 404 rather than being quietly forwarded to Home Assistant.
+tunnel: 853e952b-c3b4-454f-b349-203959c19369
+credentials-file: /home/forlinx/.cloudflared/853e952b-c3b4-454f-b349-203959c19369.json
+no-autoupdate: true
+
+ingress:
+  - hostname: ha.sonyachny.pp.ua
+    service: http://127.0.0.1:8123
+  - service: http_status:404

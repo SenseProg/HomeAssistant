@@ -1,0 +1,39 @@
+network:
+        version: 2
+        ethernets:
+                eth0:
+                        # .141 first and .168 second on purpose. The NAS exports its
+                        # shares to 192.168.50.141 only, and Linux picks the FIRST
+                        # address as the source for outgoing traffic - with .168
+                        # first, every NFS mount was refused (measured 2026-08-14).
+                        # .168 stays as a lifeline so a wrong .141 cannot strand
+                        # the board: this SoM has no usable debug UART.
+                        dhcp4: false
+                        addresses: [192.168.50.141/24, 192.168.50.168/24]
+                        gateway4: 192.168.50.1
+                        nameservers:
+                                addresses: [192.168.50.1, 1.1.1.1]
+                        optional: true
+                        # These three hosts - the Tenda AC10, .175 and the Hikvision
+                        # camera - are unreachable from this board's segment (0 of 10
+                        # pings while the NAS answers 10 of 10, clean error counters,
+                        # a static ARP entry changes nothing). The spare board reaches
+                        # them and relays. The routes live here, not in a oneshot
+                        # unit: eth0 lost carrier at 14:13 and 14:32 on 2026-08-14,
+                        # networkd re-configured the link and flushed every route it
+                        # did not own, and the unit never re-ran because
+                        # RemainAfterExit made systemd believe it was still active.
+                        # Delete this block once the cable moves to a port that
+                        # reaches that segment.
+                        routes:
+                                # The irrigation controller is reachable from
+                                # other LAN clients, but direct ARP from this
+                                # board gets no reply after the controller
+                                # reconnects to Wi-Fi. Routing this single host
+                                # through the main ASUS was verified on
+                                # 2026-08-15: ping 3/3 and LocalTuya TCP/6668.
+                                - to: 192.168.50.221/32
+                                  via: 192.168.50.1
+                eth1:
+                        dhcp4: true
+                        optional: true

@@ -878,12 +878,16 @@
     entity_id: sensor.vilne_mistse_userdata
     below: 250
     for: '00:30:00'
+  - trigger: numeric_state
+    entity_id: sensor.vilne_mistse_korenia
+    below: 800
+    for: '00:30:00'
   actions:
   - action: notify.mobile_app_sm_s918b
     data:
       title: Місце на платі закінчується
       message: >-
-        На /userdata лишилось {{ states('sensor.vilne_mistse_userdata') }} МБ.
+        На розділі «{{ trigger.to_state.name }}» лишилось {{ trigger.to_state.state }} МБ.
         Коли дійде до нуля, Home Assistant не зможе писати - минулого разу через
         це стояв полив. Найшвидше допоможе зменшити зберігання бази.
   - action: persistent_notification.create
@@ -891,8 +895,8 @@
       notification_id: disk_userdata
       title: Місце на /userdata закінчується
       message: >-
-        Лишилось {{ states('sensor.vilne_mistse_userdata') }} МБ з 2.5 ГБ.
-        База: перевірити purge_keep_days у recorder.
+        Розділ «{{ trigger.to_state.name }}»: {{ trigger.to_state.state }} МБ.
+        Найімовірніша причина - база recorder.
   mode: single
 - id: disk_userdata_critical
   alias: Диск - критично мало місця на /userdata
@@ -903,12 +907,16 @@
     entity_id: sensor.vilne_mistse_userdata
     below: 120
     for: '00:10:00'
+  - trigger: numeric_state
+    entity_id: sensor.vilne_mistse_korenia
+    below: 400
+    for: '00:10:00'
   actions:
   - action: notify.mobile_app_sm_s918b
     data:
       title: КРИТИЧНО - диск плати майже повний
       message: >-
-        Лишилось {{ states('sensor.vilne_mistse_userdata') }} МБ. Home Assistant
+        «{{ trigger.to_state.name }}»: {{ trigger.to_state.state }} МБ. Home Assistant
         ось-ось не зможе писати на диск.
       data:
         ttl: 0
@@ -918,5 +926,31 @@
       notification_id: disk_userdata_critical
       title: КРИТИЧНО - /userdata майже повний
       message: >-
-        Лишилось {{ states('sensor.vilne_mistse_userdata') }} МБ.
+        «{{ trigger.to_state.name }}»: {{ trigger.to_state.state }} МБ.
+  mode: single
+- id: userdata_fs_broken
+  alias: Диск - файлова система /userdata пошкоджена
+  description: 'Знеструмлення плати рано чи пізно псує ext4. Перевірка при
+    завантаженні знята навмисно (інакше HA взагалі не стартує), тому про
+    пошкодження треба дізнаватись звідси, а не з мертвого дому.'
+  triggers:
+  - trigger: state
+    entity_id: binary_sensor.userdata_fs_poshkodzhena
+    to: 'on'
+    for: '00:05:00'
+  actions:
+  - action: notify.mobile_app_sm_s918b
+    data:
+      title: Файлова система плати пошкоджена
+      message: >-
+        На /userdata зʼявились помилки - найімовірніше після знеструмлення.
+        Дім працює, але це треба полагодити: на платі запустити
+        bash /home/forlinx/fsck-userdata.sh
+  - action: persistent_notification.create
+    data:
+      notification_id: userdata_fs
+      title: /userdata потребує перевірки
+      message: >-
+        Суперблок у стані "not clean with errors". Ремонт:
+        bash /home/forlinx/fsck-userdata.sh (зупинить HA на кілька хвилин).
   mode: single

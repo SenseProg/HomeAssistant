@@ -1,0 +1,25 @@
+[Unit]
+Description=Cloudflare named tunnel publishing Home Assistant at ha.sonyachny.pp.ua
+# Replaces cloudflared-quick.service. That one needed no account, but Cloudflare
+# issued it a new random trycloudflare.com hostname on every start, so the
+# address died at each reboot and nothing could be placed in front of it.
+#
+# This tunnel is tied to the sonyachny.pp.ua zone, so the hostname is stable and
+# Cloudflare Access can require an emailed code before Home Assistant is
+# reached. Only ha.sonyachny.pp.ua is served; see the ingress rules in
+# /home/forlinx/.cloudflared/config.yml - everything else gets a 404 instead of
+# being forwarded.
+#
+# No port is open on the router: cloudflared connects outbound.
+After=network-online.target home-assistant.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=forlinx
+ExecStart=/usr/local/bin/cloudflared --config /home/forlinx/.cloudflared/config.yml --no-autoupdate tunnel run
+Restart=always
+RestartSec=15
+
+[Install]
+WantedBy=multi-user.target
