@@ -9,6 +9,7 @@ the project MCP `network_inventory` tool and `mcp-server/network_inventory.json`
 | `.13` | — | `30:83:98:C1:6E:AC` | Terneo thermostat 1 |
 | `.15` | — | `34:6F:24:B5:AD:4B` | HomeMate PC |
 | `.25` | — | `00:08:9B:ED:62:EF` | CloudMate QNAP NAS |
+| `.26` | `Well-Pump` | `86:0F:3B:0A:36:91` | T34 well-pump plug, LocalTuya 3.5; DHCP reservation not yet verified |
 | `.27` | `Blauberg-Boys` | `98:F4:AB:EE:A5:C5` | Recuperator, boys' room |
 | `.36` | `EV-Charger` | `3C:0B:59:11:9A:13` | Tuya EV charger |
 | `.91` | `Irrigation-Pump` | `80:64:7C:46:E8:D1` | Irrigation pump relay |

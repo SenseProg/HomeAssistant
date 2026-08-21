@@ -1,4 +1,4 @@
 interface:
   display_name: "Home Assistant MB35x8"
-  short_description: "Безпечне адміністрування Home Assistant на MB35x8"
-  default_prompt: "Use $home-assistant to inspect and safely update the MB35x8 Home Assistant deployment."
+  short_description: "Р‘РµР·РїРµС‡РЅРµ Р°РґРјС–РЅС–СЃС‚СЂСѓРІР°РЅРЅСЏ Home Assistant РЅР° MB35x8"
+  default_prompt: "Use $home-assistant to inspect and safely update the MB35x8 Home Assistant deployment, including its local well-pump monitoring."

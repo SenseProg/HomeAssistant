@@ -15,6 +15,7 @@ from project_tools import (
     recent_logs,
     repo_board_sync,
     validate_config,
+    well_pump_health,
 )
 
 
@@ -24,6 +25,7 @@ def main() -> int:
     sub.add_parser("summary")
     sub.add_parser("health")
     sub.add_parser("irrigation-health")
+    sub.add_parser("well-pump-health")
     sync_parser = sub.add_parser("sync")
     sync_parser.add_argument("files", nargs="*")
     sub.add_parser("validate")
@@ -45,6 +47,8 @@ def main() -> int:
         result = board_health()
     elif args.command == "irrigation-health":
         result = irrigation_health()
+    elif args.command == "well-pump-health":
+        result = well_pump_health()
     elif args.command == "sync":
         result = repo_board_sync(args.files or None)
     elif args.command == "validate":

@@ -24,6 +24,10 @@ IRRIGATION_CONTROLLER_IP = "192.168.50.221"
 IRRIGATION_CONTROLLER_MAC = "38:2c:e5:2d:5b:32"
 IRRIGATION_PUMP_IP = "192.168.50.91"
 LOCALTUYA_PORT = 6668
+WELL_PUMP_IP = "192.168.50.26"
+WELL_PUMP_MAC = "86:0f:3b:0a:36:91"
+WELL_PUMP_DEVICE_ID = "bf45e77e78eac99afcpbgl"
+WELL_PUMP_SCAN_INTERVAL_SECONDS = 1
 
 SYNC_TARGETS: dict[str, str] = {
     "board-config/configuration.yaml": "/userdata/hass/config/configuration.yaml",
@@ -294,6 +298,80 @@ printf 'pump_errors_10m='; sudo journalctl -u home-assistant --since '-10 min' -
             "full_irrigation": "controller ready plus pump relay reachable with hass TCP/6668 established and no matching errors for 10 minutes",
             "physical_proof": "A controlled valve command must still report the selected LocalTuya switch on within 8 seconds; this read-only check never moves hardware",
             "pump_without_valve": "Never an emergency: garden hydrants let the pump feed a hose with every valve closed, and manual start has no conditions at all. Only the three-hour maximum runtime limits it",
+        },
+        "transport": result,
+    }
+
+
+def well_pump_health() -> dict[str, Any]:
+    """Check the well-pump LocalTuya transport without operating the pump.
+
+    This intentionally avoids Home Assistant storage and device credentials.
+    A healthy TCP session proves the local control path is connected, not that
+    the pump is running or that Recorder writes one row per polling interval.
+    """
+    command = rf"""
+printf 'ha_service='; systemctl is-active home-assistant 2>/dev/null || true
+printf 'ha_http='; curl -s -o /dev/null -w '%{{http_code}}' --max-time 5 http://localhost:8123/ || true; printf '\n'
+if ping -c 1 -W 1 {WELL_PUMP_IP} >/dev/null 2>&1; then echo 'well_pump_ping=ok'; else echo 'well_pump_ping=failed'; fi
+printf 'well_pump_neighbor='; ip neigh show {WELL_PUMP_IP} 2>/dev/null | head -n1
+if sudo ss -Hntp 2>/dev/null | grep -F '{WELL_PUMP_IP}:{LOCALTUYA_PORT}' | grep -Fq 'hass'; then echo 'well_pump_localtuya=established'; else echo 'well_pump_localtuya=disconnected'; fi
+printf 'well_pump_errors_10m='; sudo journalctl -u home-assistant --since '-10 min' --no-pager 2>/dev/null | grep -iE '{WELL_PUMP_DEVICE_ID}|192\.168\.50\.26|t34_smart_plug' | grep -ciE 'failed|not connected|unavailable|does not match|exception' || true
+""".strip()
+    result = _ssh(command, timeout=120)
+    values: dict[str, str] = {}
+    for line in result["stdout"].splitlines():
+        if "=" in line:
+            key, value = line.split("=", 1)
+            values[key.strip()] = value.strip()
+
+    neighbor = values.get("well_pump_neighbor", "").casefold()
+    mac_ok = (
+        WELL_PUMP_MAC in neighbor
+        and "failed" not in neighbor
+        and "incomplete" not in neighbor
+    )
+    ready = (
+        result["ok"]
+        and values.get("ha_service") == "active"
+        and values.get("ha_http") == "200"
+        and values.get("well_pump_ping") == "ok"
+        and mac_ok
+        and values.get("well_pump_localtuya") == "established"
+        and values.get("well_pump_errors_10m") == "0"
+    )
+    return {
+        "well_pump_ready": ready,
+        "control_path": "LocalTuya 3.5 over LAN TCP/6668",
+        "expected_scan_interval_seconds": WELL_PUMP_SCAN_INTERVAL_SECONDS,
+        "values": values,
+        "entities": {
+            "switch": "switch.t34_smart_plug_switch_1_2",
+            "power": "sensor.t34_smart_plug_power_2",
+            "current": "sensor.t34_smart_plug_current_2",
+            "voltage": "sensor.t34_smart_plug_voltage_2",
+            "integrated_energy": (
+                "sensor.t34_smart_plug_nasos_sverdlovini_spozhito"
+            ),
+        },
+        "criteria": {
+            "transport": (
+                "HA active/HTTP 200, expected IP/MAC reachable, hass TCP/6668 "
+                "established, and no matching errors for 10 minutes"
+            ),
+            "cadence": (
+                "The live LocalTuya device is configured for a 1-second scan. "
+                "Recorder stores changed states, so an unchanged value does not "
+                "produce one history row per second"
+            ),
+            "physical_proof": (
+                "Observe the next natural pump run unless the owner explicitly "
+                "authorizes actuation; this tool never switches the pump"
+            ),
+            "storage_boundary": (
+                "The scan interval and local key live in Home Assistant storage; "
+                "this read-only tool never reads or returns them"
+            ),
         },
         "transport": result,
     }

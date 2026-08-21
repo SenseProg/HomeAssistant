@@ -1,6 +1,6 @@
 ---
 name: home-assistant
-description: Safely inspect, operate, diagnose, and update the Home Assistant Core 2026.7.4 deployment on the MB35x8/Forlinx RK3568J board at 192.168.50.141. Use for Home Assistant YAML, dashboards, automations, integrations, irrigation, energy, network inventory, ASUS DHCP naming, NAS backups/logs, voice/Claude integration, board health, repository-to-board synchronization, and any request to add, rename, troubleshoot, deploy, validate, reload, or restart this smart-home system.
+description: Safely inspect, operate, diagnose, and update the Home Assistant Core 2026.7.4 deployment on the MB35x8/Forlinx RK3568J board at 192.168.50.141. Use for Home Assistant YAML, dashboards, automations, integrations, irrigation, well-water and pump monitoring, energy, network inventory, ASUS DHCP naming, NAS backups/logs, voice/Claude integration, board health, repository-to-board synchronization, and any request to add, rename, troubleshoot, deploy, validate, reload, or restart this smart-home system.
 ---
 
 # Home Assistant on MB35x8
@@ -8,14 +8,14 @@ description: Safely inspect, operate, diagnose, and update the Home Assistant Co
 ## Start with the project MCP
 
 Use the project-local `home-assistant-project` MCP server when it is available.
-Prefer its read-only tools for health, irrigation LocalTuya readiness, Git
-status, router inventory, logs, config validation, and board/repository hash
-comparison. It intentionally has no tool that edits `.storage`, the recorder
-database, or live configuration.
+Prefer its read-only tools for health, irrigation and well-pump LocalTuya
+readiness, Git status, router inventory, logs, config validation, and
+board/repository hash comparison. It intentionally has no tool that edits
+`.storage`, the recorder database, or live configuration.
 
 If the MCP server is not registered, run the same checks with
 `python mcp-server/cli.py health`, `sync`, `git`, `inventory`, `logs`, or
-`validate`, or `irrigation-health` from the repository root.
+`validate`, `irrigation-health`, or `well-pump-health` from the repository root.
 
 ## Read the relevant reference
 
@@ -27,6 +27,9 @@ If the MCP server is not registered, run the same checks with
   schedule, Smart Irrigation setting, or safety automation.
 - Read `references/energy.md` for Energy dashboard sources, per-device power and
   energy, charging, boiler, inverter, and delayed-statistics behavior.
+- Read `references/well-water.md` before changing the well-pump plug, its
+  LocalTuya entities, one-second scan, energy integrator, water calibration,
+  mechanical readings, or the `sverdlovina-dashboard` storage dashboard.
 
 ## Non-negotiable safety rules
 
@@ -128,6 +131,11 @@ curl -s -o /dev/null -w '%{http_code}' http://localhost:8123/
 
 LocalTuya may show `unknown` for roughly three minutes after startup. Do not
 change it during that recovery window.
+
+For the well pump, run `ha_well_pump_health` or
+`python mcp-server/cli.py well-pump-health` before changing its monitoring path.
+Do not confuse this T34 plug with the irrigation pump at `.91`; the two pumps
+have different entity models and safety rules.
 
 ## Diagnose before changing
 

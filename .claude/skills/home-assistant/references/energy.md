@@ -22,6 +22,18 @@
   already exist as UI helpers.
 - Irrigation pump energy uses measured/confirmed pump power when available; do
   not replace an actual measurement with the nominal 1.1 kW label.
+- Well-pump power is the LocalTuya entity `sensor.t34_smart_plug_power_2` at
+  `.26`. Water calibration uses
+  `sensor.t34_smart_plug_nasos_sverdlovini_spozhito`, whose source is that local
+  power entity. Keep the unsuffixed Tuya entities only as cloud controls.
+
+## Well-pump cadence and energy
+
+The T34 well-pump plug uses LocalTuya 3.5 with a one-second scan. Recorder still
+stores changed states rather than one idle row per second; dashboard aggregation
+also does not prove or disprove device cadence. Read
+`references/well-water.md` before changing its integrator, graph source, or
+mechanical-water calibration.
 
 ## "Unit cannot be converted" — fix the metadata, never delete the history
 

@@ -16,6 +16,7 @@ from project_tools import (
     recent_logs,
     repo_board_sync,
     validate_config,
+    well_pump_health,
 )
 
 
@@ -38,6 +39,12 @@ def ha_board_health() -> dict:
 def ha_irrigation_health() -> dict:
     """Check controller and pump LocalTuya readiness without moving hardware."""
     return irrigation_health()
+
+
+@mcp.tool()
+def ha_well_pump_health() -> dict:
+    """Check well-pump LocalTuya readiness without switching the pump."""
+    return well_pump_health()
 
 
 @mcp.tool()

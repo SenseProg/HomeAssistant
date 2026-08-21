@@ -8,6 +8,7 @@
     {"ip": "192.168.50.13", "mac": "30:83:98:C1:6E:AC", "hostname": null, "function": "Terneo thermostat 1"},
     {"ip": "192.168.50.15", "mac": "34:6F:24:B5:AD:4B", "hostname": null, "function": "HomeMate PC"},
     {"ip": "192.168.50.25", "mac": "00:08:9B:ED:62:EF", "hostname": null, "function": "CloudMate QNAP NAS"},
+    {"ip": "192.168.50.26", "mac": "86:0F:3B:0A:36:91", "hostname": "Well-Pump", "function": "Well pump T34 smart plug, LocalTuya 3.5; DHCP reservation not yet verified"},
     {"ip": "192.168.50.27", "mac": "98:F4:AB:EE:A5:C5", "hostname": "Blauberg-Boys", "function": "Blauberg recuperator, boys room"},
     {"ip": "192.168.50.36", "mac": "3C:0B:59:11:9A:13", "hostname": "EV-Charger", "function": "Tuya EV charger"},
     {"ip": "192.168.50.91", "mac": "80:64:7C:46:E8:D1", "hostname": "Irrigation-Pump", "function": "Irrigation pump relay"},
