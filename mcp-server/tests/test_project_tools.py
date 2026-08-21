@@ -126,7 +126,8 @@ well_pump_errors_10m=0
 
     assert result["well_pump_ready"] is True
     assert result["expected_scan_interval_seconds"] == 1
-    assert result["entities"]["power"] == "sensor.t34_smart_plug_power_2"
+    assert result["entities"]["power"] == "sensor.t34_smart_plug_power"
+    assert result["entities"]["power_local"] == "sensor.t34_smart_plug_power_2"
 
 
 def test_well_pump_health_rejects_cloud_only_reachability(monkeypatch) -> None:

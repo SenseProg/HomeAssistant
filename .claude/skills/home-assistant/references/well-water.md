@@ -22,7 +22,8 @@ The check is transport-only and never actuates the pump.
 | Purpose | Entity |
 |---|---|
 | Relay | `switch.t34_smart_plug_switch_1_2` |
-| Power | `sensor.t34_smart_plug_power_2` |
+| LocalTuya power (currently diagnostic only) | `sensor.t34_smart_plug_power_2` |
+| Operational power fallback | `sensor.t34_smart_plug_power` |
 | Current | `sensor.t34_smart_plug_current_2` |
 | Voltage | `sensor.t34_smart_plug_voltage_2` |
 | Device electricity DP | `sensor.t34_smart_plug_electricity` |
@@ -31,27 +32,31 @@ The check is transport-only and never actuates the pump.
 
 The unsuffixed switch, power, current, voltage, and total-energy entities are
 the Tuya cloud copies. Keep them as fallback/control unless the owner requests
-their removal. New dashboards, running-state logic, and integrations must use
-the `_2` LocalTuya power and switch entities.
+their removal. The `_2` LocalTuya relay remains the preferred control entity.
+As of 2026-08-21, however, LocalTuya `power_2` has only `0 W` and brief
+`unavailable` states while cloud `power` has 148 daily records and peaks up to
+`1225.1 W`. Until local telemetry is repaired, dashboards and running-state
+logic must use the unsuffixed operational power sensor.
 
 Do not replace the own integrated-energy helper with the LocalTuya
 `sensor.t34_smart_plug_electricity` merely because both are in kWh. At cutover
-the local DP did not match the cloud cumulative total. The own helper integrates
-local power with the left Riemann sum and is the calibration source; its value
-of `0.1113 kWh` was preserved when its source changed to local power on
-2026-08-21.
+the local DP did not match the cloud cumulative total. The own helper currently
+integrates the operational cloud power sensor with the left Riemann sum and is
+the calibration source; its value is `0.1113 kWh`. Do not switch its source to
+`power_2` while that entity remains permanently zero.
 
-Automation `well_pump_running_state` triggers from local power and considers the
-pump active above 20 W. The water-estimation automation consumes the own
+Automation `well_pump_running_state` triggers from the operational cloud power
+fallback and considers the pump active above 20 W. The water-estimation automation consumes the own
 integrated-energy helper rather than either native Tuya total.
 
 ## One-second scanning versus recorded history
 
-The LocalTuya device scan interval is one second. That does not imply one
-Recorder row per second: Home Assistant normally stores state changes, so a
-steady 0 W or unchanged running value can keep the same `last_updated` time.
-Validate cadence during a real run from raw local state changes, not from the
-number of rows while idle.
+The LocalTuya device scan interval is configured as one second, but current
+`power_2` telemetry is not functioning. That does not imply one Recorder row
+per second: Home Assistant normally stores state changes, so a steady 0 W or
+unchanged running value can keep the same `last_updated` time. Validate cadence
+during a real run from raw local state changes, and retain the cloud fallback
+until a natural run produces non-zero LocalTuya power.
 
 The dashboard's `points_per_hour` is display aggregation, not device polling.
 The previous `12` points/hour produced five-minute buckets even though start and

@@ -342,12 +342,16 @@ printf 'well_pump_errors_10m='; sudo journalctl -u home-assistant --since '-10 m
     )
     return {
         "well_pump_ready": ready,
-        "control_path": "LocalTuya 3.5 over LAN TCP/6668",
+        "control_path": (
+            "LocalTuya 3.5 relay over LAN TCP/6668; cloud power telemetry "
+            "fallback while LocalTuya power_2 remains zero"
+        ),
         "expected_scan_interval_seconds": WELL_PUMP_SCAN_INTERVAL_SECONDS,
         "values": values,
         "entities": {
             "switch": "switch.t34_smart_plug_switch_1_2",
-            "power": "sensor.t34_smart_plug_power_2",
+            "power": "sensor.t34_smart_plug_power",
+            "power_local": "sensor.t34_smart_plug_power_2",
             "current": "sensor.t34_smart_plug_current_2",
             "voltage": "sensor.t34_smart_plug_voltage_2",
             "integrated_energy": (
@@ -360,9 +364,10 @@ printf 'well_pump_errors_10m='; sudo journalctl -u home-assistant --since '-10 m
                 "established, and no matching errors for 10 minutes"
             ),
             "cadence": (
-                "The live LocalTuya device is configured for a 1-second scan. "
-                "Recorder stores changed states, so an unchanged value does not "
-                "produce one history row per second"
+                "LocalTuya is configured for a 1-second scan, but power_2 is "
+                "currently diagnostic-only because it has not produced a "
+                "non-zero sample. Operational dashboards use cloud power until "
+                "a natural run proves local telemetry"
             ),
             "physical_proof": (
                 "Observe the next natural pump run unless the owner explicitly "
