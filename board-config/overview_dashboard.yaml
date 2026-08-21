@@ -19,6 +19,27 @@ views:
         {{ now().strftime('%A, %d.%m') }} · схід {{ as_timestamp(state_attr('sun.sun','next_rising')) | timestamp_custom('%H:%M', true) }} · тариф зараз: {{ states('sensor.tarif_elektroenergii_zaraz') }} грн/кВт·год
         🕘 {{ states('input_text.poliv_ostannie_rishennia') }}
     - type: tile
+      entity: switch.mini_switch_k601_2_switch_1_2
+      name: Насос поливу · ручне керування
+      icon: mdi:water-pump
+      color: blue
+      features_position: bottom
+      features:
+      - type: toggle
+      grid_options:
+        columns: 24
+        rows: 1
+    - type: custom:well-water-overview-card
+      title: Вода свердловини · розрахунок
+      energy_entity: sensor.t34_smart_plug_nasos_sverdlovini_spozhito
+      coefficient_entity: input_number.sverdlovina_koefitsiient_vodi
+      energy_offset_kwh: 0.01748706
+      offset_date: '2026-08-20'
+      time_zone: Europe/Kyiv
+      navigation_path: /sverdlovina-dashboard/well
+      grid_options:
+        columns: 24
+    - type: tile
       entity: weather.forecast_golovna
       name: Погода
       grid_options:

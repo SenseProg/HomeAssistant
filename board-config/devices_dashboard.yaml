@@ -1749,6 +1749,17 @@ views:
         **Наступний полив:** {% set nr = state_attr('sun.sun', 'next_rising') %}{% set total = (states('sensor.smart_irrigation_zona1') | float(0)) + (states('sensor.smart_irrigation_zona2') | float(0)) + (states('sensor.smart_irrigation_zona5') | float(0)) %}{% if nr and total > 0 %}{{ (as_timestamp(nr) - total) | timestamp_custom('%d.%m о %H:%M', true) }} · {{ (total/60) | round(0) }} хв на три зони, старт розрахований так, щоб закінчити на схід сонця{% elif nr %}поливу не заплановано — жодна зона не має дефіциту{% else %}—{% endif %}
         🕘 {{ states('input_text.poliv_ostannie_rishennia') }}
     - type: tile
+      entity: switch.mini_switch_k601_2_switch_1_2
+      name: Насос поливу · ручне керування
+      icon: mdi:water-pump
+      color: blue
+      features_position: bottom
+      features:
+      - type: toggle
+      grid_options:
+        columns: 16
+        rows: 1
+    - type: tile
       entity: weather.forecast_golovna
       name: Погода зараз
       grid_options:
@@ -2100,12 +2111,6 @@ views:
     - type: tile
       entity: input_boolean.poliv_avtomatika_dozvolena
       name: Автоматичний полив
-      grid_options:
-        columns: 12
-        rows: 1
-    - type: tile
-      entity: switch.mini_switch_k601_2_switch_1_2
-      name: Насос · шланг — можна вмикати будь-коли
       grid_options:
         columns: 12
         rows: 1

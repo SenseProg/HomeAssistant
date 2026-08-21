@@ -30,10 +30,13 @@
 `configuration.yaml`**. Файл може лежати у `www/community/`, віддаватися по HTTP
 зі статусом 200 — і все одно не бути підключеним.
 
-Станом на 7 серпня 2026 фактично зареєстровані лише два ресурси:
+Станом на 21 серпня 2026 фактично зареєстровані три ресурси:
 
 - `/hacsfiles/sunsynk-power-flow-card/sunsynk-power-flow-card.js`
 - `/hacsfiles/mini-graph-card/mini-graph-card-bundle.js`
+- inline data-URL module for the well-water cards (`well-meter-entry-card`,
+  `well-readings-table-card`, `well-monthly-water-card`,
+  `well-daily-water-card`, and `well-water-overview-card`).
 
 `mushroom.js` і `card-mod.js` лежать у `www/community/`, прописані в
 `configuration.yaml`, але **не підключені**. Використання `custom:mushroom-*`

@@ -81,6 +81,21 @@ storage-managed. Inspect and change them only through supported Home Assistant
 UI/API flows in an authorized session. Never inspect `.storage` directly to
 recover their configuration.
 
+The current calibrated coefficient is exposed in both directions on the water
+dashboard: litres per kWh and kWh per cubic metre. `well-daily-water-card`
+builds the last-30-days daily bars from the history of the own integrated-energy
+helper, applies the fixed offset on 2026-08-20, and recalculates all displayed
+days whenever the coefficient changes. `well-water-overview-card` is the compact
+variant for the YAML Overview dashboard; it shows calculated litres today and
+in the current calendar month and links back to the well dashboard.
+
+Both YAML dashboards use the physical irrigation relay
+`switch.mini_switch_k601_2_switch_1_2`, not the well-pump relay. Keep the
+irrigation pump control prominent in the Overview hero and at the top of the
+`poliv` view. A temporary resource-level overlay provides the same controls
+when those YAML files cannot yet be deployed; it must suppress itself once the
+native cards are present so the UI never shows duplicates.
+
 ## Safe verification
 
 1. Confirm MCP transport readiness: expected IP/MAC, established HA TCP session
