@@ -60,6 +60,12 @@ stop events had sub-second timestamps. Keep two purposes distinct:
 - the one-hour history graph shows raw local power changes without averaging;
 - the 24-hour graph may aggregate for readability and must label its interval.
 
+Pump starts are rendered by `well-pump-runs-card`, not the built-in grey binary
+history graph. Active intervals use cyan `#00bcd4` on a dark inactive track and
+the card reports launch count plus total runtime for 24 hours and 7 days. Keep
+the inactive track visually subordinate; grey must never represent an active
+pump interval.
+
 Local history begins around 08:17 Europe/Kyiv on 2026-08-21. Older cloud history
 remains in the unsuffixed power entity and must not be described as deleted.
 
