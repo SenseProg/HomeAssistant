@@ -1,0 +1,34 @@
+# Public keys authorised for user `forlinx` on the house board (192.168.50.141).
+#
+# Public keys only - nothing here is secret, and nothing here grants access on
+# its own. This file exists because the access kept getting lost: on 2026-08-21
+# the agent's key vanished twice, and both times the cause was the revoke
+# command sitting one arrow-up away in PowerShell history, a few characters
+# different from the add command:
+#
+#     sed -i '/comment/d' ~/.ssh/authorized_keys      <- removes
+#     grep -qxF '<key>' ... || printf '%s\n' '<key>'  <- adds
+#
+# SSH keys do not expire. None of the lines below carry an `expiry-time=`
+# option and sshd imposes no limit, so a key placed on the board works until
+# somebody deletes the line. "Making access permanent" therefore means keeping
+# a known-good copy to restore from - this file - rather than anything on the
+# board itself.
+#
+# To restore every key below, from PowerShell:
+#
+#   Get-Content board-config\ssh\authorized_keys | ssh -i C:\Users\roman\.ssh\mb35x8_ed25519 forlinx@192.168.50.141 "cat >> ~/.ssh/authorized_keys && awk '!seen[`$0]++' ~/.ssh/authorized_keys > /tmp/ak && mv /tmp/ak ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys && ssh-keygen -lf ~/.ssh/authorized_keys"
+#
+# Who is who:
+#   claude-agent@homemate-mb35x8  SHA256:r6gQLc...  the key on Roman's PC
+#   claude@homemate-mb35x8        SHA256:mUzhLB...  the Codex agent, added 2026-08-21
+#   v_larry@list.ru               SHA256:btzfqm...  the board's OWN key: its private
+#                                                   half lives in ~/.ssh/id_rsa on the
+#                                                   board, so it travels with the
+#                                                   hardware. Remove it before handing
+#                                                   the board to anyone else.
+#
+ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEAnxafJwqbMnBfSNFRJVeNGTT9PfJgurV+tHTmqKkfUyRs6IMs7asceuRSNvEtWCp2injEEdedfunD64DmjfS7wwsFGkztqdfkeuYkLxlQ1OjermBvzaKS3evlWPr995aJ7xGQlB1Y+NeBoE08Dm7M/tHv76rNERrzgBAzBrmDO8zcIAiKjyC6pTyq3eljXC3r0odOPTFCaaVVP/4XjP63+u7OKNHdWuO7Y9TqptsL6g35MguXnZTixAVosSEncA+ATrZhBpi3iC9rRSNn+MjTNC9StsJTAR/ByYvX1Vvi+L2iCl3NqzqVpmlpGHutXQI29XxzXf0buDIPg05yrj+uJw== v_larry@list.ru
+
+ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKUKvili8lLSY5Ocwi2b3S9YckwvhTkYmS0PgtO4mKnD claude-agent@homemate-mb35x8
+ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDBlY3QPuHelXFJH+D8VCXCuz4jFAY+Y0xrI2Ilg6ZtY claude@homemate-mb35x8
