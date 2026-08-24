@@ -16,8 +16,33 @@ views:
         columns: full
       content: |-
         ## {% set h = now().hour %}{{ 'Доброго ранку' if 5 <= h < 12 else 'Доброго дня' if 12 <= h < 18 else 'Доброго вечора' if 18 <= h < 23 else 'Доброї ночі' }} · Дім Ковтуни
-        {{ now().strftime('%A, %d.%m') }} · схід {{ as_timestamp(state_attr('sun.sun','next_rising')) | timestamp_custom('%H:%M', true) }} · тариф зараз: {{ states('sensor.tarif_elektroenergii_zaraz') }} грн/кВт·год
+        {% set dni = ['понеділок','вівторок','середа','четвер','пʼятниця','субота','неділя'] %}{{ dni[now().weekday()] }}, {{ now().strftime('%d.%m') }} · схід {{ as_timestamp(state_attr('sun.sun','next_rising')) | timestamp_custom('%H:%M', true) }} · тариф зараз: {{ states('sensor.tarif_elektroenergii_zaraz') }} грн/кВт·год
         🕘 {{ states('input_text.poliv_ostannie_rishennia') }}
+
+        {%- set ns = namespace(bad=[]) -%}
+        {%- if is_state('binary_sensor.userdata_fs_poshkodzhena','on') -%}
+          {%- set ns.bad = ns.bad + ['файлова система плати'] -%}
+        {%- endif -%}
+        {%- set userdata = states('sensor.vilne_mistse_userdata') | int(-1) -%}
+        {%- if userdata > -1 and userdata < 250 -%}
+          {%- set ns.bad = ns.bad + ['на /userdata ' ~ userdata ~ ' МБ'] -%}
+        {%- endif -%}
+        {%- set korin = states('sensor.vilne_mistse_korenia') | int(-1) -%}
+        {%- if korin > -1 and korin < 800 -%}
+          {%- set ns.bad = ns.bad + ['на корені ' ~ korin ~ ' МБ'] -%}
+        {%- endif -%}
+        {%- if is_state('binary_sensor.nas_videoarkhiv_zmontovanyi','off') -%}
+          {%- set ns.bad = ns.bad + ['відеоархів відмонтований'] -%}
+        {%- endif -%}
+        {%- if is_state('binary_sensor.hikvision_camera_online','off') -%}
+          {%- set ns.bad = ns.bad + ['камера офлайн'] -%}
+        {%- endif -%}
+        {%- if is_state('binary_sensor.cloudmate_nas_online','off') -%}
+          {%- set ns.bad = ns.bad + ['NAS недоступний'] -%}
+        {%- endif -%}
+        {# Явний перенос: усі теги вище стоять із мінусом і з'їдають власні рядки,
+           інакше статус прилипає до рядка про полив. #}
+        {{ '\n' }}{% if ns.bad %}⚠️ {{ ns.bad | length }} {{ 'проблема' if ns.bad | length == 1 else 'проблеми' }}: {{ ns.bad | join(', ') }}{% else %}✅ Система: все гаразд{% endif %}
     - type: tile
       entity: switch.mini_switch_k601_2_switch_1_2
       name: Насос поливу · ручне керування
@@ -33,8 +58,9 @@ views:
       title: Вода свердловини · розрахунок
       energy_entity: sensor.t34_smart_plug_nasos_sverdlovini_spozhito
       coefficient_entity: input_number.sverdlovina_koefitsiient_vodi
-      energy_offset_kwh: 0.01748706
-      offset_date: '2026-08-20'
+      # Базову точку й енергетичну поправку картка бере з атрибута calibration
+      # сенсора журналу, тому тут їх більше немає: одне число - одне місце.
+      log_entity: sensor.zhurnal_pokaznykiv_vody
       time_zone: Europe/Kyiv
       navigation_path: /sverdlovina-dashboard/well
       grid_options:
@@ -52,10 +78,12 @@ views:
       grid_options:
         columns: 12
         rows: 1
+    # Тариф уже стоїть рядком у hero вище, тож плитка-дубль звільнила місце для
+    # того, чого на головній не було взагалі: чи дім живиться з мережі.
     - type: tile
-      entity: sensor.tarif_elektroenergii_zaraz
-      name: Тариф
-      color: purple
+      entity: sensor.inverter_device_relay
+      name: Живлення
+      icon: mdi:transmission-tower
       grid_options:
         columns: 12
         rows: 1
@@ -147,9 +175,13 @@ views:
       grid_options:
         columns: 12
         rows: 1
+    # Не switch.zariadka_7_5kvt: той перемикач нічим не керує і бреше про стан
+    # (показував off, поки станція тягла 6.3 кВт), а на головній сторінці тумблер
+    # означає, що ним будуть користуватись. Реальне керування - select нижче.
     - type: tile
-      entity: switch.zariadka_7_5kvt
+      entity: select.zariadka_7_5kvt_charge_state
       name: Зарядка авто
+      icon: mdi:ev-station
       grid_options:
         columns: 12
         rows: 1
@@ -252,10 +284,13 @@ views:
         entity_id:
         - switch.mini_switch_k601_2_switch_1_2
         - binary_sensor.irrigation_unlimited_c1_m
-        - binary_sensor.cam1_motion
         - input_boolean.poliv_avtomatika_dozvolena
         - water_heater.144036023323246_water_heater
-        - switch.zariadka_7_5kvt
+        # Стан станції, а не її фіктивний перемикач: switch.zariadka_7_5kvt
+        # змінюється сам собою і давав журнал подій, яких не було.
+        - select.zariadka_7_5kvt_charge_state
+        # binary_sensor.cam1_motion прибрано: десятки записів «Рух · Двір» за добу
+        # топили рідкісні корисні події. Рух живе на вкладці «Камера і рух».
   # --- Секція 7 · Швидкі дії ---
   - type: grid
     column_span: 1
@@ -286,6 +321,17 @@ views:
       tap_action:
         action: navigate
         navigation_path: /claude-home
+      grid_options:
+        columns: full
+    # Бойлер бабусі - розетка Tuya з вимірюванням, у яку він увімкнений.
+    # Кнопка перемикає живлення; чи справді гріє, видно за потужністю на
+    # вкладці Пристрої.
+    - type: button
+      name: Бойлер бабусі
+      icon: mdi:water-boiler
+      entity: switch.smart_plug_socket_1
+      tap_action:
+        action: toggle
       grid_options:
         columns: full
     - type: button

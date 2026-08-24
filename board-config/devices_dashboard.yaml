@@ -313,6 +313,8 @@ views:
         | Насос автополиву K601 | `192.168.50.91` | 📶 Wi-Fi 2,4 ГГц · ASUS | {{ ('🟢 увімкнений' if pump == 'on' else '🟢 вимкнений') if pump not in bad else '🔴 локального зв\'язку немає' }} |
         | SONOFF ZBBridge — Zigbee-шлюз | `192.168.50.164` | 📶 Wi-Fi 2,4 ГГц · Tenda A9 | {{ '🟢 онлайн' if bridge_on else '🔴 недоступний' }} |
         | Телевізор TCL — Google Cast | `192.168.50.175` | 📶 Wi-Fi · ASUS | {{ '🟢 увімкнений' if is_state('binary_sensor.tcl_tv_online','on') else ('⚪ вимкнений — це норма' if is_state('binary_sensor.tcl_tv_online','off') else '🟡 визначається') }} |
+        | Монітор Odyssey G70B — 32" | `192.168.50.16` | 📶 Wi-Fi 5 ГГц · ASUS | {{ '🟢 увімкнений' if is_state('media_player.odyssey_g7_2','on') else ('⚪ вимкнений' if states('media_player.odyssey_g7_2') in ['off','standby','idle'] else '🟡 інтеграція мовчить') }} |
+        | Монітор Odyssey G70D — 32" | `192.168.50.172` | 📶 Wi-Fi 5 ГГц · ASUS | {{ '🟢 увімкнений' if is_state('media_player.32_odyssey_g7_ls32dg700ezxua','on') else ('⚪ вимкнений' if states('media_player.32_odyssey_g7_ls32dg700ezxua') in ['off','standby','idle'] else '🟡 інтеграція мовчить') }} |
 
         <details><summary>Мережеві подробиці цих пристроїв</summary>
 
@@ -331,6 +333,16 @@ views:
         окремий `device_tracker`.
 
         **Телевізор TCL** — `F0:35:75:B3:31:80`, TCL BeyondTV · Google Cast.
+
+        **Монітори Samsung Odyssey** — два майже однакові 32-дюймові 4K, різняться лише
+        поколінням. `70:09:71:A2:44:F4` — **G70B**, модель LS32BG700EIXUA, `192.168.50.16`.
+        `28:07:08:A8:10:66` — **G70D**, модель LS32DG700EZXUA, `192.168.50.172`. Обидва на
+        Tizen і відповідають на Samsung TV API (порт 8001) — саме так їх і розрізнили
+        22.08.2026, бо в Home Assistant вони мають майже однакові назви.
+
+        Станам монітора G70D тут вірити не варто: 22.08 монітор сам повідомляв
+        `powerState: on`, тоді як його сутність у Home Assistant лишалась `unavailable`.
+        Інтеграція Samsung TV для нього втрачає звʼязок і не відновлює його сама.
         Коли телевізор вимкнений, його мережевий модуль теж вимикається — тому
         «вимкнений» тут нормальний стан, а не проблема. Керувати ним або надсилати
         фото до ввімкнення неможливо.
@@ -354,13 +366,16 @@ views:
            доступу не повідомила осмислений hostname. Інфраструктуру (роутер,
            обидві Tenda, плату HA) виключаємо за IP. #}
         {% set named_macs = [
-             '00:08:9b:ed:62:ef', '04:d6:f4:70:ad:b3', '08:3a:f2:2d:32:30',
-             '14:2b:2f:e1:54:60', '30:83:98:c1:6e:ac', '3c:0b:59:11:9a:13',
-             '80:64:7c:46:e8:d1', '84:cc:a8:96:28:a7', '98:f4:ab:ee:a5:c5',
-             '98:f4:ab:ee:a8:4e', 'd4:27:87:50:23:6c', 'd8:d6:68:31:ba:49',
-             'e0:98:06:af:b7:41', 'dc:6a:e7:a1:09:f2', '62:1a:51:f4:b2:ee',
-             '38:2c:e5:2d:5b:32', 'f0:35:75:b3:31:80', '10:12:fb:f7:95:ad',
-             '1e:c0:d2:73:2c:c9', 'c0:35:32:c4:8a:4b'
+             '00:08:9b:ed:62:ef', '04:d6:f4:70:ad:b3', '06:55:69:ba:91:6f',
+             '08:3a:f2:2d:32:30', '10:12:fb:f7:95:ad', '14:2b:2f:e1:54:60',
+             '1e:c0:d2:73:2c:c9', '28:07:08:a8:10:66', '30:83:98:c1:6e:ac',
+             '34:6f:24:b5:ad:4b', '38:2c:e5:2d:5b:32', '3c:0b:59:11:9a:13',
+             '50:0f:f5:99:04:e8', '5e:82:f5:51:3c:0d', '62:1a:51:f4:b2:ee',
+             '66:55:7e:21:d0:ac', '70:09:71:a2:44:f4', '80:64:7c:46:e8:d1',
+             '84:cc:a8:96:28:a7', '86:0f:3b:0a:36:91', '98:f4:ab:ee:a5:c5',
+             '98:f4:ab:ee:a8:4e', 'b4:0f:3b:38:3f:50', 'c0:35:32:c4:8a:4b',
+             'd4:27:87:50:23:6c', 'd8:d6:68:31:ba:49', 'dc:6a:e7:a1:09:f2',
+             'e0:98:06:af:b7:41', 'f0:35:75:b3:31:80'
            ] %}
         {% set named_ips = [
              '192.168.50.13', '192.168.50.25', '192.168.50.27', '192.168.50.36',
@@ -477,14 +492,14 @@ views:
         \  'device_tracker.a24_koristuvaca_vasilij': 'Samsung Galaxy A24 — Василь',\n  'device_tracker.galaxy_j8':\
         \ 'Samsung Galaxy J8',\n  'device_tracker.laptop_u1i8pnmk': 'Ноутбук LAPTOP-U1I8PNMK',\n  'device_tracker.cloudmate':\
         \ 'CloudMate — NAS QNAP',\n  'device_tracker.esp_eea5c5': 'Blauberg №1 — кімната хлопців',\n \
-        \ 'device_tracker.esp_eea84e': 'Blauberg №2 — кімната Олесі'\n} %}\n{% set ip_names = {\n  '192.168.50.13':\
+        \ 'device_tracker.esp_eea84e': 'Blauberg №2 — кімната Олесі'\n} %}\n{% set ip_names = {\n  '192.168.50.16': 'Монітор Samsung Odyssey G70B',\n  '192.168.50.172': 'Монітор Samsung Odyssey G70D',\n  '192.168.50.13':\
         \ 'Термостат Terneo — контур 1',\n  '192.168.50.25': 'CloudMate — NAS QNAP',\n  '192.168.50.27':\
         \ 'Blauberg №1 — кімната хлопців',\n  '192.168.50.36': 'Зарядна станція авто — 7,5 кВт',\n  '192.168.50.91':\
         \ 'Насос автополиву K601',\n  '192.168.50.118': 'Бойлер Midea',\n  '192.168.50.157': 'Термостат\
         \ Terneo — контур 2',\n  '192.168.50.164': 'SONOFF ZBBridge — Zigbee-шлюз',\n  '192.168.50.176':\
         \ 'Контролер гаражних воріт — Sonoff/eWeLink',\n  '192.168.50.179': 'Інвертор Deye',\n  '192.168.50.219':\
         \ 'Трифазний лічильник електроенергії будинку',\n  '192.168.50.221': 'Контролер автополиву Tuya\
-        \ — 8 зон'\n} %}\n{% set mac_names = {\n  '00:08:9B:ED:62:EF': 'CloudMate — NAS QNAP',\n  '04:D6:F4:70:AD:B3':\
+        \ — 8 зон'\n} %}\n{% set mac_names = {\n  '70:09:71:A2:44:F4': 'Монітор Samsung Odyssey G70B',\n  '28:07:08:A8:10:66': 'Монітор Samsung Odyssey G70D',\n  '00:08:9B:ED:62:EF': 'CloudMate — NAS QNAP',\n  '04:D6:F4:70:AD:B3':\
         \ 'Бойлер Midea',\n  '08:3A:F2:2D:32:30': 'Контролер гаражних воріт — Sonoff/eWeLink',\n  '14:2B:2F:E1:54:60':\
         \ 'Рекуператор PRANA — спальня батьків',\n  '30:83:98:C1:6E:AC': 'Термостат Terneo — контур 1',\n\
         \  '3C:0B:59:11:9A:13': 'Зарядна станція авто — 7,5 кВт',\n  '80:64:7C:46:E8:D1': 'Насос автополиву\
@@ -493,7 +508,7 @@ views:
         \ 'Інвертор Deye',\n  'D8:D6:68:31:BA:49': 'Трифазний лічильник електроенергії будинку',\n  'E0:98:06:AF:B7:41':\
         \ 'Термостат Terneo — контур 2',\n  'DC:6A:E7:A1:09:F2': 'Xiaomi — модель не визначена',\n  '62:1A:51:F4:B2:EE':\
         \ 'Samsung Galaxy A24 — Василь',\n  '38:2C:E5:2D:5B:32': 'Контролер автополиву Tuya — 8 зон'\n\
-        } %}\n{% set connection_types = {\n  '00:08:9b:ed:62:ef': '\U0001F50C Ethernet',\n  '66:55:7e:21:d0:ac':\
+        } %}\n{% set connection_types = {\n  '70:09:71:a2:44:f4': '📶 Wi-Fi · 5 ГГц',\n  '28:07:08:a8:10:66': '📶 Wi-Fi · 5 ГГц',\n  '00:08:9b:ed:62:ef': '\U0001F50C Ethernet',\n  '66:55:7e:21:d0:ac':\
         \ '\U0001F50C Ethernet',\n  'b4:0f:3b:38:3f:50': '\U0001F50C Ethernet',\n  '10:12:fb:f7:95:ad':\
         \ '\U0001F50C Ethernet',\n  '34:6f:24:b5:ad:4b': '\U0001F4F6 Wi-Fi · 5 ГГц',\n  '06:55:69:ba:91:6f':\
         \ '\U0001F4F6 Wi-Fi · 5 ГГц',\n  '28:07:08:a8:10:66': '\U0001F4F6 Wi-Fi · 5 ГГц',\n  '5e:82:f5:51:3c:0d':\
@@ -1240,66 +1255,33 @@ views:
         \ | float(0) / 1000) | round(2) }} кВт ·\n**мережа:** {{ (states('sensor.inverter_grid_power')\
         \ | float(0) / 1000) | round(2) }} кВт ·\n**акумулятор:** {{ states('sensor.inverter_battery')\
         \ }}%\n{% endif %}\n\nЗв'язок: **{{ 'є' if connected else 'немає' }}** · оновлення кожні\n{{ states('sensor.inverter_update_interval')\
-        \ | float(0) | round(1) }} с ·\nтемпература {{ states('sensor.inverter_temperature') }} °C.\n\n\
-        [Відкрити детальну панель «Потужність»](/power-dashboard/inverter)\n"
-    - type: custom:sunsynk-power-flow-card
-      cardstyle: full
-      panel_mode: false
-      large_font: true
-      card_height: 550px
-      show_solar: false
-      inverter:
-        modern: true
-        three_phase: true
-        model: deye
-        autarky: power
-      battery:
-        energy: 10000
-        shutdown_soc: 15
-        show_daily: true
-        invert_power: false
-        animation_speed: 6
-        max_power: 5000
-      load:
-        essential_name: Через інвертор
-        show_daily: true
-        animation_speed: 8
-        max_power: 15000
-        show_absolute: false
-      grid:
-        grid_name: Мережа — разом
-        show_nonessential: true
-        nonessential_name: Поза інвертором
-        show_daily_buy: true
-        show_daily_sell: true
-        animation_speed: 8
-        max_power: 15000
-        invert_grid: false
-      entities:
-        inverter_status_59: sensor.inverter_device_state
-        inverter_power_175: sensor.inverter_power
-        inverter_voltage_154: sensor.inverter_output_l2_voltage
-        load_frequency_192: sensor.inverter_load_frequency
-        dc_transformer_temp_90: sensor.inverter_dc_temperature
-        battery_soc_184: sensor.inverter_battery
-        battery_power_190: sensor.inverter_battery_power
-        battery_voltage_183: sensor.inverter_battery_voltage
-        battery_current_191: sensor.inverter_battery_current
-        battery_temp_182: sensor.inverter_battery_temperature
-        day_battery_charge_70: sensor.inverter_today_battery_charge
-        day_battery_discharge_71: sensor.inverter_today_battery_discharge
-        grid_ct_power_172: sensor.merezha_potuzhnist_usogo_vvodu
-        grid_power_169: sensor.inverter_grid_power
-        nonessential_power: sensor.spozhivannia_poza_invertorom
-        grid_voltage: sensor.inverter_grid_l1_voltage
-        grid_connected_status_194: sensor.inverter_device_relay
-        day_grid_import_76: sensor.energy_meter_budinok_spozhito_sogodni
-        day_grid_export_77: sensor.inverter_today_energy_export
-        essential_power: sensor.inverter_load_power
-        load_power_l1: sensor.inverter_load_l1_power
-        load_power_l2: sensor.inverter_load_l2_power
-        load_power_l3: sensor.inverter_load_l3_power
-        day_load_energy_84: sensor.inverter_today_load_consumption
+        \ | float(0) | round(1) }} с ·\nтемпература {{ states('sensor.inverter_temperature') }} °C.\n"
+    # Повна карта потоків sunsynk-power-flow-card лишається тільки в
+    # power_dashboard.yaml (вкладка «Сонце і батарея»). Ті самі 24 entity-мапінги
+    # жили тут дублем, і коміт ce853cf показав ціну: заміну day_grid_import
+    # довелося робити у двох файлах. Замість копії — два показники розгалуження
+    # вводу, яких немає в жодній іншій картці цієї вкладки, і явний перехід.
+    # Перехід на карту лишився один — кнопка нижче; інлайн-посилання
+    # з hero-тексту прибрано: два однакові шляхи до однієї
+    # вкладки в одній секції — той самий дубль, лише дрібніший.
+    - type: tile
+      entity: sensor.merezha_potuzhnist_usogo_vvodu
+      name: Мережа · весь ввід
+      color: blue
+      grid_options:
+        columns: 6
+    - type: tile
+      entity: sensor.spozhivannia_poza_invertorom
+      name: Поза інвертором
+      color: purple
+      grid_options:
+        columns: 6
+    - type: button
+      name: Карта потоків енергії
+      icon: mdi:transit-connection-variant
+      tap_action:
+        action: navigate
+        navigation_path: /power-dashboard/inverter
       grid_options:
         columns: full
   - type: grid
@@ -1508,8 +1490,18 @@ views:
       entities:
       - entity: water_heater.144036023323246_water_heater
         name: Стан
+    # Раніше цей графік будувався просто на water_heater: його стан - режим
+    # роботи, рядок, тому виходила стрічка «увімкнено/вимкнено», а температури,
+    # яку обіцяв заголовок, не було ніколи. sensor.boiler_temperatura_vody
+    # (configuration.yaml) дістає її з атрибута current_temperature числом.
     - type: history-graph
       title: Температура за 24 години
+      hours_to_show: 24
+      entities:
+      - entity: sensor.boiler_temperatura_vody
+        name: Температура води
+    - type: history-graph
+      title: Режими роботи за 24 години
       hours_to_show: 24
       entities:
       - entity: water_heater.144036023323246_water_heater
@@ -1534,7 +1526,7 @@ views:
       title: Спожито за добу
       chart_type: bar
       period: day
-      days_to_show: 30
+      days_to_show: 14
       stat_types:
       - change
       grid_options:
@@ -1575,6 +1567,64 @@ views:
         кВт. Похибка очікується в межах 10-15 %.
 
         '
+  # Бойлер бабусі - окремий будинок, окремий пристрій. Це не водонагрівач
+  # Midea вище: тут немає ані термостата, ані температури води, бо HA бачить
+  # лише розетку Tuya з вимірюванням, у яку бойлер увімкнений. Тримається
+  # окремою секцією свідомо - щоб вимкнений бойлер бабусі не прочитався як
+  # вимкнений домашній.
+  - type: grid
+    column_span: 2
+    cards:
+    - type: heading
+      heading: Бойлер бабусі
+      icon: mdi:water-boiler
+      grid_options:
+        columns: full
+    - type: markdown
+      grid_options:
+        columns: full
+      content: |-
+        {% set on = is_state('switch.smart_plug_socket_1', 'on') %}
+        {% set w = states('sensor.smart_plug_power') | float(0) %}
+        {% set v = states('sensor.smart_plug_voltage') | float(0) %}
+        ## {% if not on %}Вимкнено{% elif w > 100 %}Гріє — {{ w | round(0) }} Вт{% else %}Живлення є, не гріє{% endif %}
+        {% if on and v > 0 %}Напруга {{ v | round(0) }} В{% endif %}
+    - type: tile
+      entity: switch.smart_plug_socket_1
+      name: Живлення бойлера
+      icon: mdi:water-boiler
+      color: red
+      grid_options:
+        columns: full
+        rows: 1
+    - type: tile
+      entity: sensor.smart_plug_power
+      name: Потужність
+      icon: mdi:flash
+      grid_options:
+        columns: 6
+        rows: 1
+    - type: tile
+      entity: sensor.smart_plug_total_energy
+      name: Спожито всього
+      icon: mdi:counter
+      grid_options:
+        columns: 6
+        rows: 1
+    - type: tile
+      entity: sensor.smart_plug_voltage
+      name: Напруга
+      icon: mdi:sine-wave
+      grid_options:
+        columns: 6
+        rows: 1
+    - type: tile
+      entity: sensor.smart_plug_current
+      name: Струм
+      icon: mdi:current-ac
+      grid_options:
+        columns: 6
+        rows: 1
 - title: Тепла підлога
   path: floor
   icon: mdi:heating-coil
@@ -1617,7 +1667,7 @@ views:
       title: Спожито за добу - контур 1
       chart_type: bar
       period: day
-      days_to_show: 30
+      days_to_show: 14
       stat_types:
       - change
       grid_options:
@@ -1662,7 +1712,7 @@ views:
       title: Спожито за добу - контур 2
       chart_type: bar
       period: day
-      days_to_show: 30
+      days_to_show: 14
       stat_types:
       - change
       grid_options:
@@ -1686,16 +1736,19 @@ views:
       title: Як рахується
       grid_options:
         columns: full
-      content: 'На відміну від бойлера, тут нічого оцінювати не треба - термостат Terneo сам віддає `heating_energy`
+      # Блок літеральний (|-), а не в лапках: усередині є одинарні лапки Jinja,
+      # які в YAML-рядку 'у лапках' обірвали б скаляр.
+      content: |-
+        На відміну від бойлера, тут нічого оцінювати не треба - термостат Terneo сам віддає `heating_energy`
         у кВт-год. Але це теж не вимір: всередині немає лічильника, і термостат рахує енергію з часу замикання
         реле, помноженого на задану потужність контуру. Якщо реальна потужність кабелю відрізняється від
         тієї, що прошита в термостаті, цифра поїде пропорційно.
 
-        Контур 2 фізично не ввімкнений, тому всі його сутності показують `unavailable`. Ніяких дій для
-        нього робити не треба - він уже доданий і в цей дашборд, і в Energy-дашборд, і почне рахувати
-        сам, щойно на нього подадуть живлення.
+        {% set nezhyvi = [] %}{% if not has_value('sensor.terneo_1_floor_temperature') %}{% set nezhyvi = nezhyvi + ['1'] %}{% endif %}{% if not has_value('sensor.terneo_2_floor_temperature') %}{% set nezhyvi = nezhyvi + ['2'] %}{% endif %}{% if nezhyvi %}Контур {{ nezhyvi | join(' і ') }} фізично не ввімкнений, тому його сутності показують `unavailable`. Ніяких дій робити не треба - контур уже доданий і в цей дашборд, і в Energy-дашборд, і почне рахувати сам, щойно на нього подадуть живлення.{% else %}Обидва контури на звʼязку.{% endif %}
 
-        '
+        Номер контуру визначається станом сутностей, а не вписаний у текст: до 22 серпня 2026 тут
+        стояло «контур 2», тоді як насправді мовчав контур 1, і сторінка суперечила власним же
+        показникам поруч.
 - title: Камера і рух
   path: motion
   icon: mdi:cctv
@@ -1761,27 +1814,27 @@ views:
       features:
       - type: toggle
       grid_options:
-        columns: 16
+        columns: 12
         rows: 1
     - type: tile
       entity: weather.forecast_golovna
       name: Погода зараз
       grid_options:
-        columns: 16
+        columns: 12
         rows: 1
     - type: tile
       entity: input_boolean.poliv_propustyty_zavtra
       name: Пропустити завтра
       color: red
       grid_options:
-        columns: 16
+        columns: 12
         rows: 1
     - type: tile
       entity: automation.poliv_rozklad_za_chasom_i_dniami_tizhnia
       name: Автополив до сходу
       color: green
       grid_options:
-        columns: 16
+        columns: 12
         rows: 1
   - type: grid
     column_span: 1
@@ -2315,7 +2368,7 @@ views:
       title: Спожито за добу
       chart_type: bar
       period: day
-      days_to_show: 30
+      days_to_show: 14
       stat_types:
       - change
       grid_options:
@@ -2626,10 +2679,10 @@ views:
       grid_options:
         columns: full
     - type: statistics-graph
-      title: Спожито за добу · 30 днів
+      title: Спожито за добу · 14 днів
       chart_type: bar
       period: day
-      days_to_show: 30
+      days_to_show: 14
       stat_types:
       - change
       grid_options:
@@ -2638,10 +2691,10 @@ views:
       - entity: sensor.zariadka_avto_spozhito
         name: Зарядна станція 1
     - type: statistics-graph
-      title: Витрачено за добу · 30 днів, грн
+      title: Витрачено за добу · 14 днів, грн
       chart_type: bar
       period: day
-      days_to_show: 30
+      days_to_show: 14
       stat_types:
       - change
       grid_options:
@@ -2685,14 +2738,19 @@ views:
         columns: full
       target:
         entity_id:
-        - switch.zariadka_7_5kvt
+        # Не switch.zariadka_7_5kvt: ця ж вкладка нижче сама пише, що перемикач
+        # ні на що не впливає і міняється сам собою (9 серпня о 13:02 «увімкнено»,
+        # через дві хвилини «вимкнено», без жодної команди). Журнал із нього
+        # показував події, яких не було.
+        - select.zariadka_7_5kvt_charge_state
+        - sensor.zariadka_7_5kvt_device_state
         - binary_sensor.zariadka_7_5kvt_fault
     - type: markdown
       grid_options:
         columns: full
       content: |-
-        Журнал показує, коли станцію вмикали й вимикали за останні 7 днів,
-        і чи траплялися несправності. Тривалість і обсяг кожної окремої сесії
+        Журнал показує команди станції та її стан за останні 7 днів, і чи
+        траплялися несправності. Тривалість і обсяг кожної окремої сесії
         Home Assistant окремо не рахує — для цього довелося б додати сенсор
         сесії, якого зараз немає.
   # --- Секція 8 · Налаштування станції ---
@@ -3487,3 +3545,114 @@ views:
         телефон незалежно від конкретної точки Wi-Fi.
 
         '
+- title: Медіа
+  path: media
+  icon: mdi:television-play
+  type: sections
+  max_columns: 4
+  sections:
+  # --- Секція 1 · Телевізор і фотозаставка ---
+  - type: grid
+    column_span: 4
+    cards:
+    - type: heading
+      heading: Телевізор
+      icon: mdi:television
+      grid_options:
+        columns: full
+    - type: markdown
+      grid_options:
+        columns: full
+      content: |-
+        {% set online = is_state('binary_sensor.tcl_tv_online', 'on') %}
+        {% set mp = states('media_player.televizor_tcl') %}
+        {% set slideshow = is_state('script.tv_idle_slideshow', 'on') %}
+        {% if not online %}## Телевізор вимкнений
+        Це нормальний стан, а не збій: TCL зникає з мережі, коли його вимикають з пульта,
+        і сутність стає `unavailable`. Керування з'явиться тут, щойно телевізор увімкнуть.
+        {% elif slideshow %}## Показує фотозаставку
+        Заставка запускається сама після пʼяти хвилин простою і зупиняється, щойно на телевізорі
+        починають щось дивитись.
+        {% elif mp == 'playing' %}## Щось відтворюється
+        {{ state_attr('media_player.televizor_tcl', 'media_title') or 'Назву джерело не повідомляє' }}
+        {% else %}## Увімкнений, нічого не відтворює
+        Через пʼять хвилин простою автоматика запустить фотозаставку.
+        {% endif %}
+    # Керування показуємо лише коли є чим керувати: media-control на вимкненому
+    # телевізорі малює сірий прямокутник із написом «Недоступно».
+    - type: conditional
+      conditions:
+      - condition: state
+        entity: binary_sensor.tcl_tv_online
+        state: 'on'
+      card:
+        type: media-control
+        entity: media_player.televizor_tcl
+      grid_options:
+        columns: 24
+    - type: tile
+      entity: binary_sensor.tcl_tv_online
+      name: Телевізор у мережі
+      icon: mdi:television-classic
+      grid_options:
+        columns: 12
+        rows: 1
+    - type: button
+      name: Запустити фотозаставку
+      icon: mdi:image-multiple
+      grid_options:
+        columns: 12
+      tap_action:
+        action: call-service
+        service: script.tv_idle_slideshow
+  # --- Секція 2 · Автоматика заставки ---
+  - type: grid
+    column_span: 2
+    cards:
+    - type: heading
+      heading: Автоматика заставки
+      icon: mdi:motion-play
+      grid_options:
+        columns: full
+    - type: tile
+      entity: automation.tcl_zapustiti_fotozastavku_pislia_5_khvilin_prostoiu
+      name: Запуск після простою
+      icon: mdi:play-circle-outline
+      grid_options:
+        columns: 12
+        rows: 1
+    - type: tile
+      entity: automation.tcl_zupiniti_fotozastavku_pri_aktivnosti
+      name: Зупинка при активності
+      icon: mdi:stop-circle-outline
+      grid_options:
+        columns: 12
+        rows: 1
+    - type: markdown
+      title: Як це працює
+      grid_options:
+        columns: full
+      content: |-
+        Фотозаставка бере знімки з теки `/mnt/homemate_media/foto` — це NFS-монт
+        альбому з NAS, тільки для читання. Телевізор отримує їх через Google Cast,
+        тому працює лише коли він у мережі.
+
+        Обидві автоматизації тут можна вимкнути, якщо заставка заважає: тоді
+        телевізор просто лишатиметься на своєму джерелі.
+  # --- Секція 3 · Журнал ---
+  - type: grid
+    column_span: 2
+    cards:
+    - type: heading
+      heading: Що відбувалось
+      icon: mdi:history
+      grid_options:
+        columns: full
+    - type: logbook
+      hours_to_show: 48
+      grid_options:
+        columns: full
+      target:
+        entity_id:
+        - binary_sensor.tcl_tv_online
+        - script.tv_idle_slideshow
