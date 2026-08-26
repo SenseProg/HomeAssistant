@@ -16,7 +16,7 @@ views:
         columns: full
       content: |-
         ## {% set h = now().hour %}{{ 'Доброго ранку' if 5 <= h < 12 else 'Доброго дня' if 12 <= h < 18 else 'Доброго вечора' if 18 <= h < 23 else 'Доброї ночі' }} · Дім Ковтуни
-        {% set dni = ['понеділок','вівторок','середа','четвер','пʼятниця','субота','неділя'] %}{{ dni[now().weekday()] }}, {{ now().strftime('%d.%m') }} · схід {{ as_timestamp(state_attr('sun.sun','next_rising')) | timestamp_custom('%H:%M', true) }} · тариф зараз: {{ states('sensor.tarif_elektroenergii_zaraz') }} грн/кВт·год
+        {% set dni = ['понеділок','вівторок','середа','четвер','пʼятниця','субота','неділя'] %}{{ dni[now().weekday()] }}, {{ now().strftime('%d.%m') }} · схід {% set nr = state_attr('sun.sun','next_rising') %}{{ as_timestamp(nr) | timestamp_custom('%H:%M', true) if nr else '—' }} · тариф зараз: {{ states('sensor.tarif_elektroenergii_zaraz') }} грн/кВт·год
         🕘 {{ states('input_text.poliv_ostannie_rishennia') }}
 
         {%- set ns = namespace(bad=[]) -%}
