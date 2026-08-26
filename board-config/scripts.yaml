@@ -13,7 +13,11 @@ poliv_zona_1:
       device_id: bfb2143124def1078b549a
       value:
         '1': true
-        '13': '{{ seconds }}'
+        # +180 с запасу, як у нічному розкладі: апаратний відлік контролера
+        # має пережити зупинку від Home Assistant, а не обірвати полив
+        # раніше за неї. Без запасу клапан закривався приблизно тоді ж,
+        # коли зупинявся IU, і насос устигав кілька секунд качати в глухий кут.
+        '13': '{{ seconds + 180 }}'
   - wait_template: '{{ is_state(''switch.avtopoliv_kontroler_avtopoliv_klapan_1'', ''on'') }}'
     timeout: 00:00:08
     continue_on_timeout: true
@@ -42,11 +46,6 @@ poliv_zona_1:
       entity_id: binary_sensor.irrigation_unlimited_c1_z1
       time: '{{ duration }}'
       queue: false
-  - action: localtuya.set_dp
-    data:
-      device_id: bfb2143124def1078b549a
-      dp: 13
-      value: '{{ seconds }}'
   - action: timer.start
     target:
       entity_id: timer.poliv_zoni_1
@@ -67,7 +66,11 @@ poliv_zona_2:
       device_id: bfb2143124def1078b549a
       value:
         '2': true
-        '14': '{{ seconds }}'
+        # +180 с запасу, як у нічному розкладі: апаратний відлік контролера
+        # має пережити зупинку від Home Assistant, а не обірвати полив
+        # раніше за неї. Без запасу клапан закривався приблизно тоді ж,
+        # коли зупинявся IU, і насос устигав кілька секунд качати в глухий кут.
+        '14': '{{ seconds + 180 }}'
   - wait_template: '{{ is_state(''switch.avtopoliv_kontroler_avtopoliv_klapan_2'', ''on'') }}'
     timeout: 00:00:08
     continue_on_timeout: true
@@ -96,11 +99,6 @@ poliv_zona_2:
       entity_id: binary_sensor.irrigation_unlimited_c1_z2
       time: '{{ duration }}'
       queue: false
-  - action: localtuya.set_dp
-    data:
-      device_id: bfb2143124def1078b549a
-      dp: 14
-      value: '{{ seconds }}'
   - action: timer.start
     target:
       entity_id: timer.poliv_zoni_2
@@ -121,7 +119,11 @@ poliv_zona_3:
       device_id: bfb2143124def1078b549a
       value:
         '3': true
-        '15': '{{ seconds }}'
+        # +180 с запасу, як у нічному розкладі: апаратний відлік контролера
+        # має пережити зупинку від Home Assistant, а не обірвати полив
+        # раніше за неї. Без запасу клапан закривався приблизно тоді ж,
+        # коли зупинявся IU, і насос устигав кілька секунд качати в глухий кут.
+        '15': '{{ seconds + 180 }}'
   - wait_template: '{{ is_state(''switch.avtopoliv_kontroler_avtopoliv_klapan_3'', ''on'') }}'
     timeout: 00:00:08
     continue_on_timeout: true
@@ -150,11 +152,6 @@ poliv_zona_3:
       entity_id: binary_sensor.irrigation_unlimited_c1_z3
       time: '{{ duration }}'
       queue: false
-  - action: localtuya.set_dp
-    data:
-      device_id: bfb2143124def1078b549a
-      dp: 15
-      value: '{{ seconds }}'
   - action: timer.start
     target:
       entity_id: timer.poliv_zoni_3
@@ -205,48 +202,43 @@ poliv_stop_all:
       - timer.poliv_zoni_5
 tv_idle_slideshow:
   alias: TCL - фотозаставка у режимі простою
-  description: Показує випадкові JPEG з двох перевірених альбомів NAS кожні 20 секунд. Запускається автоматизацією лише після 5 хвилин idle. Вимкнений телевізор не будить. Цикл завершується, коли телевізор
+  description: Показує випадкові фото з NAS кожні 20 секунд, з альбому, обраного
+    в input_select.tv_zastavka_album. Запускається автоматизацією лише після 5
+    хвилин idle. Вимкнений телевізор не будить. Цикл завершується, коли телевізор
     стає недоступним, вимикається або користувач запускає інший застосунок/медіа.
   icon: mdi:image-multiple
   mode: restart
   sequence:
   - variables:
       tv: media_player.televizor_tcl
-      photos:
-      - media-source://media_source/local/foto/2018/01-18/Карпаты/20180126_170841_001.jpg
-      - media-source://media_source/local/foto/2018/01-18/Карпаты/20180126_170859_001.jpg
-      - media-source://media_source/local/foto/2018/01-18/Карпаты/20180127_132828_001.jpg
-      - media-source://media_source/local/foto/2018/01-18/Карпаты/20180127_132828_002.jpg
-      - media-source://media_source/local/foto/2018/01-18/Карпаты/20180127_132828_003.jpg
-      - media-source://media_source/local/foto/2018/01-18/Карпаты/20180127_132828_004.jpg
-      - media-source://media_source/local/foto/2018/01-18/Карпаты/20180127_132828_005.jpg
-      - media-source://media_source/local/foto/2018/01-18/Карпаты/20180127_132828_006.jpg
-      - media-source://media_source/local/foto/2018/01-18/Карпаты/20180127_132828_007.jpg
-      - media-source://media_source/local/foto/2018/01-18/Карпаты/20180127_132828_008.jpg
-      - media-source://media_source/local/foto/2018/01-18/Карпаты/20180127_132828_009.jpg
-      - media-source://media_source/local/foto/2018/01-18/Карпаты/20180127_132828_010.jpg
-      - media-source://media_source/local/foto/2018/01-18/Карпаты/20180127_132828_011.jpg
-      - media-source://media_source/local/foto/2018/01-18/Карпаты/20180127_132828_012.jpg
-      - media-source://media_source/local/foto/2018/01-18/Карпаты/20180127_132828_013.jpg
-      - media-source://media_source/local/foto/2015/11-2015/Бахмут/20151105_104444.jpg
-      - media-source://media_source/local/foto/2015/11-2015/Бахмут/20151105_104500.jpg
-      - media-source://media_source/local/foto/2015/11-2015/Бахмут/20151105_104524.jpg
-      - media-source://media_source/local/foto/2015/11-2015/Бахмут/20151105_104541.jpg
-      - media-source://media_source/local/foto/2015/11-2015/Бахмут/image-5ded100ffad0124b665e242c5d0c0cfb02ea6a163da864284dcec8cc7138a858-V.jpg
   - repeat:
       while:
       - condition: template
-        value_template: "{% set st = states(tv) %} {% set app = state_attr(tv, 'app_name') | default('', true) %} {% set kind = state_attr(tv, 'media_content_type') | default('', true) %} {{ st == 'idle'\n\
-          \   or (st in ['playing', 'paused']\n       and (kind == 'image/jpeg'\n            or app in ['Default Media Receiver', 'Home Assistant Cast'])) }}"
+        value_template: "{% set st = states(tv) %} {% set app = state_attr(tv, 'app_name') | default('', true) %} {% set kind = state_attr(tv, 'media_content_type') | default('', true) %} {{ st == 'idle'
+          \   or (st in ['playing', 'paused']
+       and (kind == 'image/jpeg'
+            or app in ['Default Media Receiver', 'Home Assistant Cast'])) }}"
       sequence:
-      - variables:
-          photo: '{{ photos | random }}'
-      - action: media_player.play_media
+      # Сенсор віддає нове фото лише коли його про це попросити - опитувати
+      # його за розкладом означало б дарма будити NAS цілодобово.
+      - action: homeassistant.update_entity
         target:
-          entity_id: '{{ tv }}'
-        data:
-          media_content_id: '{{ photo }}'
-          media_content_type: image/jpeg
+          entity_id: sensor.tv_zastavka_foto
+      - variables:
+          photo: "{{ states('sensor.tv_zastavka_foto') | default('', true) }}"
+      # Якщо NAS відпав або скрипт не знайшов списку, сенсор віддасть порожнє
+      # чи unavailable. Тоді просто не чіпаємо телевізор: на екрані лишиться
+      # попереднє фото, а не помилка відтворення.
+      - if:
+        - condition: template
+          value_template: "{{ photo.startswith('media-source://') }}"
+        then:
+        - action: media_player.play_media
+          target:
+            entity_id: '{{ tv }}'
+          data:
+            media_content_id: '{{ photo }}'
+            media_content_type: image/jpeg
       - delay: 00:00:20
 poliv_zona_4:
   alias: Полити зону 4
@@ -254,6 +246,23 @@ poliv_zona_4:
   mode: single
   max_exceeded: warning
   sequence:
+  # Зона 4 - єдина, що керує насосом напряму і глушить його через delay. Якщо
+  # запустити її під час циклу Irrigation Unlimited, це вимкнення заб'є чужий
+  # полив: IU думатиме, що поливає, вода не потече, а сторож не спрацює, бо
+  # клапан IU відкритий. Тихий недолив, який нічим не помітити.
+  - if:
+    - condition: state
+      entity_id: binary_sensor.irrigation_unlimited_c1_m
+      state: 'on'
+    then:
+    - action: persistent_notification.create
+      data:
+        notification_id: poliv_zona_4_fault
+        title: Зону 4 не запущено
+        message: Зараз працює автоматичний полив. Запустіть зону 4 після його
+          завершення - інакше вимкнення насоса обірве поточний цикл.
+    - stop: Активний цикл Irrigation Unlimited; ручний пуск зони 4 заблоковано
+      error: false
   - variables:
       minutes: '{{ states(''input_number.poliv_zona_4_hvylyn'') | int(25) }}'
       seconds: '{{ minutes * 60 }}'
@@ -263,7 +272,11 @@ poliv_zona_4:
       device_id: bfb2143124def1078b549a
       value:
         '4': true
-        '16': '{{ seconds }}'
+        # +180 с запасу, як у нічному розкладі: апаратний відлік контролера
+        # має пережити зупинку від Home Assistant, а не обірвати полив
+        # раніше за неї. Без запасу клапан закривався приблизно тоді ж,
+        # коли зупинявся IU, і насос устигав кілька секунд качати в глухий кут.
+        '16': '{{ seconds + 180 }}'
   - wait_template: '{{ is_state(''switch.avtopoliv_kontroler_avtopoliv_klapan_4'', ''on'') }}'
     timeout: 00:00:08
     continue_on_timeout: true
@@ -323,7 +336,11 @@ poliv_zona_5:
       device_id: bfb2143124def1078b549a
       value:
         '5': true
-        '17': '{{ seconds }}'
+        # +180 с запасу, як у нічному розкладі: апаратний відлік контролера
+        # має пережити зупинку від Home Assistant, а не обірвати полив
+        # раніше за неї. Без запасу клапан закривався приблизно тоді ж,
+        # коли зупинявся IU, і насос устигав кілька секунд качати в глухий кут.
+        '17': '{{ seconds + 180 }}'
   - wait_template: '{{ is_state(''switch.avtopoliv_kontroler_avtopoliv_klapan_5'', ''on'') }}'
     timeout: 00:00:08
     continue_on_timeout: true
@@ -352,11 +369,6 @@ poliv_zona_5:
       entity_id: binary_sensor.irrigation_unlimited_c1_z4
       time: '{{ duration }}'
       queue: false
-  - action: localtuya.set_dp
-    data:
-      device_id: bfb2143124def1078b549a
-      dp: 17
-      value: '{{ seconds }}'
   - action: timer.start
     target:
       entity_id: timer.poliv_zoni_5

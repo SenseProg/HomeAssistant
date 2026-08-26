@@ -1,0 +1,13 @@
+[Unit]
+Description=Rebuild the TV screensaver photo lists once a day
+
+[Timer]
+# 04:20, while the house is asleep: the scan walks the whole NFS album and is
+# the heaviest thing this board does to the NAS. Persistent, so a board that was
+# off at 04:20 still refreshes after boot.
+OnCalendar=*-*-* 04:20:00
+RandomizedDelaySec=600
+Persistent=true
+
+[Install]
+WantedBy=timers.target

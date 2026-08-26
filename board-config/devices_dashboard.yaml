@@ -1625,6 +1625,77 @@ views:
       grid_options:
         columns: 6
         rows: 1
+  # Розклад нагріву. Час у helper'ах, а не в автоматизації, саме щоб його можна
+  # було правити звідси. Вимикач "нагрів за розкладом" стосується лише вмикання:
+  # вимкнення о кінці вікна відбувається безумовно, інакше бойлер міг би лишитись
+  # гріти на денному тарифі.
+  - type: grid
+    column_span: 2
+    cards:
+    - type: heading
+      heading: Розклад нагріву
+      icon: mdi:calendar-clock
+      grid_options:
+        columns: full
+    - type: markdown
+      grid_options:
+        columns: full
+      content: |-
+        {% set a = states('input_datetime.boiler_babusi_pochatok')[:5] %}
+        {% set b = states('input_datetime.boiler_babusi_kinets')[:5] %}
+        {% set on = is_state('input_boolean.boiler_babusi_rozklad','on') %}
+        {% if on %}Гріє з **{{ a }}** до **{{ b }}**{% else %}Розклад вимкнено — бойлер лише під ручним керуванням{% endif %}
+        Нічний тариф діє 23:00–06:59.{% if on and b > '06:59' %} ⚠️ Кінець вікна виходить за нічний тариф.{% endif %}
+    - type: tile
+      entity: input_boolean.boiler_babusi_rozklad
+      name: Нагрів за розкладом
+      icon: mdi:calendar-clock
+      features_position: bottom
+      features:
+      - type: toggle
+      grid_options:
+        columns: full
+        rows: 1
+    - type: entities
+      grid_options:
+        columns: full
+      entities:
+      - entity: input_datetime.boiler_babusi_pochatok
+        name: Початок нагріву
+      - entity: input_datetime.boiler_babusi_kinets
+        name: Кінець нагріву
+  # Спожито з розділенням на тарифи - той самий utility_meter, що і в решти
+  # приладів, тож цифри порівнянні між собою.
+  - type: grid
+    column_span: 2
+    cards:
+    - type: heading
+      heading: Спожито за тарифами
+      icon: mdi:cash-clock
+      grid_options:
+        columns: full
+    - type: tile
+      entity: sensor.boiler_babusi_za_tarifom_nich
+      name: Нічний тариф
+      icon: mdi:weather-night
+      grid_options:
+        columns: 6
+        rows: 1
+    - type: tile
+      entity: sensor.boiler_babusi_za_tarifom_den
+      name: Денний тариф
+      icon: mdi:weather-sunny
+      grid_options:
+        columns: 6
+        rows: 1
+    - type: history-graph
+      title: Споживання за 24 години
+      hours_to_show: 24
+      grid_options:
+        columns: full
+      entities:
+      - entity: sensor.smart_plug_power
+        name: Потужність
 - title: Тепла підлога
   path: floor
   icon: mdi:heating-coil
@@ -3686,7 +3757,37 @@ views:
       tap_action:
         action: call-service
         service: script.tv_idle_slideshow
-  # --- Секція 2 · Автоматика заставки ---
+  # --- Секція 2 · Альбом заставки ---
+  - type: grid
+    column_span: 2
+    cards:
+    - type: heading
+      heading: Альбом заставки
+      icon: mdi:folder-image
+      grid_options:
+        columns: full
+    - type: tile
+      entity: input_select.tv_zastavka_album
+      name: Показувати з альбому
+      icon: mdi:folder-image
+      features_position: bottom
+      features:
+      - type: select-options
+      grid_options:
+        columns: full
+    - type: markdown
+      grid_options:
+        columns: full
+      content: |-
+        {% set p = states('sensor.tv_zastavka_foto') %}
+        {% if p is string and p.startswith('media-source://') %}
+        **Останнє показане фото**
+
+        `{{ p.split('/local/foto/')[-1] }}`
+        {% else %}
+        Заставка ще не бралася до роботи — знімок зʼявиться тут після першого показу.
+        {% endif %}
+  # --- Секція 3 · Автоматика заставки ---
   - type: grid
     column_span: 2
     cards:
@@ -3718,9 +3819,17 @@ views:
         альбому з NAS, тільки для читання. Телевізор отримує їх через Google Cast,
         тому працює лише коли він у мережі.
 
+        В альбомі 87 758 фотографій, і повний обхід NAS триває дві хвилини — надто
+        довго, щоб шукати на льоту. Тому раз на добу о 04:20 таймер
+        `tv-photo-cache` перебирає теку і складає списки шляхів, окремо на кожен
+        рік і альбом. Заставка бере випадковий рядок зі списку за чверть секунди.
+
+        Нові фотографії на NAS зʼявляться у заставці наступного дня, після
+        чергового оновлення списків.
+
         Обидві автоматизації тут можна вимкнути, якщо заставка заважає: тоді
         телевізор просто лишатиметься на своєму джерелі.
-  # --- Секція 3 · Журнал ---
+  # --- Секція 4 · Журнал ---
   - type: grid
     column_span: 2
     cards:

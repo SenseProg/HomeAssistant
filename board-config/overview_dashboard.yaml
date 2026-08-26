@@ -54,6 +54,20 @@ views:
       grid_options:
         columns: 24
         rows: 1
+    # Бойлер бабусі - та сама розетка Tuya з вимірюванням, що й на вкладці
+    # Бойлер. Плитка навмисне така сама, як у насоса поливу вище: перемикач
+    # унизу, щоб вмикати одним дотиком просто з Огляду.
+    - type: tile
+      entity: switch.smart_plug_socket_1
+      name: Бойлер бабусі
+      icon: mdi:water-boiler
+      color: red
+      features_position: bottom
+      features:
+      - type: toggle
+      grid_options:
+        columns: 24
+        rows: 1
     - type: custom:well-water-overview-card
       title: Вода свердловини · розрахунок
       energy_entity: sensor.t34_smart_plug_nasos_sverdlovini_spozhito

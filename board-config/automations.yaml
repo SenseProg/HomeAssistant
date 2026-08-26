@@ -1,7 +1,7 @@
 - id: irrigation_pump_session_energy
   alias: Полив - фіксація лічильника на старті сесії
-  description: На кожному вмиканні насоса запам'ятовує поточний показ наростаючого лічильника енергії,
-    щоб сенсор "спожито за сесію" рахував від нуля.
+  description: На кожному вмиканні насоса запам'ятовує поточний показ наростаючого
+    лічильника енергії, щоб сенсор "спожито за сесію" рахував від нуля.
   triggers:
   - trigger: state
     entity_id: switch.mini_switch_k601_2_switch_1_2
@@ -17,14 +17,17 @@
   mode: single
 - id: irrigation_close_valves_when_pump_idle
   alias: Полив - закрити клапани, якщо насос давно вимкнений
-  description: Прибирає забутий відкритий клапан після ручного пуску. Irrigation Unlimited закриває свої
-    клапани за 3 секунди після зупинки насоса, тому 5-хвилинна витримка у його роботу не втручається.
+  description: Прибирає забутий відкритий клапан після ручного пуску. Irrigation Unlimited
+    закриває свої клапани за 3 секунди після зупинки насоса, тому 5-хвилинна витримка
+    у його роботу не втручається.
   triggers:
   - trigger: template
-    value_template: "{{ is_state('switch.mini_switch_k601_2_switch_1_2', 'off')\n   and (is_state('switch.avtopoliv_kontroler_avtopoliv_klapan_1',\
-      \ 'on')\n        or is_state('switch.avtopoliv_kontroler_avtopoliv_klapan_2', 'on')\n        or\
-      \ is_state('switch.avtopoliv_kontroler_avtopoliv_klapan_3', 'on')\n        or is_state('switch.avtopoliv_kontroler_avtopoliv_klapan_4',\
-      \ 'on')\n        or is_state('switch.avtopoliv_kontroler_avtopoliv_klapan_5', 'on')) }}\n"
+    value_template: "{{ is_state('switch.mini_switch_k601_2_switch_1_2', 'off')\n
+      \  and (is_state('switch.avtopoliv_kontroler_avtopoliv_klapan_1', 'on')\n        or
+      is_state('switch.avtopoliv_kontroler_avtopoliv_klapan_2', 'on')\n        or
+      is_state('switch.avtopoliv_kontroler_avtopoliv_klapan_3', 'on')\n        or
+      is_state('switch.avtopoliv_kontroler_avtopoliv_klapan_4', 'on')\n        or
+      is_state('switch.avtopoliv_kontroler_avtopoliv_klapan_5', 'on')) }}\n"
     for: 00:05:00
   conditions: []
   actions:
@@ -48,65 +51,81 @@
   - action: script.poliv_stop_all
   mode: single
 - id: irrigation_pump_max_runtime_3h
-  alias: Полив - максимальна робота насоса 3 години
-  description: Примусово зупиняє полив після трьох годин безперервної роботи насоса.
+  alias: Полив - максимальна робота насоса (0 = без ліміту)
+  description: Ліміт 0 навмисно вимикає автостоп за часом. Насос використовується
+    не лише автоматичними зонами, а й вручну зі шлангом, коли жоден клапан зон не
+    відкритий, тому вимикати насос через відсутність відкритого клапана або через
+    фіксовані 3 години не можна. Щоб повернути часовий захист, встановити max_runtime_hours
+    > 0.
   triggers:
   - trigger: state
     entity_id: switch.mini_switch_k601_2_switch_1_2
     to: 'on'
-    for: 03:00:00
-  conditions: []
+  conditions:
+  - condition: template
+    value_template: '{{ max_runtime_hours | float(0) > 0 }}'
   actions:
+  - delay:
+      seconds: '{{ (max_runtime_hours | float(0) * 3600) | int(0) }}'
+  - condition: state
+    entity_id: switch.mini_switch_k601_2_switch_1_2
+    state: 'on'
   - action: script.poliv_stop_all
   - action: persistent_notification.create
     data:
       title: Полив зупинено
-      message: Насос досяг максимального безперервного часу роботи — 3 години.
-  mode: single
+      message: Насос досяг максимального безперервного часу роботи — {{ max_runtime_hours
+        }} год.
+  variables:
+    max_runtime_hours: 0
+  mode: restart
 - id: irrigation_scheduled_weekday
   alias: Полив - розклад за часом і днями тижня
-  description: 'Слухає подію Smart Irrigation про початок поливу. Момент старту рахує сама SI: offset_minutes=0
-    разом з account_for_duration означає "почати рівно за стільки, скільки триватиме полив, щоб він ЗАКІНЧИВСЯ
-    на схід сонця". Для газону з дощуванням зверху це правильний час - вода встигає всотатися до спеки,
-    а листя висихає одразу після сходу.
+  description: 'Слухає подію Smart Irrigation про початок поливу. Момент старту рахує
+    сама SI: offset_minutes=0 разом з account_for_duration означає "почати рівно за
+    стільки, скільки триватиме полив, щоб він ЗАКІНЧИВСЯ на схід сонця". Для газону
+    з дощуванням зверху це правильний час - вода встигає всотатися до спеки, а листя
+    висихає одразу після сходу.
 
-    За розкладом поливаються зони 1, 2 і 5 - усі три заведені у Smart Irrigation, і їхня сумарна тривалість
-    задає зсув від сходу. Зона 5 додана до SI 2026-08-08: 100 м², 20 л/хв, тобто та сама інтенсивність
-    12 мм/год, що й у зон 1-2 (200 м², 40 л/хв). Зони 3 і 4 автоматично не поливаються взагалі, лише вручну
-    з дашборда.
+    За розкладом поливаються зони 1, 2 і 5 - усі три заведені у Smart Irrigation,
+    і їхня сумарна тривалість задає зсув від сходу. Зона 5 додана до SI 2026-08-08:
+    100 м², 20 л/хв, тобто та сама інтенсивність 12 мм/год, що й у зон 1-2 (200 м²,
+    40 л/хв). Зони 3 і 4 автоматично не поливаються взагалі, лише вручну з дашборда.
 
-    Виконує полив Irrigation Unlimited, бо тільки він керує насосом-майстром: прямий контроль клапанів
-    у SI вимкнено навмисно - її valve_runner про насос не знає і відкривав би клапани всуху.
+    Виконує полив Irrigation Unlimited, бо тільки він керує насосом-майстром: прямий
+    контроль клапанів у SI вимкнено навмисно - її valve_runner про насос не знає і
+    відкривав би клапани всуху.
 
-    УВАГА про нумерацію: Irrigation Unlimited нумерує зони ЗА ПОРЯДКОМ у списку controllers.zones, а не
-    за zone_id. Зона 5 стоїть четвертою, тому її сутність - binary_sensor.irrigation_unlimited_c1_z4,
+    УВАГА про нумерацію: Irrigation Unlimited нумерує зони ЗА ПОРЯДКОМ у списку controllers.zones,
+    а не за zone_id. Зона 5 стоїть четвертою, тому її сутність - binary_sensor.irrigation_unlimited_c1_z4,
     а не ..._z5. Якщо порядок зон у configuration.yaml зміниться, ці посилання поїдуть.
 
-    ДВА ТРИГЕРИ навмисно. Подія Smart Irrigation дає точний старт, але SI НЕ реєструє тригер узагалі,
-    якщо сумарна тривалість її зон дорівнює нулю (а це нормальна ситуація наступного дня після поливу).
-    Другий тригер від сонця на -75 хв лишається запобіжником на випадок, коли SI не реєструє свою подію
-    (нульова сумарна тривалість). mode: single не дасть запуститися двічі, якщо спрацюють обидва.
+    ДВА ТРИГЕРИ навмисно. Подія Smart Irrigation дає точний старт, але SI НЕ реєструє
+    тригер узагалі, якщо сумарна тривалість її зон дорівнює нулю (а це нормальна ситуація
+    наступного дня після поливу). Другий тригер від сонця на -75 хв лишається запобіжником
+    на випадок, коли SI не реєструє свою подію (нульова сумарна тривалість). mode:
+    single не дасть запуститися двічі, якщо спрацюють обидва.
 
-    ЗАПИС АПАРАТНОГО ТАЙМЕРА (додано 2026-08-10, підтверджено вимірюванням). Уночі проти 10.08 усі три
-    зони отримали по 10 хвилин замість 27/28/25, а насос пропрацював повні 80 хвилин, з них близько 50 -
-    на закриті клапани.
-    Причина виміряна тестом на зоні 5 того ж дня. Фаза A, без запису DP: клапан відкрито 10:26:18,
-    закрито 10:36:21 - рівно 10 хв 03 с, - і при цьому IU z4, майстер і насос лишалися on ще 2,5 хвилини,
-    поки IU дораховував свої 13 хвилин. Отже клапан закриває сам контролер DP-WBS01 за власним відліком
-    (DP 13-20), а irrigation_unlimited.manual_run перемикає лише DP клапана і цей відлік не задає.
-    Irrigation Unlimited раннього закриття не бачить: його check_back перевіряє клапан лише протягом
-    ~90 секунд після команди (3 спроби через 30 с), а не весь полив.
-    Фаза B, з записом DP 17 = 900 ДО старту зони, поки клапан закритий: клапан пробув відкритим усі
-    13 хвилин без раннього закриття, а зупинив полив саме IU - спершу насос (10:54:09), потім клапан
-    (10:54:13).
-    Тому запис таймера стоїть ПЕРЕД manual_run, значення - тривалість IU плюс 180 секунд запасу.
-    Запас піднято з 60 до 180 секунд 2026-08-11: у першу ж ніч кожна зона відпрацювала приблизно на
-    хвилину довше за номінал (зона 2 - 50,3 хв при плані 49,35), тобто від апаратного відліку лишалося
-    менше секунд, ніж здавалося. Зупинку однаково робить Home Assistant, а відлік контролера лишається
-    страховкою, якщо HA впаде посеред поливу.
-    Писати DP у вже відкритий клапан тут навмисно не робимо - це неперевірений шлях.
-    Ручні скрипти з дашборда задають таймер разом з відкриттям клапана від початку, тому недолив бачили
-    лише на нічному розкладі.'
+    ЗАПИС АПАРАТНОГО ТАЙМЕРА (додано 2026-08-10, підтверджено вимірюванням). Уночі
+    проти 10.08 усі три зони отримали по 10 хвилин замість 27/28/25, а насос пропрацював
+    повні 80 хвилин, з них близько 50 - на закриті клапани. Причина виміряна тестом
+    на зоні 5 того ж дня. Фаза A, без запису DP: клапан відкрито 10:26:18, закрито
+    10:36:21 - рівно 10 хв 03 с, - і при цьому IU z4, майстер і насос лишалися on
+    ще 2,5 хвилини, поки IU дораховував свої 13 хвилин. Отже клапан закриває сам контролер
+    DP-WBS01 за власним відліком (DP 13-20), а irrigation_unlimited.manual_run перемикає
+    лише DP клапана і цей відлік не задає. Irrigation Unlimited раннього закриття
+    не бачить: його check_back перевіряє клапан лише протягом ~90 секунд після команди
+    (3 спроби через 30 с), а не весь полив. Фаза B, з записом DP 17 = 900 ДО старту
+    зони, поки клапан закритий: клапан пробув відкритим усі 13 хвилин без раннього
+    закриття, а зупинив полив саме IU - спершу насос (10:54:09), потім клапан (10:54:13).
+    Тому запис таймера стоїть ПЕРЕД manual_run, значення - тривалість IU плюс 180
+    секунд запасу. Запас піднято з 60 до 180 секунд 2026-08-11: у першу ж ніч кожна
+    зона відпрацювала приблизно на хвилину довше за номінал (зона 2 - 50,3 хв при
+    плані 49,35), тобто від апаратного відліку лишалося менше секунд, ніж здавалося.
+    Зупинку однаково робить Home Assistant, а відлік контролера лишається страховкою,
+    якщо HA впаде посеред поливу. Писати DP у вже відкритий клапан тут навмисно не
+    робимо - це неперевірений шлях. Ручні скрипти з дашборда задають таймер разом
+    з відкриттям клапана від початку, тому недолив бачили лише на нічному розкладі.'
   triggers:
   - trigger: event
     event_type: smart_irrigation_start_irrigation_all_zones
@@ -118,50 +137,36 @@
     entity_id: input_boolean.poliv_avtomatika_dozvolena
     state: 'on'
   - condition: template
-    value_template: "{{ is_state(['input_boolean.poliv_pn', 'input_boolean.poliv_vt',\n             'input_boolean.poliv_sr',\
-      \ 'input_boolean.poliv_cht',\n             'input_boolean.poliv_pt', 'input_boolean.poliv_sb',\n\
-      \             'input_boolean.poliv_nd'][now().weekday()], 'on') }}\n"
+    value_template: "{{ is_state(['input_boolean.poliv_pn', 'input_boolean.poliv_vt',\n
+      \            'input_boolean.poliv_sr', 'input_boolean.poliv_cht',\n             'input_boolean.poliv_pt',
+      'input_boolean.poliv_sb',\n             'input_boolean.poliv_nd'][now().weekday()],
+      'on') }}\n"
+  # Один запуск на ранок, хоч би скільки тригерів спрацювало. mode: single сам
+  # по собі цього не гарантує: він блокує лише ПАРАЛЕЛЬНИЙ запуск. Якщо сумарний
+  # план короткий (після дощу таке буває), запуск від сонця за 75 хвилин встигає
+  # завершитись раніше, ніж Smart Irrigation надішле свою подію, - і тоді ніщо
+  # не заважає полити вдруге поспіль повним планом.
+  - condition: template
+    value_template: '{{ state_attr(this.entity_id, ''last_triggered'') is none
+      or (now() - state_attr(this.entity_id, ''last_triggered'')).total_seconds()
+      > 10800 }}'
   actions:
   - variables:
-      # Додано перевірку знаку балансу 2026-08-11. Тривалість зберігається в
-      # зоні і перераховується ЛИШЕ на розрахунку Smart Irrigation, тому при
-      # додатному балансі там може лежати старе число: 11.08 зона 2 мала запас
-      # +2.63 мм і план 3021 секунду, порахований ще при дефіциті -10.07.
-      # Компонент такий випадок не обробляє - обнуляє тривалість тільки коли
-      # баланс став точно нулем, - тому не поливаємо зону, якій вода не потрібна.
-      zona_1_seconds: >-
-        {% set smart = states('sensor.smart_irrigation_zona1') %}
-        {% set bucket = state_attr('sensor.smart_irrigation_zona1', 'bucket') | float(-1) %}
-        {% if bucket >= 0 %}0
-        {% elif is_number(smart) %}{{ smart | int(0) }}
-        {% else %}{{ (states('input_number.poliv_zona_1_hvylyn') | int(25)) * 60 }}
-        {% endif %}
-      # Додано перевірку знаку балансу 2026-08-11. Тривалість зберігається в
-      # зоні і перераховується ЛИШЕ на розрахунку Smart Irrigation, тому при
-      # додатному балансі там може лежати старе число: 11.08 зона 2 мала запас
-      # +2.63 мм і план 3021 секунду, порахований ще при дефіциті -10.07.
-      # Компонент такий випадок не обробляє - обнуляє тривалість тільки коли
-      # баланс став точно нулем, - тому не поливаємо зону, якій вода не потрібна.
-      zona_2_seconds: >-
-        {% set smart = states('sensor.smart_irrigation_zona2') %}
-        {% set bucket = state_attr('sensor.smart_irrigation_zona2', 'bucket') | float(-1) %}
-        {% if bucket >= 0 %}0
-        {% elif is_number(smart) %}{{ smart | int(0) }}
-        {% else %}{{ (states('input_number.poliv_zona_2_hvylyn') | int(25)) * 60 }}
-        {% endif %}
-      # Додано перевірку знаку балансу 2026-08-11. Тривалість зберігається в
-      # зоні і перераховується ЛИШЕ на розрахунку Smart Irrigation, тому при
-      # додатному балансі там може лежати старе число: 11.08 зона 2 мала запас
-      # +2.63 мм і план 3021 секунду, порахований ще при дефіциті -10.07.
-      # Компонент такий випадок не обробляє - обнуляє тривалість тільки коли
-      # баланс став точно нулем, - тому не поливаємо зону, якій вода не потрібна.
-      zona_5_seconds: >-
-        {% set smart = states('sensor.smart_irrigation_zona5') %}
-        {% set bucket = state_attr('sensor.smart_irrigation_zona5', 'bucket') | float(-1) %}
-        {% if bucket >= 0 %}0
-        {% elif is_number(smart) %}{{ smart | int(0) }}
-        {% else %}{{ (states('input_number.poliv_zona_5_hvylyn') | int(25)) * 60 }}
-        {% endif %}
+      zona_1_seconds: '{% set smart = states(''sensor.smart_irrigation_zona1'') %}
+        {% set bucket = state_attr(''sensor.smart_irrigation_zona1'', ''bucket'')
+        | float(-1) %} {% if bucket >= 0 %}0 {% elif is_number(smart) %}{{ smart |
+        int(0) }} {% else %}{{ (states(''input_number.poliv_zona_1_hvylyn'') | int(25))
+        * 60 }} {% endif %}'
+      zona_2_seconds: '{% set smart = states(''sensor.smart_irrigation_zona2'') %}
+        {% set bucket = state_attr(''sensor.smart_irrigation_zona2'', ''bucket'')
+        | float(-1) %} {% if bucket >= 0 %}0 {% elif is_number(smart) %}{{ smart |
+        int(0) }} {% else %}{{ (states(''input_number.poliv_zona_2_hvylyn'') | int(25))
+        * 60 }} {% endif %}'
+      zona_5_seconds: '{% set smart = states(''sensor.smart_irrigation_zona5'') %}
+        {% set bucket = state_attr(''sensor.smart_irrigation_zona5'', ''bucket'')
+        | float(-1) %} {% if bucket >= 0 %}0 {% elif is_number(smart) %}{{ smart |
+        int(0) }} {% else %}{{ (states(''input_number.poliv_zona_5_hvylyn'') | int(25))
+        * 60 }} {% endif %}'
   - action: weather.get_forecasts
     target:
       entity_id: weather.forecast_golovna
@@ -169,12 +174,13 @@
       type: hourly
     response_variable: fc
   - variables:
-      rain_now: "{{ states('weather.forecast_golovna') in\n   ['rainy', 'pouring', 'lightning-rainy',\
-        \ 'snowy-rainy', 'hail'] }}\n"
-      rain_soon: "{% set fl = (fc.get('weather.forecast_golovna', {}).get('forecast', []))[:6] %} {% set\
-        \ ns = namespace(wet=false) %} {% for f in fl %}\n  {% if f.condition in ['rainy', 'pouring',\
-        \ 'lightning-rainy', 'snowy-rainy', 'hail']\n        or (f.precipitation | default(0) | float(0))\
-        \ > 0.2 %}\n    {% set ns.wet = true %}\n  {% endif %}\n{% endfor %} {{ ns.wet }}\n"
+      rain_now: "{{ states('weather.forecast_golovna') in\n   ['rainy', 'pouring',
+        'lightning-rainy', 'snowy-rainy', 'hail'] }}\n"
+      rain_soon: "{% set fl = (fc.get('weather.forecast_golovna', {}).get('forecast',
+        []))[:6] %} {% set ns = namespace(wet=false) %} {% for f in fl %}\n  {% if
+        f.condition in ['rainy', 'pouring', 'lightning-rainy', 'snowy-rainy', 'hail']\n
+        \       or (f.precipitation | default(0) | float(0)) > 0.2 %}\n    {% set
+        ns.wet = true %}\n  {% endif %}\n{% endfor %} {{ ns.wet }}\n"
   - if:
     - condition: state
       entity_id: input_boolean.poliv_propustyty_zavtra
@@ -187,7 +193,8 @@
       target:
         entity_id: input_text.poliv_ostannie_rishennia
       data:
-        value: '{{ now().strftime(''%d.%m %H:%M'') }} · пропущено · рішення ухвалене звечора'
+        value: '{{ now().strftime(''%d.%m %H:%M'') }} · пропущено · рішення ухвалене
+          звечора'
     - stop: Полив пропущено - так вирішили ввечері
   - if:
     - condition: template
@@ -197,9 +204,9 @@
       data:
         notification_id: poliv_dosh
         title: Полив пропущено · дощ
-        message: 'Полив за розкладом о {{ now().strftime(''%H:%M'') }} пропущено: у момент старту йшов
-          дощ. Питання не ставилося - його ставлять увечері за прогнозом, а дощ просто зараз скасовує
-          полив без обговорення.'
+        message: 'Полив за розкладом о {{ now().strftime(''%H:%M'') }} пропущено:
+          у момент старту йшов дощ. Питання не ставилося - його ставлять увечері за
+          прогнозом, а дощ просто зараз скасовує полив без обговорення.'
     - action: input_text.set_value
       target:
         entity_id: input_text.poliv_ostannie_rishennia
@@ -213,8 +220,10 @@
     target:
       entity_id: input_text.poliv_ostannie_rishennia
     data:
-      value: '{{ now().strftime(''%d.%m %H:%M'') }} · полив стартував · зона 1 - {{ (zona_1_seconds |
-        int(0) / 60) | round(0) }} хв, зона 2 - {{ (zona_2_seconds | int(0) / 60) | round(0) }} хв
+      value: '{{ now().strftime(''%d.%m %H:%M'') }} · полив стартував · зона 1 - {{
+        (zona_1_seconds | int(0) / 60) | round(0) }} хв, зона 2 - {{ (zona_2_seconds
+        | int(0) / 60) | round(0) }} хв, зона 5 - {{ (zona_5_seconds | int(0) / 60)
+        | round(0) }} хв
 
         '
   - if:
@@ -234,16 +243,65 @@
         entity_id: binary_sensor.irrigation_unlimited_c1_z1
         time: '{{ timedelta(seconds=zona_1_seconds | int(0)) }}'
         queue: true
-    - wait_template: '{{ is_state(''binary_sensor.irrigation_unlimited_c1_z1'', ''on'') }}'
+    - wait_template: '{{ is_state(''binary_sensor.irrigation_unlimited_c1_z1'', ''on'')
+        }}'
       timeout: 00:00:30
-      continue_on_timeout: false
-    - wait_template: '{{ is_state(''binary_sensor.irrigation_unlimited_c1_z1'', ''off'') }}'
+      # Не false: обрив тут ховав відмову. Клапан просто не відкрився, нічого не
+      # тече, тож безпечно пропустити цю зону й полити наступні - але не мовчки.
+      # Раніше зона, що не відкрилась, лишала без води й решту зон, а в журналі
+      # стояло бадьоре «полив стартував».
+      continue_on_timeout: true
+    - if:
+      - condition: template
+        value_template: '{{ not wait.completed }}'
+      then:
+      - action: notify.mobile_app_sm_s918b
+        data:
+          title: Зона 1 не почала полив
+          message: Клапан не відкрився за 30 секунд. Решту зон поливаємо далі; перевірте
+            звязок з контролером поливу.
+      - action: input_text.set_value
+        target:
+          entity_id: input_text.poliv_ostannie_rishennia
+        data:
+          value: '{{ now().strftime(''%d.%m %H:%M'') }} · зона 1 не відкрилась'
+    - wait_template: '{{ is_state(''binary_sensor.irrigation_unlimited_c1_z1'', ''off'')
+        }}'
       timeout: 01:02:00
-      continue_on_timeout: false
-    - wait_template: "{{ is_state('binary_sensor.irrigation_unlimited_c1_m', 'off')\n   and is_state('switch.mini_switch_k601_2_switch_1_2',\
-        \ 'off')\n   and is_state('switch.avtopoliv_kontroler_avtopoliv_klapan_1', 'off') }}"
+      # Зона мала б завершитись сама. Якщо за годину з гаком цього не сталось,
+      # мовчазний обрив лишив би насос і клапан у роботі: тут потрібна активна
+      # зупинка, а не просто вихід з автоматизації.
+      continue_on_timeout: true
+    - if:
+      - condition: template
+        value_template: '{{ not wait.completed }}'
+      then:
+      - action: script.poliv_stop_all
+      - action: notify.mobile_app_sm_s918b
+        data:
+          title: Зона 1 не зупинилась - полив перервано
+          message: Зона працювала понад годину і не завершилась сама. Насос і всі клапани
+            вимкнено примусово.
+      - stop: Зона 1 не завершилась у відведений час
+    - wait_template: "{{ is_state('binary_sensor.irrigation_unlimited_c1_m', 'off')\n
+        \  and is_state('switch.mini_switch_k601_2_switch_1_2', 'off')\n   and is_state('switch.avtopoliv_kontroler_avtopoliv_klapan_1',
+        'off') }}"
       timeout: 00:01:00
-      continue_on_timeout: false
+      # Насос, майстер і клапан мали вимкнутись за хвилину після зони. Якщо ні -
+      # зупиняємо примусово й повідомляємо: раніше автоматизація просто мовчки
+      # виходила, лишаючи наступні зони без поливу і нікого не попередивши.
+      continue_on_timeout: true
+    - if:
+      - condition: template
+        value_template: '{{ not wait.completed }}'
+      then:
+      - action: script.poliv_stop_all
+      - action: notify.mobile_app_sm_s918b
+        data:
+          title: Полив не вимкнувся сам
+          message: Насос або клапан лишались увімкненими через хвилину після зони.
+            Вимкнено примусово, решту зон пропущено.
+      - stop: Обладнання не повернулось у вимкнений стан
     - delay: 00:00:10
   - if:
     - condition: state
@@ -262,16 +320,65 @@
         entity_id: binary_sensor.irrigation_unlimited_c1_z2
         time: '{{ timedelta(seconds=zona_2_seconds | int(0)) }}'
         queue: true
-    - wait_template: '{{ is_state(''binary_sensor.irrigation_unlimited_c1_z2'', ''on'') }}'
+    - wait_template: '{{ is_state(''binary_sensor.irrigation_unlimited_c1_z2'', ''on'')
+        }}'
       timeout: 00:00:30
-      continue_on_timeout: false
-    - wait_template: '{{ is_state(''binary_sensor.irrigation_unlimited_c1_z2'', ''off'') }}'
+      # Не false: обрив тут ховав відмову. Клапан просто не відкрився, нічого не
+      # тече, тож безпечно пропустити цю зону й полити наступні - але не мовчки.
+      # Раніше зона, що не відкрилась, лишала без води й решту зон, а в журналі
+      # стояло бадьоре «полив стартував».
+      continue_on_timeout: true
+    - if:
+      - condition: template
+        value_template: '{{ not wait.completed }}'
+      then:
+      - action: notify.mobile_app_sm_s918b
+        data:
+          title: Зона 2 не почала полив
+          message: Клапан не відкрився за 30 секунд. Решту зон поливаємо далі; перевірте
+            звязок з контролером поливу.
+      - action: input_text.set_value
+        target:
+          entity_id: input_text.poliv_ostannie_rishennia
+        data:
+          value: '{{ now().strftime(''%d.%m %H:%M'') }} · зона 2 не відкрилась'
+    - wait_template: '{{ is_state(''binary_sensor.irrigation_unlimited_c1_z2'', ''off'')
+        }}'
       timeout: 01:02:00
-      continue_on_timeout: false
-    - wait_template: "{{ is_state('binary_sensor.irrigation_unlimited_c1_m', 'off')\n   and is_state('switch.mini_switch_k601_2_switch_1_2',\
-        \ 'off')\n   and is_state('switch.avtopoliv_kontroler_avtopoliv_klapan_2', 'off') }}"
+      # Зона мала б завершитись сама. Якщо за годину з гаком цього не сталось,
+      # мовчазний обрив лишив би насос і клапан у роботі: тут потрібна активна
+      # зупинка, а не просто вихід з автоматизації.
+      continue_on_timeout: true
+    - if:
+      - condition: template
+        value_template: '{{ not wait.completed }}'
+      then:
+      - action: script.poliv_stop_all
+      - action: notify.mobile_app_sm_s918b
+        data:
+          title: Зона 2 не зупинилась - полив перервано
+          message: Зона працювала понад годину і не завершилась сама. Насос і всі клапани
+            вимкнено примусово.
+      - stop: Зона 2 не завершилась у відведений час
+    - wait_template: "{{ is_state('binary_sensor.irrigation_unlimited_c1_m', 'off')\n
+        \  and is_state('switch.mini_switch_k601_2_switch_1_2', 'off')\n   and is_state('switch.avtopoliv_kontroler_avtopoliv_klapan_2',
+        'off') }}"
       timeout: 00:01:00
-      continue_on_timeout: false
+      # Насос, майстер і клапан мали вимкнутись за хвилину після зони. Якщо ні -
+      # зупиняємо примусово й повідомляємо: раніше автоматизація просто мовчки
+      # виходила, лишаючи наступні зони без поливу і нікого не попередивши.
+      continue_on_timeout: true
+    - if:
+      - condition: template
+        value_template: '{{ not wait.completed }}'
+      then:
+      - action: script.poliv_stop_all
+      - action: notify.mobile_app_sm_s918b
+        data:
+          title: Полив не вимкнувся сам
+          message: Насос або клапан лишались увімкненими через хвилину після зони.
+            Вимкнено примусово, решту зон пропущено.
+      - stop: Обладнання не повернулось у вимкнений стан
     - delay: 00:00:10
   - if:
     - condition: state
@@ -290,22 +397,71 @@
         entity_id: binary_sensor.irrigation_unlimited_c1_z4
         time: '{{ timedelta(seconds=zona_5_seconds | int(0)) }}'
         queue: true
-    - wait_template: '{{ is_state(''binary_sensor.irrigation_unlimited_c1_z4'', ''on'') }}'
+    - wait_template: '{{ is_state(''binary_sensor.irrigation_unlimited_c1_z4'', ''on'')
+        }}'
       timeout: 00:00:30
-      continue_on_timeout: false
-    - wait_template: '{{ is_state(''binary_sensor.irrigation_unlimited_c1_z4'', ''off'') }}'
+      # Не false: обрив тут ховав відмову. Клапан просто не відкрився, нічого не
+      # тече, тож безпечно пропустити цю зону й полити наступні - але не мовчки.
+      # Раніше зона, що не відкрилась, лишала без води й решту зон, а в журналі
+      # стояло бадьоре «полив стартував».
+      continue_on_timeout: true
+    - if:
+      - condition: template
+        value_template: '{{ not wait.completed }}'
+      then:
+      - action: notify.mobile_app_sm_s918b
+        data:
+          title: Зона 5 не почала полив
+          message: Клапан не відкрився за 30 секунд. Решту зон поливаємо далі; перевірте
+            звязок з контролером поливу.
+      - action: input_text.set_value
+        target:
+          entity_id: input_text.poliv_ostannie_rishennia
+        data:
+          value: '{{ now().strftime(''%d.%m %H:%M'') }} · зона 5 не відкрилась'
+    - wait_template: '{{ is_state(''binary_sensor.irrigation_unlimited_c1_z4'', ''off'')
+        }}'
       timeout: 01:02:00
-      continue_on_timeout: false
-    - wait_template: "{{ is_state('binary_sensor.irrigation_unlimited_c1_m', 'off')\n   and is_state('switch.mini_switch_k601_2_switch_1_2',\
-        \ 'off')\n   and is_state('switch.avtopoliv_kontroler_avtopoliv_klapan_5', 'off') }}"
+      # Зона мала б завершитись сама. Якщо за годину з гаком цього не сталось,
+      # мовчазний обрив лишив би насос і клапан у роботі: тут потрібна активна
+      # зупинка, а не просто вихід з автоматизації.
+      continue_on_timeout: true
+    - if:
+      - condition: template
+        value_template: '{{ not wait.completed }}'
+      then:
+      - action: script.poliv_stop_all
+      - action: notify.mobile_app_sm_s918b
+        data:
+          title: Зона 5 не зупинилась - полив перервано
+          message: Зона працювала понад годину і не завершилась сама. Насос і всі клапани
+            вимкнено примусово.
+      - stop: Зона 5 не завершилась у відведений час
+    - wait_template: "{{ is_state('binary_sensor.irrigation_unlimited_c1_m', 'off')\n
+        \  and is_state('switch.mini_switch_k601_2_switch_1_2', 'off')\n   and is_state('switch.avtopoliv_kontroler_avtopoliv_klapan_5',
+        'off') }}"
       timeout: 00:01:00
-      continue_on_timeout: false
+      # Насос, майстер і клапан мали вимкнутись за хвилину після зони. Якщо ні -
+      # зупиняємо примусово й повідомляємо: раніше автоматизація просто мовчки
+      # виходила, лишаючи наступні зони без поливу і нікого не попередивши.
+      continue_on_timeout: true
+    - if:
+      - condition: template
+        value_template: '{{ not wait.completed }}'
+      then:
+      - action: script.poliv_stop_all
+      - action: notify.mobile_app_sm_s918b
+        data:
+          title: Полив не вимкнувся сам
+          message: Насос або клапан лишались увімкненими через хвилину після зони.
+            Вимкнено примусово, решту зон пропущено.
+      - stop: Обладнання не повернулось у вимкнений стан
     - delay: 00:00:10
   mode: single
 - id: tcl_idle_slideshow_start
   alias: TCL - запустити фотозаставку після 5 хвилин простою
-  description: Не вмикає телевізор. Стартує лише якщо вже ввімкнений TCL безперервно перебуває у стані
-    idle п'ять хвилин.
+  description: Не вмикає телевізор. Стартує лише якщо вже ввімкнений TCL безперервно
+    перебуває у стані idle п'ять хвилин.
   triggers:
   - trigger: state
     entity_id: media_player.televizor_tcl
@@ -322,8 +478,9 @@
   mode: restart
 - id: tcl_idle_slideshow_stop_on_activity
   alias: TCL - зупинити фотозаставку при активності
-  description: Не дає заставці перебивати відео чи застосунок, який запустив користувач. Дві секунди потрібні,
-    щоб не прийняти власний запуск JPEG через стандартний Cast receiver за сторонню активність.
+  description: Не дає заставці перебивати відео чи застосунок, який запустив користувач.
+    Дві секунди потрібні, щоб не прийняти власний запуск JPEG через стандартний Cast
+    receiver за сторонню активність.
   triggers:
   - trigger: state
     entity_id: media_player.televizor_tcl
@@ -340,19 +497,19 @@
   actions:
   - delay: 00:00:02
   - condition: template
-    value_template: "{% set tv = 'media_player.televizor_tcl' %} {% set st = states(tv) %} {% set app\
-      \ = state_attr(tv, 'app_name') | default('', true) %} {% set kind = state_attr(tv, 'media_content_type')\
-      \ | default('', true) %} {{ st in ['off', 'unavailable']\n   or (st not in ['idle']\n       and\
-      \ kind != 'image/jpeg'\n       and app not in ['Default Media Receiver', 'Home Assistant Cast'])\
-      \ }}"
+    value_template: "{% set tv = 'media_player.televizor_tcl' %} {% set st = states(tv)
+      %} {% set app = state_attr(tv, 'app_name') | default('', true) %} {% set kind
+      = state_attr(tv, 'media_content_type') | default('', true) %} {{ st in ['off',
+      'unavailable']\n   or (st not in ['idle']\n       and kind != 'image/jpeg'\n
+      \      and app not in ['Default Media Receiver', 'Home Assistant Cast']) }}"
   - action: script.turn_off
     target:
       entity_id: script.tv_idle_slideshow
   mode: restart
 - id: hikvision_motion_snapshot
   alias: Камера - знімок при виявленні руху
-  description: При спрацюванні binary_sensor.cam1_motion зберігає кадр з camera.cam1, оновлює www/motion/latest.jpg
-    для дашборда і лишає останні 30 знімків.
+  description: При спрацюванні binary_sensor.cam1_motion зберігає кадр з camera.cam1,
+    оновлює www/motion/latest.jpg для дашборда і лишає останні 30 знімків.
   triggers:
   - trigger: state
     entity_id: binary_sensor.cam1_motion
@@ -362,15 +519,17 @@
     target:
       entity_id: camera.cam1
     data:
-      filename: /userdata/hass/config/www/motion/motion_{{ now().strftime('%Y%m%d_%H%M%S') }}.jpg
+      filename: /userdata/hass/config/www/motion/motion_{{ now().strftime('%Y%m%d_%H%M%S')
+        }}.jpg
   - action: shell_command.update_motion_snapshot
   mode: queued
   max: 10
 - id: hikvision_motion_clip
   alias: Камера - відеокліп при виявленні руху
-  description: 'Пише 15 с відео на NAS від моменту руху. Пре-ролю немає навмисно: він потребує preload_stream,
-    тобто постійного потоку з камери, а це розхитувало живлення плати. Умова про змонтовану шару обовʼязкова
-    - без неї кліпи писалися б на саму плату.'
+  description: 'Пише 15 с відео на NAS від моменту руху. Пре-ролю немає навмисно:
+    він потребує preload_stream, тобто постійного потоку з камери, а це розхитувало
+    живлення плати. Умова про змонтовану шару обовʼязкова - без неї кліпи писалися
+    б на саму плату.'
   triggers:
   - trigger: state
     entity_id: binary_sensor.cam1_motion
@@ -385,16 +544,10 @@
     target:
       entity_id: camera.cam1
     data:
-      filename: /userdata/hass/config/media/video/ha-motion/{{ now().strftime('%Y-%m-%d') }}/ruh_{{ now().strftime('%H%M%S')
-        }}.mp4
+      filename: /userdata/hass/config/media/video/ha-motion/{{ now().strftime('%Y-%m-%d')
+        }}/ruh_{{ now().strftime('%H%M%S') }}.mp4
       duration: 15
   - action: shell_command.rebuild_clip_gallery
-  # ПРИБРАНО 2026-08-10: тут викликався shell_command.prune_motion_clips, якого
-  # не існує - ні в configuration.yaml, ні в жодній гілці репозиторію. Кожне
-  # спрацювання автоматизації падало з "Service not found ... at pos 4", тобто
-  # кліп записувався, а автоматизація завершувалася помилкою.
-  # Окрема чистка й не потрібна: prepare_motion_dir на початку кожного запису
-  # видаляє теки старші за 14 діб (find -mtime +14 -exec rm -rf).
   mode: queued
   max: 10
 - id: tarif_peremknuty_lichylnyky
@@ -402,12 +555,12 @@
   description: 'Тримає всі utility_meter у тому самому тарифі, що й sensor.tarif_elektroenergii_zaraz:
     день 07:00-22:59, ніч 23:00-06:59.
 
-    Без цієї автоматизації лічильники назавжди лишились би в тарифі, який був активний при створенні,
-    і весь розподіл день/ніч був би неправильний.
+    Без цієї автоматизації лічильники назавжди лишились би в тарифі, який був активний
+    при створенні, і весь розподіл день/ніч був би неправильний.
 
-    Тригер на старт Home Assistant обов''язковий: після перезапуску серед ночі лічильники інакше лишалися
-    б у денному тарифі до наступної сьомої ранку. Затримка потрібна, щоб сутності utility_meter встигли
-    з''явитися.'
+    Тригер на старт Home Assistant обов''язковий: після перезапуску серед ночі лічильники
+    інакше лишалися б у денному тарифі до наступної сьомої ранку. Затримка потрібна,
+    щоб сутності utility_meter встигли з''явитися.'
   triggers:
   - trigger: time
     at: 07:00:00
@@ -433,16 +586,17 @@
   mode: single
 - id: irrigation_evening_rain_ask
   alias: Полив - вечірнє питання про дощ
-  description: 'О 21:00 дивиться погодинний прогноз на завтрашній ранок (03:00-09:00 - вікно, у яке потрапляє
-    старт за 1:15 до сходу) і, якщо очікується дощ, питає, чи поливати. Відповідь запам''ятовується у
-    input_boolean.poliv_propustyty_zavtra, і ранковий розклад просто її виконує.
+  description: 'О 21:00 дивиться погодинний прогноз на завтрашній ранок (03:00-09:00
+    - вікно, у яке потрапляє старт за 1:15 до сходу) і, якщо очікується дощ, питає,
+    чи поливати. Відповідь запам''ятовується у input_boolean.poliv_propustyty_zavtra,
+    і ранковий розклад просто її виконує.
 
-    Питати о 04:30, як було раніше, не мало сенсу: о пів на п''яту ніхто не бачить сповіщення, 30 хвилин
-    минають, і день пропускається за замовчуванням. Тепер питання ставиться, коли на нього реально можуть
-    відповісти.
+    Питати о 04:30, як було раніше, не мало сенсу: о пів на п''яту ніхто не бачить
+    сповіщення, 30 хвилин минають, і день пропускається за замовчуванням. Тепер питання
+    ставиться, коли на нього реально можуть відповісти.
 
-    Мовчання = пропустити, як і просили. Але прапорець скидається на початку перевірки, тож якщо дощу
-    не прогнозують, ранок поллється без жодних питань.'
+    Мовчання = пропустити, як і просили. Але прапорець скидається на початку перевірки,
+    тож якщо дощу не прогнозують, ранок поллється без жодних питань.'
   triggers:
   - trigger: time
     at: '21:00:00'
@@ -461,18 +615,19 @@
       type: hourly
     response_variable: fc
   - variables:
-      rain_morning: "{% set fl = fc.get('weather.forecast_golovna', {}).get('forecast', []) %} {% set\
-        \ ns = namespace(wet=false, mm=0.0) %} {% for f in fl %}\n  {% set t = as_datetime(f.datetime)\
-        \ | as_local %}\n  {% if t.date() == (now() + timedelta(days=1)).date() and 3 <= t.hour <= 9 %}\n\
-        \    {% if f.condition in ['rainy', 'pouring', 'lightning-rainy', 'snowy-rainy', 'hail']\n   \
-        \     or (f.precipitation | default(0) | float(0)) > 0.2 %}\n      {% set ns.wet = true %}\n \
-        \   {% endif %}\n    {% set ns.mm = ns.mm + (f.precipitation | default(0) | float(0)) %}\n  {%\
-        \ endif %}\n{% endfor %} {{ ns.wet }}\n"
-      rain_mm: "{% set fl = fc.get('weather.forecast_golovna', {}).get('forecast', []) %} {% set ns =\
-        \ namespace(mm=0.0) %} {% for f in fl %}\n  {% set t = as_datetime(f.datetime) | as_local %}\n\
-        \  {% if t.date() == (now() + timedelta(days=1)).date() and 3 <= t.hour <= 9 %}\n    {% set ns.mm\
-        \ = ns.mm + (f.precipitation | default(0) | float(0)) %}\n  {% endif %}\n{% endfor %} {{ ns.mm\
-        \ | round(1) }}\n"
+      rain_morning: "{% set fl = fc.get('weather.forecast_golovna', {}).get('forecast',
+        []) %} {% set ns = namespace(wet=false, mm=0.0) %} {% for f in fl %}\n  {%
+        set t = as_datetime(f.datetime) | as_local %}\n  {% if t.date() == (now()
+        + timedelta(days=1)).date() and 3 <= t.hour <= 9 %}\n    {% if f.condition
+        in ['rainy', 'pouring', 'lightning-rainy', 'snowy-rainy', 'hail']\n        or
+        (f.precipitation | default(0) | float(0)) > 0.2 %}\n      {% set ns.wet =
+        true %}\n    {% endif %}\n    {% set ns.mm = ns.mm + (f.precipitation | default(0)
+        | float(0)) %}\n  {% endif %}\n{% endfor %} {{ ns.wet }}\n"
+      rain_mm: "{% set fl = fc.get('weather.forecast_golovna', {}).get('forecast',
+        []) %} {% set ns = namespace(mm=0.0) %} {% for f in fl %}\n  {% set t = as_datetime(f.datetime)
+        | as_local %}\n  {% if t.date() == (now() + timedelta(days=1)).date() and
+        3 <= t.hour <= 9 %}\n    {% set ns.mm = ns.mm + (f.precipitation | default(0)
+        | float(0)) %}\n  {% endif %}\n{% endfor %} {{ ns.mm | round(1) }}\n"
   - if:
     - condition: template
       value_template: '{{ rain_morning }}'
@@ -492,15 +647,15 @@
       data:
         notification_id: poliv_dosh_vechir
         title: Полив завтра вранці · очікує рішення
-        message: Met.no прогнозує на завтрашній ранок дощ ({{ rain_mm }} мм за 03:00-09:00). Питання надіслано
-          на телефон о {{ now().strftime('%H:%M') }}. Якщо до 23:59 ніхто не натисне «Поливати», ранковий
-          полив буде пропущено.
+        message: Met.no прогнозує на завтрашній ранок дощ ({{ rain_mm }} мм за 03:00-09:00).
+          Питання надіслано на телефон о {{ now().strftime('%H:%M') }}. Якщо до 23:59
+          ніхто не натисне «Поливати», ранковий полив буде пропущено.
     - action: input_text.set_value
       target:
         entity_id: input_text.poliv_ostannie_rishennia
       data:
-        value: '{{ now().strftime(''%d.%m %H:%M'') }} · чекаю відповіді · прогноз дощу на ранок {{ rain_mm
-          }} мм'
+        value: '{{ now().strftime(''%d.%m %H:%M'') }} · чекаю відповіді · прогноз
+          дощу на ранок {{ rain_mm }} мм'
     - wait_for_trigger:
       - trigger: event
         event_type: mobile_app_notification_action
@@ -514,7 +669,8 @@
       continue_on_timeout: true
     - if:
       - condition: template
-        value_template: '{{ wait.trigger is none or wait.trigger.event.data.action != ''POLIV_YES'' }}'
+        value_template: '{{ wait.trigger is none or wait.trigger.event.data.action
+          != ''POLIV_YES'' }}'
       then:
       - action: input_boolean.turn_on
         target:
@@ -528,14 +684,16 @@
         data:
           notification_id: poliv_dosh_vechir
           title: Завтрашній полив пропущено
-          message: 'Ранковий полив завтра пропущено. Причина: прогноз дощу {{ rain_mm }} мм, а на питання
-            {{ ''ніхто не відповів'' if wait.trigger is none else ''обрано «Пропустити»'' }}.'
+          message: 'Ранковий полив завтра пропущено. Причина: прогноз дощу {{ rain_mm
+            }} мм, а на питання {{ ''ніхто не відповів'' if wait.trigger is none else
+            ''обрано «Пропустити»'' }}.'
       - action: input_text.set_value
         target:
           entity_id: input_text.poliv_ostannie_rishennia
         data:
-          value: '{{ now().strftime(''%d.%m %H:%M'') }} · завтра пропустити · дощ {{ rain_mm }} мм · {{
-            ''без відповіді'' if wait.trigger is none else ''обрано «Пропустити»'' }}'
+          value: '{{ now().strftime(''%d.%m %H:%M'') }} · завтра пропустити · дощ
+            {{ rain_mm }} мм · {{ ''без відповіді'' if wait.trigger is none else ''обрано
+            «Пропустити»'' }}'
       else:
       - action: persistent_notification.dismiss
         data:
@@ -544,13 +702,15 @@
         target:
           entity_id: input_text.poliv_ostannie_rishennia
         data:
-          value: '{{ now().strftime(''%d.%m %H:%M'') }} · завтра поливати попри дощ · рішення підтверджено'
+          value: '{{ now().strftime(''%d.%m %H:%M'') }} · завтра поливати попри дощ
+            · рішення підтверджено'
     else:
     - action: input_text.set_value
       target:
         entity_id: input_text.poliv_ostannie_rishennia
       data:
-        value: '{{ now().strftime(''%d.%m %H:%M'') }} · дощу на ранок не прогнозують · поллється за розкладом'
+        value: '{{ now().strftime(''%d.%m %H:%M'') }} · дощу на ранок не прогнозують
+          · поллється за розкладом'
   mode: single
 - id: ev_schedule_window_start
   alias: Заряджання - старт вікна розкладу
@@ -580,9 +740,9 @@
   mode: single
 - id: ev_schedule_window_end
   alias: Заряджання - кінець вікна розкладу
-  description: О часі кінця вікна зупиняє заряджання. Зупиняє саме командою
-    Close charging - перемикач switch.zariadka_7_5kvt на сесію не впливає, це
-    перевірено 2026-08-09.
+  description: О часі кінця вікна зупиняє заряджання. Зупиняє саме командою Close
+    charging - перемикач switch.zariadka_7_5kvt на сесію не впливає, це перевірено
+    2026-08-09.
   triggers:
   - trigger: time
     at: input_datetime.zariadka_kinets
@@ -599,9 +759,8 @@
   mode: single
 - id: ev_schedule_car_plugged_inside_window
   alias: Заряджання - авто підключили всередині вікна
-  description: Якщо машину під'єднали посеред дозволеного вікна, заряджання має
-    початися одразу, а не чекати наступної ночі. Спрацьовує на виході станції зі
-    стану no_connet.
+  description: Якщо машину під'єднали посеред дозволеного вікна, заряджання має початися
+    одразу, а не чекати наступної ночі. Спрацьовує на виході станції зі стану no_connet.
   triggers:
   - trigger: state
     entity_id: sensor.zariadka_7_5kvt_device_state
@@ -611,11 +770,11 @@
     entity_id: input_boolean.zariadka_rozklad
     state: 'on'
   - condition: template
-    value_template: >
-      {% set now_t = now().strftime('%H:%M') %}
-      {% set a = states('input_datetime.zariadka_pochatok')[:5] %}
-      {% set b = states('input_datetime.zariadka_kinets')[:5] %}
-      {% if a <= b %}{{ a <= now_t < b }}{% else %}{{ now_t >= a or now_t < b }}{% endif %}
+    value_template: '{% set now_t = now().strftime(''%H:%M'') %} {% set a = states(''input_datetime.zariadka_pochatok'')[:5]
+      %} {% set b = states(''input_datetime.zariadka_kinets'')[:5] %} {% if a <= b
+      %}{{ a <= now_t < b }}{% else %}{{ now_t >= a or now_t < b }}{% endif %}
+
+      '
   actions:
   - action: number.set_value
     target:
@@ -631,24 +790,27 @@
   mode: single
 - id: irrigation_switch_source_log
   alias: Полив - журнал перемикань із джерелом
-  description: 'Пише в журнал HA кожне перемикання насоса й клапанів 1-5 разом із тим, ХТО його зробив.
-    Без цього в логах видно лише факт "клапан закрився", і неможливо відрізнити ручне натискання від
-    роботи автоматизації чи від того, що клапан закрив сам контролер за власним відліком - а саме це
-    питання виникло 10.08.2026 при розборі недоливу.
+  description: 'Пише в журнал HA кожне перемикання насоса й клапанів 1-5 разом із
+    тим, ХТО його зробив. Без цього в логах видно лише факт "клапан закрився", і неможливо
+    відрізнити ручне натискання від роботи автоматизації чи від того, що клапан закрив
+    сам контролер за власним відліком - а саме це питання виникло 10.08.2026 при розборі
+    недоливу.
 
-    Джерело визначається за контекстом Home Assistant:
-    user_id заповнений і батьківського контексту немає - людина натиснула в інтерфейсі;
-    parent_id заповнений - дію породила автоматизація або скрипт (можливо, запущені людиною);
-    обидва порожні - команди з Home Assistant не було АБО її подала інтеграція власним контекстом.
+    Джерело визначається за контекстом Home Assistant: user_id заповнений і батьківського
+    контексту немає - людина натиснула в інтерфейсі; parent_id заповнений - дію породила
+    автоматизація або скрипт (можливо, запущені людиною); обидва порожні - команди
+    з Home Assistant не було АБО її подала інтеграція власним контекстом.
 
-    Контексту недостатньо, щоб відрізнити Irrigation Unlimited від самого контролера: IU викликає
-    сервіси зі свіжим контекстом без parent_id, тому 10.08 його команди підписувалися як "пристрій сам".
-    Тому в рядок додано стан IU, а окремим маркером POLIV-АНОМАЛІЯ позначається саме та ситуація, яка
-    призвела до недоливу: клапан закрився, поки майстер IU ще поливає. IU так ніколи не робить - він
-    спершу зупиняє насос і аж потім закриває клапан, - отже це апаратний відлік контролера.
+    Контексту недостатньо, щоб відрізнити Irrigation Unlimited від самого контролера:
+    IU викликає сервіси зі свіжим контекстом без parent_id, тому 10.08 його команди
+    підписувалися як "пристрій сам". Тому в рядок додано стан IU, а окремим маркером
+    POLIV-АНОМАЛІЯ позначається саме та ситуація, яка призвела до недоливу: клапан
+    закрився, поки майстер IU ще поливає. IU так ніколи не робить - він спершу зупиняє
+    насос і аж потім закриває клапан, - отже це апаратний відлік контролера.
 
-    Пише через system_log на рівні warning, тому потрапляє і в journalctl, і в Налаштування - Журнали.
-    Домени automation і script виключені з recorder, тому іншого сліду про авторство не лишається.'
+    Пише через system_log на рівні warning, тому потрапляє і в journalctl, і в Налаштування
+    - Журнали. Домени automation і script виключені з recorder, тому іншого сліду
+    про авторство не лишається.'
   triggers:
   - trigger: state
     entity_id:
@@ -663,56 +825,61 @@
     - 'off'
   conditions:
   - condition: template
-    value_template: '{{ trigger.from_state is not none and trigger.from_state.state != trigger.to_state.state
-      }}'
+    value_template: '{{ trigger.from_state is not none and trigger.from_state.state
+      != trigger.to_state.state }}'
   actions:
   - variables:
-      source: "{% set c = trigger.to_state.context %} {% if c.user_id and not c.parent_id %}ВРУЧНУ (людина\
-        \ в інтерфейсі){% elif c.parent_id %}АВТОМАТИЗАЦІЯ або скрипт{% elif c.user_id %}ВРУЧНУ через\
-        \ автоматизацію, запущену людиною{% else %}БЕЗ КОНТЕКСТУ HA (інтеграція або сам контролер){% endif\
-        \ %}"
-      controller_closed: "{{ 'klapan' in trigger.entity_id\n   and trigger.to_state.state == 'off'\n \
-        \  and is_state('binary_sensor.irrigation_unlimited_c1_m', 'on') }}\n"
+      source: '{% set c = trigger.to_state.context %} {% if c.user_id and not c.parent_id
+        %}ВРУЧНУ (людина в інтерфейсі){% elif c.parent_id %}АВТОМАТИЗАЦІЯ або скрипт{%
+        elif c.user_id %}ВРУЧНУ через автоматизацію, запущену людиною{% else %}БЕЗ
+        КОНТЕКСТУ HA (інтеграція або сам контролер){% endif %}'
+      controller_closed: "{{ 'klapan' in trigger.entity_id\n   and trigger.to_state.state
+        == 'off'\n   and is_state('binary_sensor.irrigation_unlimited_c1_m', 'on')
+        }}\n"
   - action: system_log.write
     data:
       level: warning
       logger: homemate.poliv
-      message: '{{ ''POLIV-АНОМАЛІЯ КОНТРОЛЕР ЗАКРИВ КЛАПАН, поки IU ще поливає: '' if controller_closed
-        else ''POLIV '' }}{{ trigger.to_state.name }} {{ trigger.from_state.state }} -> {{ trigger.to_state.state
-        }} · джерело: {{ source }} · IU майстер={{ states(''binary_sensor.irrigation_unlimited_c1_m'')
-        }} · насос={{ states(''switch.mini_switch_k601_2_switch_1_2'') }} · context id={{ trigger.to_state.context.id[:8]
-        }} parent={{ trigger.to_state.context.parent_id[:8] if trigger.to_state.context.parent_id else
-        ''-'' }} user={{ trigger.to_state.context.user_id[:8] if trigger.to_state.context.user_id else
-        ''-'' }}'
+      message: '{{ ''POLIV-АНОМАЛІЯ КОНТРОЛЕР ЗАКРИВ КЛАПАН, поки IU ще поливає: ''
+        if controller_closed else ''POLIV '' }}{{ trigger.to_state.name }} {{ trigger.from_state.state
+        }} -> {{ trigger.to_state.state }} · джерело: {{ source }} · IU майстер={{
+        states(''binary_sensor.irrigation_unlimited_c1_m'') }} · насос={{ states(''switch.mini_switch_k601_2_switch_1_2'')
+        }} · context id={{ trigger.to_state.context.id[:8] }} parent={{ trigger.to_state.context.parent_id[:8]
+        if trigger.to_state.context.parent_id else ''-'' }} user={{ trigger.to_state.context.user_id[:8]
+        if trigger.to_state.context.user_id else ''-'' }}'
   mode: queued
   max: 25
 - id: irrigation_credit_bucket_on_valve_close
   alias: Полив - зарахувати вилиту воду в баланс зони
-  description: 'Додає вилиту воду до водного балансу Smart Irrigation після кожного закриття клапана -
-    незалежно від того, хто його відкрив: розклад, кнопка на дашборді чи тумблер.
+  description: 'Додає вилиту воду до водного балансу Smart Irrigation після кожного
+    закриття клапана - незалежно від того, хто його відкрив: розклад, кнопка на дашборді
+    чи тумблер.
 
-    НАВІЩО. Модуль observed watering усередині Smart Irrigation уміє це сам, але для зон 1 і 2 він
-    мовчить: їм прив''язана сутність, яка ніколи не змінює стан (інцидент 0cfd77b0, найімовірніше
-    застарілий хмарний дубль switch.avtopoliv_kontroler_switch_N). Прив''язка лежить у .storage і
-    правиться лише з панелі Smart Irrigation, тому до її виправлення зарахування робить ця
-    автоматизація. Без неї полив зон 1 і 2 не потрапляє ні в баланс, ні на графік "Вода за 7 днів",
-    і дефіцит накопичується щодоби.
+    НАВІЩО. Модуль observed watering усередині Smart Irrigation уміє це сам, але для
+    зон 1 і 2 він мовчить: їм прив''язана сутність, яка ніколи не змінює стан (інцидент
+    0cfd77b0, найімовірніше застарілий хмарний дубль switch.avtopoliv_kontroler_switch_N).
+    Прив''язка лежить у .storage і правиться лише з панелі Smart Irrigation, тому
+    до її виправлення зарахування робить ця автоматизація. Без неї полив зон 1 і 2
+    не потрапляє ні в баланс, ні на графік "Вода за 7 днів", і дефіцит накопичується
+    щодоби.
 
-    ЧОМУ НЕ БУДЕ ПОДВІЙНОГО РАХУНКУ. Після закриття клапана автоматизація запам''ятовує баланс, чекає
-    20 секунд і дивиться, чи він змінився сам. Якщо змінився - зарахував штатний модуль (так працює
-    зона 5), і автоматизація не робить нічого. Дописує тільки там, де не зарахував ніхто. Через це її
-    можна лишати ввімкненою і після виправлення прив''язки: вона просто перестане спрацьовувати.
+    ЧОМУ НЕ БУДЕ ПОДВІЙНОГО РАХУНКУ. Після закриття клапана автоматизація запам''ятовує
+    баланс, чекає 20 секунд і дивиться, чи він змінився сам. Якщо змінився - зарахував
+    штатний модуль (так працює зона 5), і автоматизація не робить нічого. Дописує
+    тільки там, де не зарахував ніхто. Через це її можна лишати ввімкненою і після
+    виправлення прив''язки: вона просто перестане спрацьовувати.
 
-    ЯК РАХУЄТЬСЯ. Тими самими числами, що й у самому модулі: мм = хвилини * продуктивність / площа.
-    Зони 1 і 2 - 40 л/хв на 200 м². Результат обрізається зверху максимальним балансом зони, інакше
-    сервіс set_zone відхиляє значення.
+    ЯК РАХУЄТЬСЯ. Тими самими числами, що й у самому модулі: мм = хвилини * продуктивність
+    / площа. Зони 1 і 2 - 40 л/хв на 200 м². Результат обрізається зверху максимальним
+    балансом зони, інакше сервіс set_zone відхиляє значення.
 
-    ЗОНА 5 СЮДИ НЕ ВХОДИТЬ навмисно. Їй штатний модуль зараховує сам: його внутрішній id 2 прив''язаний
-    саме до клапана 5. 11.08 о 05:15 обидва спрацювали разом і зона отримала 6,82 мм обліку на 3,41 мм
-    вилитої води, бо модуль дописує в ту саму секунду, коли клапан закрився, - тобто до першого заміру
-    балансу цією автоматизацією.
+    ЗОНА 5 СЮДИ НЕ ВХОДИТЬ навмисно. Їй штатний модуль зараховує сам: його внутрішній
+    id 2 прив''язаний саме до клапана 5. 11.08 о 05:15 обидва спрацювали разом і зона
+    отримала 6,82 мм обліку на 3,41 мм вилитої води, бо модуль дописує в ту саму секунду,
+    коли клапан закрився, - тобто до першого заміру балансу цією автоматизацією.
 
-    Пробіги коротші за 30 секунд ігноруються: це не полив, а перевірка клапана або збій зв''язку.'
+    Пробіги коротші за 30 секунд ігноруються: це не полив, а перевірка клапана або
+    збій зв''язку.'
   triggers:
   - trigger: state
     entity_id:
@@ -723,52 +890,43 @@
   conditions: []
   actions:
   - variables:
-      zone_sensor: "{{ {'switch.avtopoliv_kontroler_avtopoliv_klapan_1': 'sensor.smart_irrigation_zona1',\n\
-        \  'switch.avtopoliv_kontroler_avtopoliv_klapan_2': 'sensor.smart_irrigation_zona2'}[trigger.entity_id]\
-        \ }}\n"
-      seconds: "{{ (as_timestamp(trigger.to_state.last_changed)\n   - as_timestamp(trigger.from_state.last_changed))\
-        \ | int(0) }}\n"
+      zone_sensor: "{{ {'switch.avtopoliv_kontroler_avtopoliv_klapan_1': 'sensor.smart_irrigation_zona1',\n
+        \ 'switch.avtopoliv_kontroler_avtopoliv_klapan_2': 'sensor.smart_irrigation_zona2'}[trigger.entity_id]
+        }}\n"
+      seconds: "{{ (as_timestamp(trigger.to_state.last_changed)\n   - as_timestamp(trigger.from_state.last_changed))
+        | int(0) }}\n"
   - condition: template
     value_template: '{{ seconds >= 30 and seconds <= 7200 }}'
   - variables:
       bucket_before: '{{ state_attr(zone_sensor, ''bucket'') | float(0) }}'
-      applied_mm: "{{ (seconds / 60.0\n   * (state_attr(zone_sensor, 'throughput') | float(0))\n   /\
-        \ (state_attr(zone_sensor, 'size') | float(1))) | round(3) }}\n"
+      applied_mm: "{{ (seconds / 60.0\n   * (state_attr(zone_sensor, 'throughput')
+        | float(0))\n   / (state_attr(zone_sensor, 'size') | float(1))) | round(3)
+        }}\n"
   - condition: template
     value_template: '{{ applied_mm > 0 }}'
   - delay: 00:00:20
   - variables:
       bucket_after: '{{ state_attr(zone_sensor, ''bucket'') | float(0) }}'
-  # Дві незалежні перевірки, чи не зарахував уже штатний модуль.
-  #
-  # Перша - за міткою last_irrigation. Вона надійніша за порівняння балансу, бо
-  # штатний модуль зараховує в ту саму секунду, коли клапан закрився, тобто ДО
-  # першого заміру балансу. Саме на цьому 11.08 о 05:15 сталося подвійне
-  # зарахування зони 5: модуль дописав +3.41, автоматизація за 20 секунд побачила
-  # "зростання нуль" і дописала ще стільки ж. Зона отримала 3,41 мм води і 6,82
-  # мм в облік.
-  #
-  # Друга - за зростанням балансу, як запобіжник, якщо мітка не оновиться.
   - variables:
       last_irr: '{{ state_attr(zone_sensor, ''last_irrigation'') }}'
-      last_irr_age: "{{ (as_timestamp(now()) - as_timestamp(last_irr, 0)) | int(999999)\n   if last_irr\
-        \ else 999999 }}\n"
+      last_irr_age: "{{ (as_timestamp(now()) - as_timestamp(last_irr, 0)) | int(999999)\n
+        \  if last_irr else 999999 }}\n"
   - if:
     - condition: template
-      value_template: "{{ last_irr_age < 120\n   or (bucket_after - bucket_before) >= (applied_mm | float(0))\
-        \ * 0.5 }}\n"
+      value_template: "{{ last_irr_age < 120\n   or (bucket_after - bucket_before)
+        >= (applied_mm | float(0)) * 0.5 }}\n"
     then:
     - action: system_log.write
       data:
         level: warning
         logger: homemate.poliv
-        message: 'POLIV-БАЛАНС {{ zone_sensor }}: зарахував штатний модуль ({{ bucket_before | round(3)
-          }} -> {{ bucket_after | round(3) }}, очікувалось +{{ applied_mm }} мм, last_irrigation {{ last_irr_age
-          }} с тому), автоматизація не втручається'
+        message: 'POLIV-БАЛАНС {{ zone_sensor }}: зарахував штатний модуль ({{ bucket_before
+          | round(3) }} -> {{ bucket_after | round(3) }}, очікувалось +{{ applied_mm
+          }} мм, last_irrigation {{ last_irr_age }} с тому), автоматизація не втручається'
     - stop: Баланс уже поповнено самим Smart Irrigation
   - variables:
-      new_bucket: "{{ [ bucket_after + (applied_mm | float(0)),\n     state_attr(zone_sensor, 'maximum_bucket')\
-        \ | float(24) ] | min | round(3) }}\n"
+      new_bucket: "{{ [ bucket_after + (applied_mm | float(0)),\n     state_attr(zone_sensor,
+        'maximum_bucket') | float(24) ] | min | round(3) }}\n"
   - action: smart_irrigation.set_zone
     data:
       entity_id: '{{ zone_sensor }}'
@@ -777,34 +935,37 @@
     data:
       level: warning
       logger: homemate.poliv
-      message: 'POLIV-БАЛАНС {{ zone_sensor }}: полив {{ (seconds / 60) | round(1) }} хв = {{ applied_mm
-        }} мм, баланс {{ bucket_after | round(3) }} -> {{ new_bucket }} (зарахувала автоматизація, штатний
-        модуль промовчав)'
+      message: 'POLIV-БАЛАНС {{ zone_sensor }}: полив {{ (seconds / 60) | round(1)
+        }} хв = {{ applied_mm }} мм, баланс {{ bucket_after | round(3) }} -> {{ new_bucket
+        }} (зарахувала автоматизація, штатний модуль промовчав)'
   mode: queued
   max: 10
 - id: irrigation_watchdog_master_without_valve
   alias: 'Полив - сторож: майстер поливає, а клапан закритий'
-  description: 'Зупиняє полив, якщо Irrigation Unlimited вважає, що поливає, а жоден клапан не відкритий.
-    Це той стан, у якому насос працює в глухий кут.
+  description: 'Зупиняє полив, якщо Irrigation Unlimited вважає, що поливає, а жоден
+    клапан не відкритий. Це той стан, у якому насос працює в глухий кут.
 
-    НАВІЩО ОКРЕМО ВІД ЗАПИСУ ТАЙМЕРА. Запис DP лікує одну конкретну причину - апаратний відлік
-    контролера. Сторож ловить весь клас: обрив LocalTuya посеред поливу, відмову котушки клапана,
-    ручне закриття клапана під час циклу, збій контролера. У ніч проти 10.08 така ситуація тривала
-    близько 50 хвилин і ніхто її не помітив, бо check_back у Irrigation Unlimited перевіряє клапан
-    лише ~90 секунд після команди.
+    НАВІЩО ОКРЕМО ВІД ЗАПИСУ ТАЙМЕРА. Запис DP лікує одну конкретну причину - апаратний
+    відлік контролера. Сторож ловить весь клас: обрив LocalTuya посеред поливу, відмову
+    котушки клапана, ручне закриття клапана під час циклу, збій контролера. У ніч
+    проти 10.08 така ситуація тривала близько 50 хвилин і ніхто її не помітив, бо
+    check_back у Irrigation Unlimited перевіряє клапан лише ~90 секунд після команди.
 
-    ВИТРИМКА ХВИЛИНА навмисна. Між зонами Irrigation Unlimited на кілька секунд лишає всі клапани
-    закритими при увімкненому майстрі - це нормальний перехід, і без витримки сторож рубав би кожен
-    багатозонний полив. Хвилини вистачає з запасом: 11.08 найдовший такий перехід тривав 17 секунд.
+    ВИТРИМКА ХВИЛИНА навмисна. Між зонами Irrigation Unlimited на кілька секунд лишає
+    всі клапани закритими при увімкненому майстрі - це нормальний перехід, і без витримки
+    сторож рубав би кожен багатозонний полив. Хвилини вистачає з запасом: 11.08 найдовший
+    такий перехід тривав 17 секунд.
 
-    Зупиняє через той самий script.poliv_stop_all, що й кнопка на дашборді, тобто у правильному
-    порядку: спершу насос, потім клапани.'
+    Зупиняє через той самий script.poliv_stop_all, що й кнопка на дашборді, тобто
+    у правильному порядку: спершу насос, потім клапани.'
   triggers:
   - trigger: template
-    value_template: "{{ is_state('binary_sensor.irrigation_unlimited_c1_m', 'on')\n   and not is_state('switch.avtopoliv_kontroler_avtopoliv_klapan_1',\
-      \ 'on')\n   and not is_state('switch.avtopoliv_kontroler_avtopoliv_klapan_2', 'on')\n   and not\
-      \ is_state('switch.avtopoliv_kontroler_avtopoliv_klapan_3', 'on')\n   and not is_state('switch.avtopoliv_kontroler_avtopoliv_klapan_4',\
-      \ 'on')\n   and not is_state('switch.avtopoliv_kontroler_avtopoliv_klapan_5', 'on') }}\n"
+    value_template: "{{ is_state('binary_sensor.irrigation_unlimited_c1_m', 'on')\n
+      \  and not is_state('switch.avtopoliv_kontroler_avtopoliv_klapan_1', 'on')\n
+      \  and not is_state('switch.avtopoliv_kontroler_avtopoliv_klapan_2', 'on')\n
+      \  and not is_state('switch.avtopoliv_kontroler_avtopoliv_klapan_3', 'on')\n
+      \  and not is_state('switch.avtopoliv_kontroler_avtopoliv_klapan_4', 'on')\n
+      \  and not is_state('switch.avtopoliv_kontroler_avtopoliv_klapan_5', 'on') }}\n"
     for: 00:01:00
   conditions: []
   actions:
@@ -812,41 +973,43 @@
     data:
       level: warning
       logger: homemate.poliv
-      message: 'POLIV-СТОРОЖ: майстер Irrigation Unlimited поливає вже хвилину без жодного відкритого
-        клапана - зупиняю. Насос = {{ states(''switch.mini_switch_k601_2_switch_1_2'') }}, зони IU:
-        z1={{ states(''binary_sensor.irrigation_unlimited_c1_z1'') }} z2={{ states(''binary_sensor.irrigation_unlimited_c1_z2'')
-        }} z3={{ states(''binary_sensor.irrigation_unlimited_c1_z3'') }} z4={{ states(''binary_sensor.irrigation_unlimited_c1_z4'')
-        }}'
+      message: 'POLIV-СТОРОЖ: майстер Irrigation Unlimited поливає вже хвилину без
+        жодного відкритого клапана - зупиняю. Насос = {{ states(''switch.mini_switch_k601_2_switch_1_2'')
+        }}, зони IU: z1={{ states(''binary_sensor.irrigation_unlimited_c1_z1'') }}
+        z2={{ states(''binary_sensor.irrigation_unlimited_c1_z2'') }} z3={{ states(''binary_sensor.irrigation_unlimited_c1_z3'')
+        }} z4={{ states(''binary_sensor.irrigation_unlimited_c1_z4'') }}'
   - action: script.poliv_stop_all
   - action: persistent_notification.create
     data:
       notification_id: poliv_storozh
       title: Полив зупинено сторожем
-      message: 'Irrigation Unlimited поливав понад хвилину, хоча жоден клапан не був відкритий - насос
-        працював у глухий кут. Полив зупинено о {{ now().strftime(''%H:%M:%S'') }}. Перевірте живлення
-        24 В контролера, зв''язок LocalTuya і котушку клапана тієї зони, яка мала поливатися.'
+      message: Irrigation Unlimited поливав понад хвилину, хоча жоден клапан не був
+        відкритий - насос працював у глухий кут. Полив зупинено о {{ now().strftime('%H:%M:%S')
+        }}. Перевірте живлення 24 В контролера, зв'язок LocalTuya і котушку клапана
+        тієї зони, яка мала поливатися.
   mode: single
 - id: irrigation_morning_recalculate
   alias: Полив - ранковий перерахунок Smart Irrigation
   description: 'Перераховує зони о 07:00, коли нічний полив уже завершився і зарахований.
 
-    НАВІЩО. Тривалість зберігається в зоні і перераховується ЛИШЕ на розрахунку. Автоматичний був
-    один - о 19:55, - тому цілий день на панелі й на картках висів учорашній план, який до реальності
-    вже не мав стосунку. 11.08 зона 2 показувала запас +2.63 мм і поруч "3021 секунда", бо це число
-    порахували ще при дефіциті -10.07.
+    НАВІЩО. Тривалість зберігається в зоні і перераховується ЛИШЕ на розрахунку. Автоматичний
+    був один - о 19:55, - тому цілий день на панелі й на картках висів учорашній план,
+    який до реальності вже не мав стосунку. 11.08 зона 2 показувала запас +2.63 мм
+    і поруч "3021 секунда", бо це число порахували ще при дефіциті -10.07.
 
-    Ранковий розрахунок робить денну картину чесною: після нього тривалість відповідає балансу, який
-    лишився після поливу.
+    Ранковий розрахунок робить денну картину чесною: після нього тривалість відповідає
+    балансу, який лишився після поливу.
 
-    НА НІЧНИЙ ПОЛИВ ЦЕ НЕ ВПЛИВАЄ. Полив бере тривалість з розрахунку о 19:55, а він відбувається
-    пізніше і перезаписує ранкову.
+    НА НІЧНИЙ ПОЛИВ ЦЕ НЕ ВПЛИВАЄ. Полив бере тривалість з розрахунку о 19:55, а він
+    відбувається пізніше і перезаписує ранкову.
 
-    ПРО ПОГОДНІ ДАНІ. Кожен розрахунок застосовує накопичене випаровування і стирає використані дані.
-    Тепер доба ділиться на дві частини: 23:59-07:00 і 07:00-19:55. Сумарне випаровування від цього не
-    змінюється - воно просто застосовується двома порціями замість однієї.
+    ПРО ПОГОДНІ ДАНІ. Кожен розрахунок застосовує накопичене випаровування і стирає
+    використані дані. Тепер доба ділиться на дві частини: 23:59-07:00 і 07:00-19:55.
+    Сумарне випаровування від цього не змінюється - воно просто застосовується двома
+    порціями замість однієї.
 
-    Пропускаємо, якщо в цю мить іде полив: розрахунок посеред циклу міняв би тривалість зони, яку
-    Irrigation Unlimited уже виконує.'
+    Пропускаємо, якщо в цю мить іде полив: розрахунок посеред циклу міняв би тривалість
+    зони, яку Irrigation Unlimited уже виконує.'
   triggers:
   - trigger: time
     at: 07:00:00
@@ -863,61 +1026,59 @@
       level: warning
       logger: homemate.poliv
       message: 'POLIV-ПЕРЕРАХУНОК ранковий: зона 1 баланс {{ state_attr(''sensor.smart_irrigation_zona1'',
-        ''bucket'') | round(2) }} мм / {{ states(''sensor.smart_irrigation_zona1'') }} с, зона 2 {{
-        state_attr(''sensor.smart_irrigation_zona2'', ''bucket'') | round(2) }} мм / {{ states(''sensor.smart_irrigation_zona2'')
-        }} с, зона 5 {{ state_attr(''sensor.smart_irrigation_zona5'', ''bucket'') | round(2) }} мм /
-        {{ states(''sensor.smart_irrigation_zona5'') }} с'
+        ''bucket'') | round(2) }} мм / {{ states(''sensor.smart_irrigation_zona1'')
+        }} с, зона 2 {{ state_attr(''sensor.smart_irrigation_zona2'', ''bucket'')
+        | round(2) }} мм / {{ states(''sensor.smart_irrigation_zona2'') }} с, зона
+        5 {{ state_attr(''sensor.smart_irrigation_zona5'', ''bucket'') | round(2)
+        }} мм / {{ states(''sensor.smart_irrigation_zona5'') }} с'
   mode: single
 - id: disk_userdata_warning
   alias: Диск - попередження про заповнення /userdata
-  description: 'Попереджає, поки ще є доба запасу. 250 МБ обрано за виміряним
-    темпом росту бази (~130 МБ на добу), тобто приблизно доба до біди.
-    for: 30 хв, щоб короткий сплеск під час бекапу не смикав телефон.'
+  description: 'Попереджає, поки ще є доба запасу. 250 МБ обрано за виміряним темпом
+    росту бази (~130 МБ на добу), тобто приблизно доба до біди. for: 30 хв, щоб короткий
+    сплеск під час бекапу не смикав телефон.'
   triggers:
   - trigger: numeric_state
     entity_id: sensor.vilne_mistse_userdata
     below: 250
-    for: '00:30:00'
+    for: 00:30:00
   - trigger: numeric_state
     entity_id: sensor.vilne_mistse_korenia
     below: 800
-    for: '00:30:00'
+    for: 00:30:00
   actions:
   - action: notify.mobile_app_sm_s918b
     data:
       title: Місце на платі закінчується
-      message: >-
-        На розділі «{{ trigger.to_state.name }}» лишилось {{ trigger.to_state.state }} МБ.
-        Коли дійде до нуля, Home Assistant не зможе писати - минулого разу через
-        це стояв полив. Найшвидше допоможе зменшити зберігання бази.
+      message: На розділі «{{ trigger.to_state.name }}» лишилось {{ trigger.to_state.state
+        }} МБ. Коли дійде до нуля, Home Assistant не зможе писати - минулого разу
+        через це стояв полив. Найшвидше допоможе зменшити зберігання бази.
   - action: persistent_notification.create
     data:
       notification_id: disk_userdata
       title: Місце на /userdata закінчується
-      message: >-
-        Розділ «{{ trigger.to_state.name }}»: {{ trigger.to_state.state }} МБ.
-        Найімовірніша причина - база recorder.
+      message: 'Розділ «{{ trigger.to_state.name }}»: {{ trigger.to_state.state }}
+        МБ. Найімовірніша причина - база recorder.'
   mode: single
 - id: disk_userdata_critical
   alias: Диск - критично мало місця на /userdata
-  description: 'Остання межа. 120 МБ - це вже менше, ніж добовий приріст, тож
-    зволікати нема куди.'
+  description: Остання межа. 120 МБ - це вже менше, ніж добовий приріст, тож зволікати
+    нема куди.
   triggers:
   - trigger: numeric_state
     entity_id: sensor.vilne_mistse_userdata
     below: 120
-    for: '00:10:00'
+    for: 00:10:00
   - trigger: numeric_state
     entity_id: sensor.vilne_mistse_korenia
     below: 400
-    for: '00:10:00'
+    for: 00:10:00
   actions:
   - action: notify.mobile_app_sm_s918b
     data:
       title: КРИТИЧНО - диск плати майже повний
-      message: >-
-        «{{ trigger.to_state.name }}»: {{ trigger.to_state.state }} МБ. Home Assistant
-        ось-ось не зможе писати на диск.
+      message: '«{{ trigger.to_state.name }}»: {{ trigger.to_state.state }} МБ. Home
+        Assistant ось-ось не зможе писати на диск.'
       data:
         ttl: 0
         priority: high
@@ -925,32 +1086,1185 @@
     data:
       notification_id: disk_userdata_critical
       title: КРИТИЧНО - /userdata майже повний
-      message: >-
-        «{{ trigger.to_state.name }}»: {{ trigger.to_state.state }} МБ.
+      message: '«{{ trigger.to_state.name }}»: {{ trigger.to_state.state }} МБ.'
   mode: single
 - id: userdata_fs_broken
   alias: Диск - файлова система /userdata пошкоджена
-  description: 'Знеструмлення плати рано чи пізно псує ext4. Перевірка при
-    завантаженні знята навмисно (інакше HA взагалі не стартує), тому про
-    пошкодження треба дізнаватись звідси, а не з мертвого дому.'
+  description: 'Знеструмлення плати рано чи пізно псує ext4. Перевірка при завантаженні
+    знята навмисно (інакше HA взагалі не стартує), тому про пошкодження треба дізнаватись
+    звідси, а не з мертвого дому. Одного тригера на перехід не досить: 22 серпня 2026
+    сенсор був "on", помилок у суперблоці 22, останній fsck - червень 2024, а
+    last_triggered лишався never. Перехід стався колись до появи цієї автоматизації, і
+    більше не повторився - тривога мовчала при справдешній поломці. Тому додано ще два
+    входи: перевірка після старту HA і щоденне нагадування, поки не полагоджено.'
   triggers:
   - trigger: state
     entity_id: binary_sensor.userdata_fs_poshkodzhena
     to: 'on'
-    for: '00:05:00'
+    for: 00:05:00
+  # Сенсор command_line оживає не миттєво, тож після старту чекаємо його опитування.
+  - trigger: homeassistant
+    event: start
+    id: after_start
+  - trigger: time
+    at: '09:30:00'
+    id: daily
   actions:
+  # Після старту сенсор ще unknown - дочекатись справжнього значення, інакше
+  # автоматизація зробить хибний висновок і промовчить саме тоді, коли треба кричати.
+  - if:
+    - condition: trigger
+      id: after_start
+    then:
+    - wait_template: '{{ states(''binary_sensor.userdata_fs_poshkodzhena'') in [''on'',
+        ''off''] }}'
+      timeout: 00:10:00
+      continue_on_timeout: false
+  - condition: state
+    entity_id: binary_sensor.userdata_fs_poshkodzhena
+    state: 'on'
   - action: notify.mobile_app_sm_s918b
     data:
       title: Файлова система плати пошкоджена
-      message: >-
-        На /userdata зʼявились помилки - найімовірніше після знеструмлення.
-        Дім працює, але це треба полагодити: на платі запустити
-        bash /home/forlinx/fsck-userdata.sh
+      message: 'На /userdata зʼявились помилки - найімовірніше після знеструмлення.
+        Дім працює, але це треба полагодити: на платі запустити bash /home/forlinx/fsck-userdata.sh'
   - action: persistent_notification.create
     data:
       notification_id: userdata_fs
       title: /userdata потребує перевірки
-      message: >-
-        Суперблок у стані "not clean with errors". Ремонт:
-        bash /home/forlinx/fsck-userdata.sh (зупинить HA на кілька хвилин).
+      message: 'Суперблок у стані "not clean with errors". Ремонт: bash /home/forlinx/fsck-userdata.sh
+        (зупинить HA на кілька хвилин).'
+  mode: single
+- id: '1786808625261'
+  alias: Бойлер - відкласти дезінфекцію до 23:00
+  description: Переносить лише штатний цикл дезінфекції Midea; звичайний нагрів води
+    не вимикається.
+  triggers:
+  - trigger: state
+    entity_id: switch.144036023323246_sterilization
+    to: 'on'
+  - trigger: homeassistant
+    event: start
+  conditions:
+  - condition: state
+    entity_id: switch.144036023323246_sterilization
+    state: 'on'
+  - condition: time
+    after: 06:00:00
+    before: '23:00:00'
+  actions:
+  - action: input_boolean.turn_on
+    target:
+      entity_id: input_boolean.dezinfektsiia_boilera_ochikuie
+  - action: switch.turn_off
+    target:
+      entity_id: switch.144036023323246_sterilization
+  - action: persistent_notification.create
+    data:
+      notification_id: boiler_sterilization_deferred
+      title: Дезінфекцію бойлера відкладено
+      message: Цикл перенесено на 23:00. Звичайний нагрів води не вимикався.
+  mode: restart
+- id: '1786808654796'
+  alias: Бойлер - запустити відкладену дезінфекцію о 23:00
+  description: Запускає збережений цикл дезінфекції після 23:00. Якщо Midea недоступна,
+    прапорець очікування не скидається.
+  triggers:
+  - trigger: time
+    at: '23:00:00'
+  - trigger: homeassistant
+    event: start
+  - trigger: state
+    entity_id: input_boolean.dezinfektsiia_boilera_ochikuie
+    to: 'on'
+  conditions:
+  - condition: state
+    entity_id: input_boolean.dezinfektsiia_boilera_ochikuie
+    state: 'on'
+  - condition: template
+    value_template: '{{ now().hour >= 23 or now().hour < 6 }}'
+  actions:
+  - action: switch.turn_on
+    target:
+      entity_id: switch.144036023323246_sterilization
+  - delay: 00:00:10
+  - condition: state
+    entity_id: switch.144036023323246_sterilization
+    state: 'on'
+  - action: input_boolean.turn_off
+    target:
+      entity_id: input_boolean.dezinfektsiia_boilera_ochikuie
+  - action: persistent_notification.create
+    data:
+      notification_id: boiler_sterilization_deferred
+      title: Нічну дезінфекцію бойлера запущено
+      message: Відкладений цикл запущено після 23:00.
+  mode: restart
+- id: well_estimated_water_update
+  alias: Свердловина — оновити розрахункову воду
+  description: Оновлює накопичувальну оцінку води за енергією насоса і зафіксованим
+    коефіцієнтом.
+  triggers:
+  - trigger: state
+    entity_id:
+    - sensor.t34_smart_plug_nasos_sverdlovini_spozhito
+    - input_number.sverdlovina_koefitsiient_vodi
+  conditions: []
+  actions:
+  - variables:
+      calibration: '{{ state_attr(''sensor.zhurnal_pokaznykiv_vody'', ''calibration'')
+        or {} }}'
+      energy_delta: '{{ (states(''sensor.t34_smart_plug_nasos_sverdlovini_spozhito'')
+        | float(0)) + (calibration.get(''energy_offset_kwh'', 0.01748706) | float(0.01748706))
+        }}'
+      coefficient: '{{ states(''input_number.sverdlovina_koefitsiient_vodi'') | float(0)
+        }}'
+  - action: input_number.set_value
+    target:
+      entity_id: input_number.sverdlovina_rozrakhunkova_voda
+    data:
+      value: '{{ ([0, energy_delta * coefficient] | max) | round(3) }}'
+  mode: restart
+- id: well_pump_running_state
+  alias: Свердловина — стан роботи насоса
+  description: Вважає насос активним, коли робочий сенсор потужності перевищує 20
+    Вт. Тимчасово використовується cloud-сенсор, бо LocalTuya power_2 не віддає ненульових
+    значень.
+  triggers:
+  - trigger: state
+    entity_id: sensor.t34_smart_plug_power
+  conditions: []
+  actions:
+  - if:
+    - condition: template
+      value_template: '{{ states(''sensor.t34_smart_plug_power'') | float(0) > 20
+        }}'
+    then:
+    - action: input_boolean.turn_on
+      target:
+        entity_id: input_boolean.nasos_sverdlovini_pratsiuie
+    else:
+    - action: input_boolean.turn_off
+      target:
+        entity_id: input_boolean.nasos_sverdlovini_pratsiuie
+  mode: restart
+- id: well_water_coefficient_from_log
+  alias: Свердловина — коефіцієнт із журналу показників
+  description: 'Джерелом показників стала таблиця water_readings.json, тож коефіцієнт
+    м³/кВт·год тепер рахується від останнього живого рядка журналу, а не від кнопки
+    «Зберегти показник». Так само працює запис заднім числом і виправлення помилки:
+    щойно журнал змінився, калібрування перераховується саме. Базову точку та енергетичну
+    поправку бере з атрибута calibration того ж сенсора — числа в шаблоні лишилися
+    тільки як запас на випадок, коли сенсор недоступний.'
+  triggers:
+  - trigger: state
+    entity_id: sensor.zhurnal_pokaznykiv_vody
+  conditions: []
+  actions:
+  - variables:
+      calibration: '{{ state_attr(''sensor.zhurnal_pokaznykiv_vody'', ''calibration'')
+        or {} }}'
+      baseline: '{{ calibration.get(''baseline_value'', 814.79) | float(814.79) }}'
+      rows: '{{ state_attr(''sensor.zhurnal_pokaznykiv_vody'', ''readings'') | default([],
+        true) | rejectattr(''deleted'') | list }}'
+      new_reading: '{{ (rows | last).value | float(0) if rows | count > 0 else 0 }}'
+      water_delta: '{{ ((rows | last).value | float(0) if rows | count > 0 else 0)
+        - baseline }}'
+      energy_delta: '{{ (states(''sensor.t34_smart_plug_nasos_sverdlovini_spozhito'')
+        | float(0)) + (calibration.get(''energy_offset_kwh'', 0.01748706) | float(0.01748706))
+        }}'
+  - condition: template
+    value_template: '{{ rows | count > 0 and new_reading >= baseline }}'
+  - action: input_number.set_value
+    target:
+      entity_id: input_number.lichilnik_vodi_sverdlovini
+    data:
+      value: '{{ new_reading }}'
+  - variables:
+      candidate: '{{ (water_delta / energy_delta) if energy_delta > 0.001 else 0 }}'
+  - if:
+    - alias: Коефіцієнт має бути фізично можливим
+      condition: template
+      # Підняти 1 м³ навіть на 10 метрів при ККД 100 % коштує 0.027 кВт·год,
+      # тобто стеля — близько 36 м³/кВт·год, і то недосяжна. Реальні значення
+      # для свердловини з баком — одиниці. Верхня межа тут ловить не фізику,
+      # а поламані дані: якщо інтегратор Riemann обнулиться після падіння HA,
+      # energy_delta впаде до самої поправки й коефіцієнт стрибне в десятки
+      # разів. Мовчки записати таке — гірше, ніж не записати нічого.
+      value_template: '{{ water_delta > 0 and energy_delta > 0.05 and 0.5 <= candidate
+        <= 20 }}'
+    then:
+    - action: input_number.set_value
+      target:
+        entity_id: input_number.sverdlovina_koefitsiient_vodi
+      data:
+        value: '{{ candidate | round(3) }}'
+    else:
+    - action: persistent_notification.create
+      data:
+        notification_id: well_coefficient_rejected
+        title: Свердловина — калібрування відхилено
+        message: 'Розрахований коефіцієнт {{ candidate | round(3) }} м³/кВт·год не
+          схожий на правду, тому попереднє значення збережено. Вода від бази: {{ water_delta
+          | round(3) }} м³, енергія: {{ energy_delta | round(4) }} кВт·год. Найімовірніша
+          причина — накопичувач енергії насоса скинувся після перезапуску Home Assistant.'
+  mode: restart
+- id: link_watchdog_irrigation_controller
+  alias: Звʼязок - контролер поливу недоступний
+  description: 'Диск і файлова система мали сторожів, увесь мережевий шар - жодного.
+    Про мертвий контролер клапанів дізнавались уночі, коли полив не відбувався.
+
+    Це сповіщення про ЗВʼЯЗОК, а не про режим роботи. Насос без відкритого клапана -
+    нормальний стан (на ділянці є водяні розетки для шланга), і жодне з цих правил
+    не має права вважати його аварією.'
+  triggers:
+  - trigger: state
+    entity_id: switch.avtopoliv_kontroler_avtopoliv_klapan_1
+    to:
+    - unavailable
+    - unknown
+    for: 00:10:00
+  conditions: []
+  actions:
+  - action: notify.mobile_app_sm_s918b
+    data:
+      title: Контролер поливу не відповідає
+      message: Клапани недоступні понад 10 хвилин. Нічний полив під загрозою; перевірте
+        живлення контролера і LocalTuya.
+  - action: persistent_notification.create
+    data:
+      notification_id: link_irrigation_controller
+      title: Контролер поливу офлайн
+      message: Сутності клапанів у стані unavailable понад 10 хвилин.
+  mode: single
+- id: link_watchdog_nas_video
+  alias: Звʼязок - відеоархів не змонтований
+  description: Поки шара NAS відмонтована, автоматизація кліпів мовчки їх не пише -
+    умова просто не виконується, і про це ніхто не дізнається. Архів може не вестись
+    тижнями.
+  triggers:
+  - trigger: state
+    entity_id: binary_sensor.nas_videoarkhiv_zmontovanyi
+    to: 'off'
+    for: 00:15:00
+  conditions: []
+  actions:
+  - action: notify.mobile_app_sm_s918b
+    data:
+      title: Відеокліпи не пишуться
+      message: Шара NAS відмонтована понад 15 хвилин. Записи руху зараз нікуди не
+        зберігаються.
+  - action: persistent_notification.create
+    data:
+      notification_id: link_nas_video
+      title: Відеоархів недоступний
+      message: binary_sensor.nas_videoarkhiv_zmontovanyi у стані off; кліпи руху не
+        зберігаються.
+  mode: single
+- id: link_watchdog_camera
+  alias: Звʼязок - камера офлайн
+  description: Камера двору - єдине джерело кліпів і знімків руху. Її зникнення досі
+    було видно лише тому, хто відкриє потрібну вкладку.
+  triggers:
+  - trigger: state
+    entity_id: binary_sensor.hikvision_camera_online
+    to: 'off'
+    for: 00:10:00
+  conditions: []
+  actions:
+  - action: notify.mobile_app_sm_s918b
+    data:
+      title: Камера двору офлайн
+      message: Hikvision не відповідає понад 10 хвилин. Знімки й кліпи руху зараз не
+        створюються.
+  - action: persistent_notification.create
+    data:
+      notification_id: link_camera
+      title: Камера офлайн
+      message: binary_sensor.hikvision_camera_online у стані off понад 10 хвилин.
+  mode: single
+- id: well_pump_count_starts
+  alias: Свердловина — рахувати запуски насоса
+  description: 'Веде два лічильники: усі запуски за добу і ті з них, що припали на
+    ніч. Миттєва потужність показує лише «зараз», а поведінку насоса видно саме з
+    кількості пусків: справний будинок дає їх десятки, залиплий зворотний клапан або
+    витік — сотні. Нічне вікно 00:00–05:00 вибране як час, коли розбору води бути
+    майже не повинно, тож запуски в ньому — найраніша ознака витоку.'
+  triggers:
+  - trigger: state
+    entity_id: input_boolean.nasos_sverdlovini_pratsiuie
+    from: 'off'
+    to: 'on'
+  conditions: []
+  actions:
+  - action: counter.increment
+    target:
+      entity_id: counter.nasos_sverdlovini_zapusky
+  - if:
+    - condition: time
+      after: '00:00:00'
+      before: '05:00:00'
+    then:
+    - action: counter.increment
+      target:
+        entity_id: counter.nasos_sverdlovini_zapusky_nich
+  mode: queued
+  max: 25
+- id: well_pump_daily_reset
+  alias: Свердловина — обнулити добові лічильники насоса
+  description: Скидає обидва лічильники опівночі. Нічне вікно починається рівно тоді
+    ж, тому скидання стоїть на 00:00:00 і рахує вже нову добу.
+  triggers:
+  - trigger: time
+    at: 00:00:00
+  conditions: []
+  actions:
+  - action: counter.reset
+    target:
+      entity_id:
+      - counter.nasos_sverdlovini_zapusky
+      - counter.nasos_sverdlovini_zapusky_nich
+  mode: single
+- id: well_pump_watchdog_stuck
+  alias: Свердловина — насос не зупиняється
+  description: 'Насосом керує реле тиску, а не Home Assistant, тому єдиний спосіб
+    помітити залипання — тривалість роботи. Звичайний цикл наповнення гідроакумулятора
+    триває близько півтори хвилини; п''ятнадцять хвилин поспіль означають або залипле
+    реле, або відкритий кран, або серйозний витік. Вимкнути насос автоматично не можна:
+    його розетка живить весь водопровід будинку, і зняття живлення лишило б дім без
+    води. Тому сторож попереджає, а рішення за людиною.'
+  triggers:
+  - trigger: state
+    entity_id: input_boolean.nasos_sverdlovini_pratsiuie
+    to: 'on'
+    for: 00:15:00
+  conditions: []
+  actions:
+  - action: notify.mobile_app_sm_s918b
+    data:
+      title: Насос свердловини не зупиняється
+      message: 'Насос качає безперервно вже 15 хвилин — звичайний цикл триває близько
+        півтори. Перевірте реле тиску, відкриті крани й можливий витік. Поточна потужність:
+        {{ states(''sensor.t34_smart_plug_power'') }} Вт.'
+  - action: persistent_notification.create
+    data:
+      notification_id: well_pump_stuck
+      title: Насос свердловини не зупиняється
+      message: Безперервна робота понад 15 хвилин. Живлення насоса свідомо не знімається
+        автоматично — його розетка живить весь водопровід будинку.
+  mode: single
+- id: well_pump_watchdog_anomaly
+  alias: Свердловина — аномальна кількість запусків
+  description: 'Пороги взяті з поміряної норми: 22.08.2026 за добу було 14 запусків,
+    із них уночі одиниці. Сорок за добу — це вже втричі більше за звичайне, а понад
+    шість нічних при закритих кранах пояснити нічим, окрім витоку або зворотного клапана,
+    що не тримає. Спрацьовує один раз на добу для кожного порога, бо лічильники обнуляються
+    опівночі.'
+  triggers:
+  - trigger: numeric_state
+    entity_id: counter.nasos_sverdlovini_zapusky
+    above: 40
+    id: doba
+  - trigger: numeric_state
+    entity_id: counter.nasos_sverdlovini_zapusky_nich
+    above: 6
+    id: nich
+  conditions: []
+  actions:
+  - choose:
+    - conditions:
+      - condition: trigger
+        id: doba
+      sequence:
+      - action: notify.mobile_app_sm_s918b
+        data:
+          title: Свердловина — забагато запусків насоса
+          message: 'За добу вже {{ states(''counter.nasos_sverdlovini_zapusky'') }}
+            запусків при звичайних приблизно п''ятнадцяти. Найімовірніші причини —
+            витік, зворотний клапан, що не тримає, або втрачений тиск у гідроакумуляторі.'
+    - conditions:
+      - condition: trigger
+        id: nich
+      sequence:
+      - action: notify.mobile_app_sm_s918b
+        data:
+          title: Свердловина — нічні запуски насоса
+          message: 'З опівночі насос стартував {{ states(''counter.nasos_sverdlovini_zapusky_nich'')
+            }} разів. Уночі розбору води бути майже не повинно, тож це схоже на витік
+            або на зворотний клапан, що не тримає.'
+  mode: queued
+  max: 4
+- id: well_pump_trace_samples
+  alias: Свердловина — трасування семплів насоса
+  description: 'Пише у .private/pump-trace.log кожну зміну електричних сутностей насоса
+    з міткою часу до мікросекунди. Питання, заради якого це заведено: чи справді
+    розетка віддає один семпл на пуск, чи їх більше, а губить їх Home Assistant.
+    Фізика бака каже, що пуск триває близько 26 секунд при подачі 80 л/хв і що
+    система бачить менш ніж половину пусків — трасування має це підтвердити або
+    спростувати. Це тимчасова діагностика: коли питання закриється, автоматизацію
+    і платформу notify.pump_trace слід прибрати.'
+  triggers:
+  - trigger: state
+    entity_id:
+    - sensor.t34_smart_plug_power_2
+    - sensor.t34_smart_plug_power
+    - sensor.t34_smart_plug_current_2
+    - sensor.t34_smart_plug_electricity
+    - input_boolean.nasos_sverdlovini_pratsiuie
+  conditions: []
+  actions:
+  # system_log.write замість notify.file: YAML-платформа `file` у цій версії HA
+  # більше не реєструє сервіс (перевірено 22.08 - вісім помилок «Action
+  # notify.pump_trace not found» під час першого ж заміру), а цей сервіс
+  # вбудований, пише в journal і застосовується звичайним automation.reload.
+  - action: system_log.write
+    data:
+      level: warning
+      logger: pump_trace
+      message: '{{ now().isoformat(timespec=''microseconds'') }} {{ trigger.entity_id
+        | replace(''sensor.t34_smart_plug_'', '''') | replace(''input_boolean.'', '''')
+        }} {{ trigger.from_state.state | default(''?'', true) }} -> {{ trigger.to_state.state
+        | default(''?'', true) }} (dt={{ (as_timestamp(trigger.to_state.last_changed)
+        - as_timestamp(trigger.from_state.last_changed)) | round(2) if trigger.from_state
+        else ''-'' }}s)'
+  mode: queued
+  max: 40
+- id: well_pump_manual_timing_start
+  alias: Свердловина — початок ручного заміру
+  description: Знімає показання трьох лічильників у момент, коли людина біля насоса
+    вмикає секундомір. Без цього знімка на зупинці не буде від чого рахувати різницю.
+  triggers:
+  - trigger: state
+    entity_id: input_boolean.sverdlovina_sekundomir
+    from: 'off'
+    to: 'on'
+  conditions: []
+  actions:
+  - action: input_number.set_value
+    target:
+      entity_id: input_number.zamir_start_runtime
+    data:
+      value: '{{ states(''sensor.nasos_sverdlovini_robota_sogodni'') | float(0) }}'
+  - action: input_number.set_value
+    target:
+      entity_id: input_number.zamir_start_riemann
+    data:
+      value: '{{ states(''sensor.t34_smart_plug_nasos_sverdlovini_spozhito'') | float(0)
+        }}'
+  - action: input_number.set_value
+    target:
+      entity_id: input_number.zamir_start_device
+    data:
+      value: '{{ states(''sensor.nasos_sverdlovini_enerhiia_prystroiu'') | float(0) }}'
+  - action: input_text.set_value
+    target:
+      entity_id: input_text.sverdlovina_zamir_rezultat
+    data:
+      value: 'Замір триває з {{ now().strftime(''%H:%M:%S'') }}…'
+  mode: single
+- id: well_pump_manual_timing_stop
+  alias: Свердловина — підсумок ручного заміру
+  description: 'Порівнює живий час із зарахованим. Реальні секунди беруться з того,
+    скільки секундомір був увімкнений; зараховані — з приросту history_stats, який
+    живиться тими самими рідкими семплами розетки. Відношення між ними і є шуканою
+    похибкою: якщо система зараховує третину справжнього часу, то стільки ж вона
+    втрачає і в енергії, а отже коефіцієнт калібрування завищений рівно настільки.'
+  triggers:
+  - trigger: state
+    entity_id: input_boolean.sverdlovina_sekundomir
+    from: 'on'
+    to: 'off'
+  conditions: []
+  actions:
+  # history_stats перераховується не миттєво: перший замір показав 0 с там, де
+  # розетка насправді відзвітувала 10, бо значення знімалося в ту саму секунду,
+  # коли вимикався тумблер. Реальний час беремо ДО паузи, зарахований - після.
+  - variables:
+      real_s: '{{ (as_timestamp(now()) - as_timestamp(trigger.from_state.last_changed))
+        | round(1) }}'
+  - delay: 00:00:45
+  - variables:
+      counted_s: '{{ (((states(''sensor.nasos_sverdlovini_robota_sogodni'') | float(0))
+        - (states(''input_number.zamir_start_runtime'') | float(0))) * 3600) | round(1)
+        }}'
+      riemann_kwh: '{{ ((states(''sensor.t34_smart_plug_nasos_sverdlovini_spozhito'')
+        | float(0)) - (states(''input_number.zamir_start_riemann'') | float(0))) | round(4)
+        }}'
+      device_kwh: '{{ ((states(''sensor.nasos_sverdlovini_enerhiia_prystroiu'') | float(0))
+        - (states(''input_number.zamir_start_device'') | float(0))) | round(4) }}'
+      share: '{{ ((counted_s | float(0)) / (real_s | float(1)) * 100) | round(0) if
+        (real_s | float(0)) > 0 else 0 }}'
+      expected_kwh: '{{ ((real_s | float(0)) / 3600 * 1.19) | round(4) }}'
+  - action: input_text.set_value
+    target:
+      entity_id: input_text.sverdlovina_zamir_rezultat
+    data:
+      value: '{{ now().strftime(''%d.%m %H:%M'') }} · факт {{ real_s }} с · система
+        {{ counted_s }} с ({{ share }}%) · Riemann {{ riemann_kwh }} · розетка {{ device_kwh
+        }} кВт·год'
+  - action: notify.mobile_app_sm_s918b
+    data:
+      title: Свердловина — підсумок заміру
+      message: 'Реальний час: {{ real_s }} с. Система зарахувала: {{ counted_s }} с,
+        тобто {{ share }} % від справжнього. За цей пуск Riemann нарахував {{ riemann_kwh
+        }} кВт·год, власний лічильник розетки {{ device_kwh }} кВт·год, а за виміряною
+        потужністю 1.19 кВт мало б вийти {{ expected_kwh }} кВт·год. Той із лічильників,
+        що ближчий до останнього числа, і є правильним джерелом для калібрування.'
+  mode: single
+- id: lts_depth_watchdog
+  alias: Статистика - глибина історії впала
+  description: 'Довгострокова статистика - єдине джерело для карток «Цей місяць» і
+    «Цей рік» та для перерахунку витрат. 18 серпня 2026 корупція бази знищила все,
+    що було до тієї дати, і ніхто не помітив: за глибиною історії не стежив ніхто,
+    а зовні це виглядало як «місяць і рік показують однакову суму».
+
+    Сторож дивиться на кількість різних календарних днів у таблиці statistics.
+    Поріг 7 днів обрано не випадково: recorder тримає докладну історію саме
+    7 діб (purge_keep_days), тож коли статистика коротша за неї, довгострокове
+    сховище перестало бути довгостроковим.
+
+    Помилка самого сенсора теж вважається приводом кричати: якщо база
+    заблокована або зникла, мовчання гірше за хибну тривогу.'
+  triggers:
+  - trigger: numeric_state
+    entity_id: sensor.hlybyna_statystyky
+    below: 7
+    for: 00:30:00
+    id: shallow
+  - trigger: state
+    entity_id: sensor.hlybyna_statystyky
+    to:
+    - unavailable
+    - unknown
+    for: 01:00:00
+    id: broken
+  conditions: []
+  actions:
+  - if:
+    - condition: trigger
+      id: shallow
+    then:
+    - action: notify.mobile_app_sm_s918b
+      data:
+        title: Історія статистики коротка
+        message: 'У довгостроковій статистиці лишилось {{ states(''sensor.hlybyna_statystyky'')
+          }} дн. ({{ state_attr(''sensor.hlybyna_statystyky'', ''oldest_date'') }} -
+          {{ state_attr(''sensor.hlybyna_statystyky'', ''newest_date'') }}). Картки
+          «Цей місяць» і «Цей рік» показуватимуть те саме число.'
+    - action: persistent_notification.create
+      data:
+        notification_id: lts_depth
+        title: Глибина статистики впала
+        message: 'Днів у statistics: {{ states(''sensor.hlybyna_statystyky'') }}.
+          Рядків: {{ state_attr(''sensor.hlybyna_statystyky'', ''rows'') }}. Якщо це
+          сталося раптово - шукайте корупцію бази, як 18.08.2026. Історію можна
+          підняти з бекапів на NAS.'
+    else:
+    - action: notify.mobile_app_sm_s918b
+      data:
+        title: Сторож статистики не бачить бази
+        message: 'sensor.hlybyna_statystyky у стані {{ states(''sensor.hlybyna_statystyky'')
+          }} понад годину. Помилка: {{ state_attr(''sensor.hlybyna_statystyky'', ''error'')
+          | default(''невідома'') }}.'
+  mode: single
+- id: energy_meter_stale_watchdog
+  alias: Облік - трифазний лічильник замовк
+  description: 'Накопичувальний показ лічильника приходить ТІЛЬКИ хмарним каналом
+    Tuya: локальні _2-сутності віддають самі миттєві значення, накопичувального
+    регістру в них немає. Тому облік усього вводу тримається на чужому сервері.
+
+    Це вже коштувало десяти днів даних: 9 серпня 2026 токен Tuya протух
+    (tuya_sharing: token is expired), і до 19 серпня статистики по лічильнику не
+    було зовсім. Помітили це аж 22-го і випадково.
+
+    Поріг година: лічильник оновлюється кілька разів на хвилину, тож година
+    мовчання - це вже не мережевий збій, а зламаний канал. Недоступність самої
+    сутності теж вважається тривогою: сторож, який мовчить разом із джерелом,
+    гірший за відсутній.'
+  triggers:
+  - trigger: state
+    entity_id: sensor.energy_meter_local_total_energy_local
+    to: null
+    for: 01:00:00
+    id: stale
+  - trigger: state
+    entity_id: sensor.energy_meter_local_total_energy_local
+    to:
+    - unavailable
+    - unknown
+    for: 00:30:00
+    id: gone
+  conditions: []
+  actions:
+  - action: notify.mobile_app_sm_s918b
+    data:
+      title: Лічильник не оновлюється
+      message: '{% if trigger.id == ''gone'' %}Локальний накопичувач у стані
+        {{ states(''sensor.energy_meter_local_total_energy_local'') }} понад пів години.{% else
+        %}Показ лічильника не змінювався годину: {{ states(''sensor.energy_meter_local_total_energy_local'')
+        }} кВт·год.{% endif %} Тепер це ЛОКАЛЬНИЙ канал: причина не в токені Tuya,
+        а в LocalTuya або в самому лічильнику. Поки він мовчить, облік вводу стоїть.'
+  - action: persistent_notification.create
+    data:
+      notification_id: energy_meter_stale
+      title: Трифазний лічильник замовк
+      message: 'Останнє оновлення: {{ relative_time(states.sensor.energy_meter_local_total_energy_local.last_updated)
+        }} тому. Перевірити LocalTuya і доступність 192.168.50.219.
+        Подробиці - docs/energy-accounting-spec.md, розділ 5.'
+  mode: single
+- id: grid_anchor_update
+  alias: Облік - оновити якір мережі
+  description: 'Переставляє якір щоразу, коли хмарний показ лічильника оновився.
+    Значення sensor.merezha_spozhyto після цього дорівнює хмарному, а локальний
+    інтеграл починає рахувати від нуля наново.
+
+    Захист від ходу назад обовʼязковий. sensor.merezha_spozhyto має
+    state_class: total_increasing, і будь-яке зменшення Home Assistant читає як
+    скидання лічильника - нараховуючи фантомне споживання на весь показ. Тому
+    новий якір береться як максимум із показу лічильника і поточного значення:
+    якщо локальний інтеграл трохи перебрав за останні хвилини, ми лишаємо його
+    результат, а не відкочуємось.
+
+    Джерело якоря переведено на ЛОКАЛЬНИЙ DP 1 (23.08.2026). Доти він брався з
+    хмари, і це означало, що після втрати підписки Tuya якір замерз би, а
+    sensor.merezha_spozhyto поїхав би на самому інтегралі й почав дрейфувати.
+    Тепер в обліку немає жодної залежності від чужого сервера.'
+  triggers:
+  - trigger: state
+    entity_id: sensor.energy_meter_local_total_energy_local
+  # Після рестарту інтеграл починається з нуля, а LocalTuya піднімається близько
+  # трьох хвилин. Без цього тригера sensor.merezha_spozhyto стояв би недоступним
+  # увесь цей час.
+  - trigger: homeassistant
+    event: start
+  conditions: []
+  actions:
+  # Тригер на старті сам по собі марний: LocalTuya оживає близько трьох хвилин,
+  # і в момент запуску інтеграл ще unavailable, тож умова відсікала б запуск
+  # мовчки. Сторож, який виглядає працюючим і нічого не робить, гірший за
+  # відсутній - тому тут чекаємо, поки обидва джерела дадуть справжнє значення.
+  - wait_template: '{{ has_value(''sensor.energy_meter_local_total_energy_local'')
+      and has_value(''sensor.merezha_lokalnyi_integral'') }}'
+    timeout: 00:10:00
+    continue_on_timeout: false
+  - variables:
+      hmara: '{{ states(''sensor.energy_meter_local_total_energy_local'') | float(0) / 100 }}'
+      teper: '{{ states(''sensor.merezha_spozhyto'') | float(0) }}'
+      integral: '{{ states(''sensor.merezha_lokalnyi_integral'') | float(0) }}'
+  - condition: template
+    value_template: '{{ hmara > 0 }}'
+  - action: input_number.set_value
+    target:
+      entity_id: input_number.merezha_yakir_pokaz
+    data:
+      value: '{{ [hmara, teper] | max | round(3) }}'
+  - action: input_number.set_value
+    target:
+      entity_id: input_number.merezha_yakir_integral
+    data:
+      value: '{{ integral | round(3) }}'
+  mode: single
+  max_exceeded: silent
+- id: minute_rollup_sample
+  alias: Облік - похвилинний зріз
+  description: 'Пише хвилинний зріз у власну маленьку базу minute_rollup.db.
+    Штатних рівнів у Home Assistant три - сира зміна, пʼятихвилинна і погодинна, -
+    і кроку «хвилина за 30 днів» серед них немає: purge_keep_days глобальний, не
+    по сутностях. Тому рівень живе збоку.
+
+    Ціна: 1440 записів на добу на сенсор, кілька мегабайтів за 30 днів. Для
+    порівняння, секундне опитування у штатному states коштувало б 73 МБ на добу.
+
+    Скрипт читає останні значення прямо з бази recorder, лише на читання - без
+    токена, якого на платі немає.'
+  triggers:
+  - trigger: time_pattern
+    minutes: /1
+  conditions: []
+  actions:
+  - action: shell_command.minute_rollup_sample
+  mode: single
+  max_exceeded: silent
+- id: minute_rollup_purge
+  alias: Облік - прибрати старі хвилинні зрізи
+  description: Ретенція похвилинного рівня - 30 днів. Чиститься раз на добу вночі,
+    коли ні полив, ні дашборди нікому не заважають.
+  triggers:
+  - trigger: time
+    at: '03:40:00'
+  conditions: []
+  actions:
+  - action: shell_command.minute_rollup_purge
+  mode: single
+- id: meter_phase_loss
+  alias: Облік - зникла фаза
+  description: 'Еквівалент miss_phase_alarm, зібраний із того, що приходить
+    локально. Сам біт тривоги лічильника (DP fault, двадцять міток) у Home
+    Assistant не заведений: ані хмарна інтеграція tuya, ані localtuya його не
+    віддають. Але зникнення фази видно й без нього - напруга падає в нуль, поки
+    сусідні живі.
+
+    Умова "хоч одна фаза жива" відрізняє втрату фази від знеструмлення всього
+    будинку. Без неї кожне вимкнення світла давало б три тривоги про фази
+    замість однієї про відсутність живлення - і сторож швидко став би шумом,
+    який перестають читати.
+
+    Дві хвилини затримки прибирають перемикання АВР і кидки при старті великих
+    двигунів. Реальна втрата фази триває довше.'
+  triggers:
+  - trigger: numeric_state
+    entity_id: sensor.energy_meter_phase_a_voltage_2
+    below: 50
+    for: 00:02:00
+    id: A
+  - trigger: numeric_state
+    entity_id: sensor.energy_meter_phase_b_voltage_2
+    below: 50
+    for: 00:02:00
+    id: B
+  - trigger: numeric_state
+    entity_id: sensor.energy_meter_phase_c_voltage_2
+    below: 50
+    for: 00:02:00
+    id: C
+  conditions:
+  - condition: template
+    value_template: '{{ [states(''sensor.energy_meter_phase_a_voltage_2'') | float(0),
+      states(''sensor.energy_meter_phase_b_voltage_2'') | float(0),
+      states(''sensor.energy_meter_phase_c_voltage_2'') | float(0)] | max > 180 }}'
+  actions:
+  - action: notify.mobile_app_sm_s918b
+    data:
+      title: Зникла фаза {{ trigger.id }}
+      message: 'Напруга фази {{ trigger.id }} впала до {{ trigger.to_state.state }} В,
+        решта фаз під напругою: A={{ states(''sensor.energy_meter_phase_a_voltage_2'') }},
+        B={{ states(''sensor.energy_meter_phase_b_voltage_2'') }},
+        C={{ states(''sensor.energy_meter_phase_c_voltage_2'') }} В. Це не
+        знеструмлення будинку, а втрата однієї фази.'
+  - action: persistent_notification.create
+    data:
+      notification_id: meter_phase_loss
+      title: Втрата фази {{ trigger.id }}
+      message: 'Перекос на трифазному вводі. Навантаження, що живиться з цієї
+        фази, стоїть; те, що з інших, працює. Перевірити ввідний автомат і
+        живлення від мережі.'
+  mode: single
+
+- id: meter_voltage_out_of_range
+  alias: Облік - напруга поза нормою
+  description: 'Межі 207 і 253 В - це 230 В плюс-мінус десять відсотків за
+    ДСТУ EN 50160. Пороги взяті зі стандарту, а не придумані: інакше довелося б
+    підбирати їх на око, а тоді жодна тривога не має ваги.
+
+    Пʼять хвилин затримки навмисно довгі. Просідання під пуск насоса чи
+    зварювання - це не аварія мережі, а нормальна робота; тривога має означати,
+    що напруга ТРИМАЄТЬСЯ поза нормою.
+
+    Зауваження на майбутнє: 23.08.2026 фази стояли 227,6 / 213,0 / 235,6 В,
+    тобто розкид 22,6 В при звичайному навантаженні. Це в межах норми, але
+    окрема тривога на перекіс була б постійним шумом - тому її тут немає.'
+  triggers:
+  - trigger: numeric_state
+    entity_id:
+    - sensor.energy_meter_phase_a_voltage_2
+    - sensor.energy_meter_phase_b_voltage_2
+    - sensor.energy_meter_phase_c_voltage_2
+    below: 207
+    above: 50
+    for: 00:05:00
+    id: nyzka
+  - trigger: numeric_state
+    entity_id:
+    - sensor.energy_meter_phase_a_voltage_2
+    - sensor.energy_meter_phase_b_voltage_2
+    - sensor.energy_meter_phase_c_voltage_2
+    above: 253
+    for: 00:05:00
+    id: vysoka
+  conditions: []
+  actions:
+  - action: notify.mobile_app_sm_s918b
+    data:
+      title: '{% if trigger.id == ''vysoka'' %}Перенапруга{% else %}Знижена напруга{% endif %}
+        на вводі'
+      message: '{{ trigger.to_state.attributes.friendly_name }}: {{ trigger.to_state.state }} В
+        уже пʼять хвилин. Норма 207-253 В. Фази зараз:
+        A={{ states(''sensor.energy_meter_phase_a_voltage_2'') }},
+        B={{ states(''sensor.energy_meter_phase_b_voltage_2'') }},
+        C={{ states(''sensor.energy_meter_phase_c_voltage_2'') }} В.'
+  mode: single
+
+- id: meter_breaker_off
+  alias: Облік - ввідний автомат вимкнувся
+  description: 'switch.energy_meter_switch_2 - це не розетка, а трифазний ввідний
+    автомат усього будинку. Він виставлений у Home Assistant обома каналами
+    (хмарним switch.energy_meter_switch і локальним _2), тобто його можна
+    вимкнути з інтерфейсу, голосом або помилковою автоматизацією.
+
+    Ця автоматизація нічим не керує - вона лише повідомляє. Але повідомляє
+    голосно, бо вимкнення вводу означає, що дім знеструмлено, і причина може
+    бути як апаратною (спрацював захист лічильника), так і людською.'
+  triggers:
+  - trigger: state
+    entity_id:
+    - switch.energy_meter_switch_2
+    - switch.energy_meter_switch
+    from: 'on'
+    to: 'off'
+  conditions: []
+  actions:
+  - action: notify.mobile_app_sm_s918b
+    data:
+      title: Ввідний автомат вимкнено
+      message: '{{ trigger.entity_id }} перейшов у off. Це трифазний ввід усього
+        будинку. Якщо це не ви - спрацював захист лічильника.'
+      data:
+        ttl: 0
+        priority: high
+  - action: persistent_notification.create
+    data:
+      notification_id: meter_breaker_off
+      title: Ввідний автомат вимкнено
+      message: 'Живлення будинку від мережі перервано через {{ trigger.entity_id }}.
+        Перевірити причину до повторного вмикання: захист міг спрацювати на
+        перевантаження, перекос або струм витоку.'
+  mode: single
+
+- id: meter_fault_alarm
+  alias: Облік - тривога лічильника
+  description: 'DP 9 трифазного лічильника - бітова маска на двадцять тривог:
+    коротке замикання, перевантаження, струм витоку, перегрів, пожежа, втрата
+    фази, перекоси, магнітний вплив. Заведена в localtuya 23.08.2026; доти її в
+    Home Assistant не було зовсім, хоч лічильник надсилав її локально весь час.
+
+    Це найпряміше джерело з усіх: сам лічильник каже, що саме він вважає
+    несправністю, а не ми здогадуємось із напруг. Тому тут немає ані затримки,
+    ані порогів - є біт, є тривога.
+
+    Повернення до нуля теж повідомляється. Сторож, який кричить про початок і
+    мовчить про кінець, змушує щоразу йти дивитися вручну.'
+  triggers:
+  - trigger: state
+    entity_id: sensor.energy_meter_fault
+    id: zmina
+  conditions:
+  - condition: template
+    value_template: '{{ trigger.to_state.state not in [''unknown'', ''unavailable'']
+      and trigger.from_state is not none
+      and trigger.from_state.state not in [''unknown'', ''unavailable''] }}'
+  actions:
+  - choose:
+    - conditions:
+      - condition: template
+        value_template: '{{ trigger.to_state.state | int(0) > 0 }}'
+      sequence:
+      - action: notify.mobile_app_sm_s918b
+        data:
+          title: Тривога на лічильнику
+          message: '{{ states(''sensor.lichylnyk_tryvohy'') }}. Фази:
+            A={{ states(''sensor.energy_meter_phase_a_voltage_2'') }},
+            B={{ states(''sensor.energy_meter_phase_b_voltage_2'') }},
+            C={{ states(''sensor.energy_meter_phase_c_voltage_2'') }} В.'
+          data:
+            ttl: 0
+            priority: high
+      - action: persistent_notification.create
+        data:
+          notification_id: meter_fault
+          title: Лічильник повідомляє про несправність
+          message: '{{ states(''sensor.lichylnyk_tryvohy'') }} (код
+            {{ trigger.to_state.state }}). Це повідомлення від самого
+            лічильника, а не наш висновок із напруг.'
+    default:
+    - action: notify.mobile_app_sm_s918b
+      data:
+        title: Тривога лічильника знята
+        message: 'Лічильник більше не повідомляє про несправність.'
+    - action: persistent_notification.dismiss
+      data:
+        notification_id: meter_fault
+  mode: queued
+  max: 5
+
+- id: meter_overload
+  alias: Облік - перевантаження фази
+  description: 'Ввідний автомат 100 А на фазу (підтверджено власником
+    23.08.2026). Два рівні, бо теплова характеристика автомата має ширину: при
+    113 А він за годину ще не зобовʼязаний спрацювати, а при 145 А зобовʼязаний.
+    Тобто між "багато" і "вибило" лежить довгий проміжок, і корисне
+    попередження живе саме в ньому.
+
+    80 А протягом пʼяти хвилин - це 80 відсотків номіналу. Автомат від такого не
+    спрацює ніколи, але це вже фаза, до якої не варто додавати ще один
+    споживач. 100 А протягом хвилини - це вже номінал, і питання лише в тому,
+    скільки автомат протримається.
+
+    Ця автоматизація не дублює тривогу самого лічильника, а випереджає її: біт
+    overload_alarm приходить, коли лічильник уже вважає стан аварійним. Тут
+    сенс у тому, щоб дізнатися раніше.
+
+    Струм береться з локальних _2-сутностей: покладатися на хмару в тривозі про
+    перевантаження було б дивно.'
+  triggers:
+  - trigger: numeric_state
+    entity_id:
+    - sensor.energy_meter_phase_a_current_2
+    - sensor.energy_meter_phase_b_current_2
+    - sensor.energy_meter_phase_c_current_2
+    above: 100
+    for: 00:01:00
+    id: perevantazhennia
+  - trigger: numeric_state
+    entity_id:
+    - sensor.energy_meter_phase_a_current_2
+    - sensor.energy_meter_phase_b_current_2
+    - sensor.energy_meter_phase_c_current_2
+    above: 80
+    below: 100
+    for: 00:05:00
+    id: pidkhid
+  conditions: []
+  actions:
+  - action: notify.mobile_app_sm_s918b
+    data:
+      title: '{% if trigger.id == ''perevantazhennia'' %}Перевантаження фази{% else
+        %}Фаза близько до межі{% endif %}'
+      message: '{{ trigger.to_state.attributes.friendly_name }}:
+        {{ trigger.to_state.state }} А при номіналі автомата 100 А.
+        Струми фаз: A={{ states(''sensor.energy_meter_phase_a_current_2'') }},
+        B={{ states(''sensor.energy_meter_phase_b_current_2'') }},
+        C={{ states(''sensor.energy_meter_phase_c_current_2'') }} А.
+        {% if trigger.id == ''perevantazhennia'' %}Автомат може вимкнути ввід.{%
+        else %}Не додавайте навантаження на цю фазу.{% endif %}'
+      data:
+        ttl: 0
+        priority: '{{ ''high'' if trigger.id == ''perevantazhennia'' else ''normal'' }}'
+  mode: single
+
+- id: meter_weekly_reconcile
+  alias: Облік - тижнева звірка лічильника
+  description: 'Звіряє локальний накопичувач (DP 1) із хмарним показом того ж
+    лічильника. Обидва вже є в Home Assistant, тож звірка не потребує ані
+    хмарного API, ані ключів, ані токена - лише двох сенсорів.
+
+    Раз на тиждень, а не щодня, свідомо. Ці два числа приходять з одного
+    приладу різними каналами; вони не можуть повільно розʼїхатися так, щоб це
+    було видно саме за добу. Щоденна перевірка дала б сім повідомлень на тиждень
+    там, де достатньо одного, а сторож, якого читають упівока, не сторож.
+
+    Допуск кілограват-година. Локальний канал оновлюється частіше за хмарний,
+    тож у будь-яку мить локальне значення трохи випереджає - при 2,4 кВт це
+    десяті частки за пʼять хвилин. Реальний розʼїзд буде більший на порядок.
+
+    Недоступність будь-якого з двох сенсорів теж вважається тривогою: звірка,
+    яка мовчить, коли звіряти нема з чим, гірша за відсутню.'
+  triggers:
+  - trigger: time
+    at: 09:00:00
+    id: shchotyzhnia
+  conditions:
+  - condition: time
+    weekday:
+    - sun
+  actions:
+  - variables:
+      lok: '{{ states(''sensor.energy_meter_local_total_energy_local'') }}'
+      hmara: '{{ states(''sensor.energy_meter_total_energy'') }}'
+  - choose:
+    - conditions:
+      - condition: template
+        value_template: '{{ lok in [''unknown'', ''unavailable'', ''none'']
+          or hmara in [''unknown'', ''unavailable'', ''none''] }}'
+      sequence:
+      - action: notify.mobile_app_sm_s918b
+        data:
+          title: Звірку лічильника зроблено не було
+          message: '{% if lok in [''unknown'', ''unavailable'', ''none''] %}Замовк
+            ЛОКАЛЬНИЙ накопичувач ({{ lok }}) - це серйозно, на ньому тримається
+            весь облік вводу. Перевірте LocalTuya і 192.168.50.219.{% else %}Немає
+            хмарного показу ({{ hmara }}), локальний живий: {{ (lok | float(0) / 100)
+            | round(2) }}. Якщо підписка Tuya спливла - це очікувано, і облік від
+            цього не постраждав: звіряти просто нема з чим.{% endif %}'
+    - conditions:
+      - condition: template
+        value_template: '{{ ((lok | float(0) / 100) - (hmara | float(0))) | abs > 1.0 }}'
+      sequence:
+      - action: notify.mobile_app_sm_s918b
+        data:
+          title: Розбіжність лічильника
+          message: 'Локально {{ (lok | float(0) / 100) | round(2) }}, у хмарі
+            {{ hmara | float(0) | round(2) }} кВт·год. Різниця
+            {{ ((lok | float(0) / 100) - (hmara | float(0))) | round(2) }} при
+            допуску 1. Один із каналів відстав або показує чуже.'
+      - action: persistent_notification.create
+        data:
+          notification_id: meter_reconcile
+          title: Канали лічильника розійшлися
+          message: 'Локальний DP 1 і хмарний показ мають збігатися до сотих.
+            Різниця більша за кіловат-годину означає, що один канал застряг.
+            Подробиці - docs/energy-accounting-spec.md, розділ 2.'
+    default:
+    - action: persistent_notification.dismiss
+      data:
+        notification_id: meter_reconcile
+  mode: single
+
+- id: backup_statistics_daily
+  alias: Облік - копія статистики на NAS
+  description: 'Щоденні бекапи Home Assistant не містять бази: у кожному
+    backup.json від 11 до 23 серпня стоїть "exclude_database": true. Ті 5-8 ГБ -
+    це медіа й motion-кліпи. Тобто копії статистики не існувало ніколи, і саме
+    тому корупція 18.08.2026 забрала три тижні історії безповоротно, а
+    врятувати вдалося лише уламки.
+
+    Копіюються чотири таблиці статистики - 18 МБ із 568, бо решта це states за
+    сім діб, які й так чистяться за розкладом. У стисненому вигляді 6 МБ,
+    вісім секунд роботи.
+
+    03:50 - до штатного бекапу Home Assistant о 04:48 і після чистки хвилинних
+    зрізів о 03:40, щоб три задачі не сходилися на слабкій платі водночас.'
+  triggers:
+  - trigger: time
+    at: 03:50:00
+  conditions: []
+  actions:
+  - action: shell_command.backup_statistics
+    response_variable: rezultat
+  - choose:
+    - conditions:
+      - condition: template
+        value_template: '{{ rezultat.returncode != 0 }}'
+      sequence:
+      - action: notify.mobile_app_sm_s918b
+        data:
+          title: Копію статистики не зроблено
+          message: 'Код {{ rezultat.returncode }}. {{ rezultat.stderr | default('''')
+            | truncate(200) }} Без цієї копії наступна корупція бази знову
+            забере історію.'
+      - action: persistent_notification.create
+        data:
+          notification_id: backup_statistics_failed
+          title: Копія статистики не вдалася
+          message: 'Перевірити монтування NAS і вільне місце на /userdata.'
+    default:
+    - action: persistent_notification.dismiss
+      data:
+        notification_id: backup_statistics_failed
+  mode: single
+
+- id: notify_log_capture
+  alias: Журнал - записати сповіщення
+  description: 'Ловить КОЖНЕ сповіщення і кладе його у власну базу
+    notifications.db.
+
+    Навіщо. Home Assistant не зберігає сповіщень ніде. notify.mobile_app_*
+    віддає текст застосунку на телефоні й забуває його тієї ж миті, а
+    persistent_notification живе тільки в оперативній памʼяті - після рестарту
+    панель порожня. 23.08.2026 у конфігурації було 33 виклики push проти 22
+    записів у панель: одинадцять тривог не лишали в системі сліду взагалі.
+    Сторож, який спрацював уночі й зник під час ранкового рестарту, - це сторож,
+    якого не було.
+
+    Ловиться подія виклику служби, а не переписані виклики. Так журнал захопить
+    і ті сповіщення, які зʼявляться потім, без правки тридцяти трьох місць. І
+    так само ловляться виклики з інтерфейсу й зі скриптів, а не лише з
+    автоматизацій.
+
+    Текст санітизується тут, а не в shell_command: той розбирає рядок через
+    shlex, і апостроф у слові "зʼявиться" зламав би розбір. Заразом прибираються
+    лапки, зворотні лапки й долар - у команду не має потрапляти нічого, що
+    оболонка могла б прочитати як власний синтаксис.'
+  triggers:
+  - trigger: event
+    event_type: call_service
+    event_data:
+      domain: notify
+    id: push
+  - trigger: event
+    event_type: call_service
+    event_data:
+      domain: persistent_notification
+      service: create
+    id: panel
+  conditions: []
+  actions:
+  - variables:
+      sluzhba: '{{ trigger.event.data.domain }}.{{ trigger.event.data.service }}'
+      syryi_zagolovok: '{{ trigger.event.data.service_data.title | default('''') }}'
+      syryi_tekst: '{{ trigger.event.data.service_data.message | default('''') }}'
+  - action: shell_command.notify_log
+    data:
+      sluzhba: '{{ sluzhba }}'
+      zagolovok: '{{ syryi_zagolovok | replace("''", "") | replace(''"'', "")
+        | replace("`", "") | replace("$", "") | truncate(120, true, "") }}'
+      tekst: '{{ syryi_tekst | replace("''", "") | replace(''"'', "")
+        | replace("`", "") | replace("$", "") | truncate(400, true, "") }}'
+  mode: queued
+  max: 25
+
+- id: notify_log_mark_read
+  alias: Журнал - позначити сповіщення прочитаними
+  description: 'Скидає лічильник непрочитаних. Спрацьовує двома шляхами.
+
+    Явний - кнопка «Сповіщення - позначити прочитаними». Неявний - коли ви
+    прибираєте сповіщення з панелі Home Assistant: закрити повідомлення означає,
+    що ви його побачили, і змушувати після цього тиснути ще одну кнопку було б
+    зайвою церемонією.
+
+    Мітка одна на весь журнал, а не стан на кожен запис. Це поштова модель:
+    зберігається час останнього прочитання, усе старіше за нього вважається
+    прочитаним. Простіше і не бреше - на відміну від лічильника за добу, який
+    висів з одиницею ще двадцять три години після того, як ви все прочитали.
+
+    Після позначки сенсор оновлюється примусово: інакше цифра змінилася б аж за
+    пʼять хвилин, і виглядало б, що кнопка не працює.'
+  triggers:
+  - trigger: state
+    entity_id: input_button.spovishchennia_prochytano
+    id: knopka
+  - trigger: event
+    event_type: call_service
+    event_data:
+      domain: persistent_notification
+      service: dismiss
+    id: prybrano
+  conditions:
+  - condition: template
+    value_template: '{{ trigger.id != ''knopka'' or trigger.from_state is not none }}'
+  actions:
+  - action: shell_command.notify_log_mark_read
+  - delay: 00:00:02
+  - action: homeassistant.update_entity
+    target:
+      entity_id: sensor.spovishchennia_zhurnal
+  mode: single
+- id: boiler_babusi_heat_start
+  alias: Бойлер бабусі - початок нагріву
+  description: Вмикає розетку бойлера о часі з input_datetime.boiler_babusi_pochatok.
+    Час тримається в helper, а не тут, щоб міняти його з дашборда без правки YAML.
+    Нічний тариф 23:00-06:59, тож типове вікно 04:00-07:00 повністю в ньому.
+  triggers:
+  - trigger: time
+    at: input_datetime.boiler_babusi_pochatok
+  conditions:
+  - condition: state
+    entity_id: input_boolean.boiler_babusi_rozklad
+    state: 'on'
+  actions:
+  - action: switch.turn_on
+    target:
+      entity_id: switch.smart_plug_socket_1
+  mode: single
+- id: boiler_babusi_heat_stop
+  alias: Бойлер бабусі - кінець нагріву
+  description: Вимикає розетку о часі з input_datetime.boiler_babusi_kinets. Вимикає
+    безумовно, навіть якщо розклад був вимкнений посеред нагріву - інакше бойлер
+    лишився б гріти на денному тарифі.
+  triggers:
+  - trigger: time
+    at: input_datetime.boiler_babusi_kinets
+  actions:
+  - action: switch.turn_off
+    target:
+      entity_id: switch.smart_plug_socket_1
   mode: single

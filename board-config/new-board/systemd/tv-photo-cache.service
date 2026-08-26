@@ -1,0 +1,18 @@
+[Unit]
+Description=Rebuild the photo lists the TV screensaver picks from
+# The NAS album holds ~378000 JPEGs and a full find takes 155 s. The slideshow
+# needs a fresh path every 20 s, so it reads pre-built lists instead. This is
+# what builds them.
+#
+# Requires the NAS mount; the script exits quietly and keeps the previous lists
+# if it is missing, so a NAS outage degrades to yesterday's selection rather
+# than an empty screensaver.
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=forlinx
+Nice=10
+IOSchedulingClass=idle
+ExecStart=/home/forlinx/tv-photo-cache.sh

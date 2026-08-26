@@ -51,7 +51,7 @@ frontend:
   # resources are ignored in that mode, so load our repository-owned card as
   # a frontend module without changing or overwriting storage resources.
   extra_module_url:
-    - /local/home-energy-flow-card.js?v=20260821-2
+    - /local/home-energy-flow-card.js?v=20260822-thin
 
 input_number:
   poliv_zona_1_hvylyn:
@@ -98,6 +98,33 @@ input_number:
     mode: box
     icon: mdi:counter
 
+  # --- Знімки лічильників на старті ручного заміру (2026-08-22) ---
+  # Автоматизація кладе сюди значення в момент увімкнення секундоміра, щоб на
+  # зупинці порахувати різницю. Три джерела одразу: скільки часу зарахувала
+  # система, скільки енергії нарахував Riemann і скільки - власний лічильник
+  # розетки. За один пуск стає видно, який із них ближчий до правди.
+  zamir_start_runtime:
+    name: Замір - час роботи на старті
+    min: 0
+    max: 100000
+    step: 0.0000001
+    mode: box
+    icon: mdi:timer-play
+  zamir_start_riemann:
+    name: Замір - Riemann на старті
+    min: 0
+    max: 1000000
+    step: 0.0001
+    mode: box
+    icon: mdi:counter
+  zamir_start_device:
+    name: Замір - лічильник розетки на старті
+    min: 0
+    max: 1000000
+    step: 0.0001
+    mode: box
+    icon: mdi:counter
+
   # --- Розклад заряджання авто (додано 2026-08-09) ---
   # Струм, який виставляється на станцію на початку вікна. 32 А - апаратна межа
   # цієї однофазної станції, тобто близько 7,4 кВт при 230 В.
@@ -109,10 +136,55 @@ input_number:
     unit_of_measurement: A
     icon: mdi:current-ac
 
+  # --- Якір обліку мережі (додано 2026-08-23) ---
+  #
+  # Накопичувальний показ трифазного лічильника приходить ТІЛЬКИ хмарою Tuya:
+  # локальний канал віддає самі миттєві значення (сирий DP фази декодується як
+  # 2 байти напруги, 3 струму, 3 потужності - накопичувального регістру там
+  # немає). Коли 9 серпня 2026 протух токен Tuya, облік усього вводу став
+  # мертвий на десять днів, і помітили це лише 22-го.
+  #
+  # Тому показ будується як ЯКІР + локальний інтеграл від якоря. Поки хмара
+  # жива, значення дорівнює її показу з точністю до останнього якоря - тобто
+  # біллінгове. Коли хмара падає, сенсор продовжує рухатись локально й повільно
+  # дрейфує, замість того щоб замерзнути.
+  #
+  # Той самий патерн уже працює для сесії насоса (nasos_energiia_start).
+  merezha_yakir_pokaz:
+    name: Мережа - якір, показ лічильника
+    min: 0
+    max: 1000000
+    step: 0.001
+    mode: box
+    unit_of_measurement: kWh
+    icon: mdi:anchor
+  merezha_yakir_integral:
+    name: Мережа - якір, локальний інтеграл
+    min: 0
+    max: 1000000
+    step: 0.001
+    mode: box
+    unit_of_measurement: kWh
+    icon: mdi:anchor
+
 # --- Розклад заряджання авто: межі вікна (додано 2026-08-09) ---
 # Типово збігається з нічним тарифом 23:00-06:59, бо кіловат уночі вдвічі
 # дешевший. Значення редагуються на дашборді, YAML правити не треба.
 input_datetime:
+  # Бойлер бабусі. Вікно нагріву задається тут, а не в автоматизації, щоб його
+  # можна було міняти з дашборда без правки YAML. За замовчуванням 04:00-07:00:
+  # нічний тариф триває 23:00-06:59, тож вода встигає нагрітися найдешевше і
+  # лишається гарячою до ранку.
+  boiler_babusi_pochatok:
+    name: Бойлер бабусі - початок нагріву
+    has_date: false
+    has_time: true
+    icon: mdi:clock-start
+  boiler_babusi_kinets:
+    name: Бойлер бабусі - кінець нагріву
+    has_date: false
+    has_time: true
+    icon: mdi:clock-end
   zariadka_pochatok:
     name: Заряджання - початок вікна
     has_date: false
@@ -139,6 +211,11 @@ input_datetime:
 # every scheduled/weather-driven irrigation automation. Manual controls and
 # emergency stop remain available independently.
 input_boolean:
+  # Вимикач самого розкладу. Off - бойлер лишається під ручним керуванням,
+  # автоматика його не чіпає. Автоматизації перевіряють саме цей прапорець.
+  boiler_babusi_rozklad:
+    name: Бойлер бабусі - нагрів за розкладом
+    icon: mdi:calendar-clock
   # Set by the 21:00 rain question, read and cleared by the morning run.
   # Off means "water normally" - so a missed evening check (HA down, no rain
   # forecast) never silently cancels irrigation.
@@ -190,6 +267,15 @@ input_boolean:
     name: Заряджання авто за розкладом
     icon: mdi:calendar-clock
 
+  # --- Ручний секундомір насоса свердловини (2026-08-22) ---
+  # Розетка звітує рідко, і скільки насос працює насправді, з її даних не видно.
+  # Єдиний спосіб дізнатись похибку - засікти пуск людиною поруч із насосом.
+  # Увімкнути на старті, вимкнути на зупинці; решту рахує автоматизація, тому
+  # записувати щось на папері не потрібно.
+  sverdlovina_sekundomir:
+    name: Свердловина - ручний секундомір
+    icon: mdi:timer-outline
+
 # --- Журнал рішень про полив (додано 2026-08-08) ---
 # Автоматизація розкладу пише сюди підсумок останнього рішення. До цього
 # рішення жило тільки в пуші на телефон: якщо пуш не побачили, на дашборді
@@ -198,7 +284,13 @@ input_text:
   poliv_ostannie_rishennia:
     name: Полив - останнє рішення
     icon: mdi:clipboard-text-clock
+
+  # Підсумок останнього ручного заміру насоса: реальні секунди проти зарахованих
+  # системою, і скільки за той самий пуск нарахували обидва лічильники енергії.
+  sverdlovina_zamir_rezultat:
+    name: Свердловина - результат заміру
     max: 255
+    icon: mdi:clipboard-check-outline
 
 # --- Розподіл споживання на день і ніч (додано 2026-08-08) ---
 #
@@ -218,6 +310,32 @@ input_text:
 # 2026-08-08 розділити на день і ніч неможливо - у статистиці збережена лише
 # сумарна вартість без розбиття за тарифом.
 utility_meter:
+  # --- Паралельний лічильник на ПОКАЗ ЛІЧИЛЬНИКА (додано 23.08.2026) ---
+  #
+  # Джерело наявних лічильників - інвертор, а він бачить лише свою гілку:
+  # заміряна різниця з лічильником доходила до 27 відсотків. Правильне джерело -
+  # sensor.merezha_spozhyto, який тепер тримається на локальному DP 1.
+  #
+  # Але source наявного utility_meter міняти НЕ МОЖНА (розділ 2 специфікації):
+  # історія не переноситься, лічильник продовжить з місця, де стояв, і на стику
+  # вийде сходинка, яку потім шукатимуть як аномалію. Тому новий лічильник
+  # поруч зі старим. Коли обидва відпрацюють доба-дві паралельно і числа
+  # зійдуться - тоді перемикати картки, а старому дати доживати.
+  lichylnyk_za_tarifom:
+    name: Лічильник за тарифом
+    source: sensor.merezha_spozhyto
+    tariffs: [den, nich]
+  lichylnyk_dobovyi:
+    name: Лічильник за добу
+    source: sensor.merezha_spozhyto
+    cycle: daily
+    tariffs: [den, nich]
+  lichylnyk_misiachnyi:
+    name: Лічильник за місяць
+    source: sensor.merezha_spozhyto
+    cycle: monthly
+    tariffs: [den, nich]
+
   merezha_za_tarifom:
     name: Мережа за тарифом
     source: sensor.inverter_total_energy_import
@@ -252,6 +370,12 @@ utility_meter:
   nasos_za_tarifom:
     name: Насос поливу за тарифом
     source: sensor.nasos_polivu_spozhito
+    tariffs: [den, nich]
+  # Бойлер бабусі. Джерело - лічильник самої розетки Tuya (device_class energy,
+  # state_class total_increasing, kWh), тому додаткового інтегрування не треба.
+  boiler_babusi_za_tarifom:
+    name: Бойлер бабусі за тарифом
+    source: sensor.smart_plug_total_energy
     tariffs: [den, nich]
 
 automation: !include automations.yaml
@@ -432,6 +556,111 @@ template:
           {{ ((states('sensor.smart_irrigation_zona5') | float(0)) / 60) | round(0) }}
         availability: >
           {{ has_value('sensor.smart_irrigation_zona5') }}
+
+      # --- Температура води в бойлері (додано 2026-08-22) ---
+      #
+      # Стан water_heater - це режим роботи, рядок, а не число. Картка
+      # «Температура за 24 години» на вкладці «Бойлер» будувалась просто на
+      # цій сутності й тому малювала стрічку «увімкнено/вимкнено»: температури,
+      # яку обіцяв заголовок, там не було ніколи. history-graph не вміє малювати
+      # атрибути, тому потрібен окремий числовий сенсор.
+      - name: "Boiler temperatura vody"
+        unique_id: boiler_water_temperature
+        unit_of_measurement: "°C"
+        device_class: temperature
+        state_class: measurement
+        icon: mdi:water-thermometer
+        state: >
+          {{ state_attr('water_heater.144036023323246_water_heater', 'current_temperature') }}
+        availability: >
+          {{ state_attr('water_heater.144036023323246_water_heater', 'current_temperature')
+             is not none }}
+
+      # --- Показ мережі: локально, з якорем як мостом (переписано 23.08.2026) ---
+      #
+      # Спершу цей сенсор брав ЯКІР ІЗ ХМАРИ, бо вважалося, що накопичувального
+      # регістру в локальному каналі немає. Це виявилося неправдою: DP 1
+      # (`total_forward_energy`, scale 2) віддається локально й збігається з
+      # хмарним показом до сотої. Тобто конструкція обходила обмеження, якого
+      # не існує - див. розділ 1 специфікації.
+      #
+      # Тепер джерело локальне, а якір лишився мостом на ті три хвилини після
+      # рестарту, поки LocalTuya піднімає зʼєднання. Хмара більше не потрібна
+      # для обліку взагалі: коли підписка Tuya спливе, тут не зміниться нічого.
+      #
+      # max(0, ...) на дельті - не косметика: інтеграл після рестарту HA
+      # починається з нуля, і без цього захисту різниця стала б великою
+      # відʼємною, а total_increasing прочитав би це як скидання лічильника і
+      # нарахував фантомне споживання на весь показ.
+      - name: "Merezha spozhyto"
+        unique_id: grid_total_anchored
+        unit_of_measurement: "kWh"
+        device_class: energy
+        state_class: total_increasing
+        icon: mdi:transmission-tower-import
+        state: >
+          {% set lok = states('sensor.energy_meter_local_total_energy_local') | float(0) / 100 %}
+          {% if lok > 0 %}
+            {{ lok | round(3) }}
+          {% else %}
+            {% set yakir = states('input_number.merezha_yakir_pokaz') | float(0) %}
+            {% set base = states('input_number.merezha_yakir_integral') | float(0) %}
+            {% set now_int = states('sensor.merezha_lokalnyi_integral') | float(0) %}
+            {{ (yakir + [0, now_int - base] | max) | round(3) }}
+          {% endif %}
+        availability: >
+          {{ (states('sensor.energy_meter_local_total_energy_local') | float(0)) > 0
+             or ((states('input_number.merezha_yakir_pokaz') | float(0)) > 0
+                 and has_value('sensor.merezha_lokalnyi_integral')) }}
+        attributes:
+          dzherelo: >
+            {% set lok = states('sensor.energy_meter_local_total_energy_local') | float(0) %}
+            {{ 'локальний DP 1' if lok > 0 else 'якір плюс інтеграл' }}
+          rozbizhnist_z_hmaroiu: >
+            {% set lok = states('sensor.energy_meter_local_total_energy_local') | float(0) / 100 %}
+            {% set hmara = states('sensor.energy_meter_total_energy') | float(0) %}
+            {{ (lok - hmara) | round(3) if lok > 0 and hmara > 0 else 'немає з чим звіряти' }}
+
+      # --- Тривоги лічильника (додано 2026-08-23) ---
+      #
+      # DP 9 лічильника - бітова маска на двадцять тривог. Вона приходить
+      # ЛОКАЛЬНО, без хмари: у localtuya її просто не було заведено сутністю,
+      # тому в Home Assistant її не бачили зовсім.
+      #
+      # Сенсор віддає готовий людський перелік, а не число: "перевантаження,
+      # перекіс напруг" однаково читається і з картки, і з push, а 1028 не
+      # читається ніде. Сире значення лишається в атрибуті kod.
+      #
+      # Порядок міток - з опису продукту в кабінеті Tuya, біт 0 перший.
+      - name: "Lichylnyk tryvohy"
+        unique_id: meter_fault_decoded
+        icon: mdi:alert-octagon-outline
+        state: >
+          {% set kod = states('sensor.energy_meter_fault') | int(-1) %}
+          {% set mitky = [
+            'коротке замикання', 'імпульсне перенапруження', 'перевантаження',
+            'струм витоку', 'перегрів', 'пожежна тривога',
+            'перевищення потужності', 'самотестування', 'перевищення струму',
+            'перекіс струмів', 'перенапруга', 'знижена напруга',
+            'втрата фази', 'зникнення живлення', 'магнітний вплив',
+            'залишок коштів', 'нульовий баланс', 'порушення чергування фаз',
+            'перекіс напруг', 'занизький струм'] %}
+          {% if kod < 0 %}
+            невідомо
+          {% elif kod == 0 %}
+            немає
+          {% else %}
+            {% set ns = namespace(perelik=[]) %}
+            {% for i in range(20) %}
+              {% if kod | bitwise_and(2 ** i) %}
+                {% set ns.perelik = ns.perelik + [mitky[i]] %}
+              {% endif %}
+            {% endfor %}
+            {{ ns.perelik | join(', ') if ns.perelik else 'код ' ~ kod }}
+          {% endif %}
+        availability: "{{ has_value('sensor.energy_meter_fault') }}"
+        attributes:
+          kod: "{{ states('sensor.energy_meter_fault') }}"
 
       # --- Вартість у гривнях (додано 2026-08-08) ---
       #
@@ -735,6 +964,36 @@ template:
 # Home Assistant дістається ззовні через Tailscale Serve, а той проксіює запит
 # з 127.0.0.1. Без цих двох рядків HA вважав би локальним будь-кого, хто зайшов
 # ззовні, і «тільки локальний доступ» на облікових записах не значив би нічого.
+  # --- Енергія насоса за власним лічильником розетки (2026-08-22) ---
+  #
+  # Riemann по сенсору потужності занижує споживання насоса приблизно вп'ятеро,
+  # і це не полагодити налаштуванням: розетка віддає ОДИН семпл на цикл насоса,
+  # хоч через хмару, хоч локально (0.0553 проти 0.0555 кВт·год за ту саму добу).
+  # Інтеграл по одній точці на дев'яностосекундний пуск — це груба оцінка.
+  #
+  # DP 20 (add_ele) — власний вимір самої розетки: скільки енергії пройшло з
+  # моменту попереднього звіту. Прилад рахує його безперервно, тому короткі
+  # пуски він не губить. Але це НЕ накопичувач: значення постійно скидається,
+  # а `state_class: total_increasing` на sensor.t34_smart_plug_electricity
+  # описує його неправильно. Тому суму збираємо тут, самі.
+  #
+  # Сенсор поки що ДОВІДКОВИЙ. Калібрування далі стоїть на Riemann, і замінити
+  # джерело можна буде лише після наступного механічного показника — коли стане
+  # видно, який із двох лічильників ближчий до правди. Поспішна заміна зсунула б
+  # коефіцієнт іще раз, не довівши нічого.
+  - trigger:
+      - trigger: state
+        entity_id: sensor.t34_smart_plug_electricity
+    sensor:
+      - name: Nasos sverdlovini enerhiia prystroiu
+        unique_id: well_pump_device_energy_total
+        unit_of_measurement: kWh
+        device_class: energy
+        state_class: total_increasing
+        state: >-
+          {% set prev = states('sensor.nasos_sverdlovini_enerhiia_prystroiu') | float(0) %}
+          {% set add = trigger.to_state.state | float(0) %}
+          {{ (prev + add) | round(4) }}
 http:
   use_x_forwarded_for: true
   trusted_proxies:
@@ -769,6 +1028,9 @@ recorder:
     # Dynamic client-list attributes are useful on the live dashboard but
     # would create needless SQLite/eMMC churn when devices roam between APs.
     entities:
+      # Журнал показників тримає всі рядки в атрибутах; писати цей блок у
+      # SQLite при кожному опитуванні немає сенсу - файл сам собі історія.
+      - sensor.zhurnal_pokaznykiv_vody
       - sensor.tenda_ap_clients
       - sensor.tenda_ap_status
       - sensor.tenda_ap_security
@@ -822,17 +1084,12 @@ recorder:
 
 # --- Separate YAML dashboard with instantaneous power graphs ---
 lovelace:
-  resources:
-    - url: /hacsfiles/sunsynk-power-flow-card/sunsynk-power-flow-card.js
-      type: module
-    # Встановлені вручну в www/community (повз HACS), тому шлях /local/,
-    # а не /hacsfiles/ - той алias обслуговує лише репозиторії, які знає HACS.
-    - url: /local/community/mushroom/mushroom.js
-      type: module
-    - url: /local/community/card-mod/card-mod.js
-      type: module
-    - url: /local/community/mini-graph-card/mini-graph-card-bundle.js
-      type: module
+  # Блок resources: тут стояв і не робив нічого: у режимі storage Home Assistant
+  # ігнорує YAML-ресурси повністю, а справжній список живе в .storage і
+  # редагується через Налаштування → Дашборди → Ресурси. Шкода була не нульова:
+  # він перелічував mushroom і card-mod так, ніби вони підключені, і перша ж
+  # спроба редизайну з mushroom-картками дала 20 «Помилок конфігурації».
+  # Фактичний перелік ресурсів описаний у docs/dashboard-layout.md.
   mode: storage
   dashboards:
     # url_path свідомо лишається power-dashboard: перейменування зламало б усі
@@ -857,6 +1114,20 @@ lovelace:
       filename: overview_dashboard.yaml
 
 sensor:
+  # Локальний інтеграл усього вводу: сума трьох фаз, проінтегрована в часі.
+  # Це НЕ показ лічильника, а міст між хмарними оновленнями - див. якорі в
+  # input_number вище і docs/energy-accounting-spec.md.
+  #
+  # max_sub_interval обовʼязковий: без нього інтеграл не рухається, поки не
+  # зміниться джерело, а фазна потужність уночі може стояти хвилинами.
+  - platform: integration
+    source: sensor.zagalne_navantazhennia
+    name: Merezha lokalnyi integral
+    unique_id: grid_local_integral
+    unit_time: h
+    method: left
+    round: 3
+    max_sub_interval: "00:01:00"
   - platform: integration
     source: sensor.zariadka_7_5kvt_device_kw
     name: Зарядка авто - спожито
@@ -868,6 +1139,24 @@ sensor:
   - platform: history_stats
     name: "Насос поливу - робота сьогодні"
     entity_id: switch.mini_switch_k601_2_switch_1_2
+    state: "on"
+    type: time
+    start: "{{ today_at('00:00') }}"
+    end: "{{ now() }}"
+  # --- Насос свердловини: тривалість роботи за добу (2026-08-22) ---
+  # Потрібне для щоденної звірки: механічний показник ділиться на цей час і дає
+  # подачу в літрах за хвилину, яку можна порівняти з паспортом насоса - без
+  # жодної енергії в рівнянні. Це друга, незалежна перевірка коефіцієнта.
+  #
+  # ЧЕСНО ПРО ТОЧНІСТЬ. Сенсор рахує час, поки input_boolean тримається 'on', а
+  # той перемикається за сенсором потужності. Розетка звітує рідко, тому межі
+  # пуску відомі приблизно, і добова сума занижена рівно настільки ж, як енергія.
+  # Секундної точності тут немає й не буде без окремого вимірювача; цифра
+  # корисна для порівняння днів між собою, а не як абсолютна величина.
+  - platform: history_stats
+    name: "Насос свердловини - робота сьогодні"
+    unique_id: well_pump_runtime_today
+    entity_id: input_boolean.nasos_sverdlovini_pratsiuie
     state: "on"
     type: time
     start: "{{ today_at('00:00') }}"
@@ -917,9 +1206,13 @@ sensor:
 logger:
   logs:
     aioasuswrt.asuswrt: error
-    # Temporary 2026-08-05: capture the exact Tuya QR-login error code/message.
-    # Remove once the cloud re-authentication succeeds.
-    homeassistant.components.tuya: debug
+    # Знято 2026-08-22. Рядок стояв «тимчасово» з 5 серпня, поки не вдасться
+    # ре-автентифікація Tuya - вона так і не відбулась, а debug тим часом писав
+    # близько трьох рядків на секунду («Received update for device …» на кожен
+    # MQTT-пакет хмари) і роздув home-assistant.log до 29 МБ. Це постійні записи
+    # на eMMC і зайва робота на платі з 1.93 ГБ RAM. Коли до ре-автентифікації
+    # дійдуть руки, рівень можна підняти на час самої спроби:
+    #   homeassistant.components.tuya: debug
     # ЗНИЖЕНО 2026-08-09 після аварії: на рівні debug ця бібліотека пише КОЖЕН
     # MQTT-пакет хмари Tuya (кілька разів на секунду). За чотири доби лог виріс
     # до 74 МБ і разом із базою recorder заповнив розділ /userdata на 100%.
@@ -1050,6 +1343,22 @@ logger:
 # is just an ordinary empty directory, and writing clips into it would fill
 # /userdata - exactly the failure that took the whole system down earlier today.
 command_line:
+  # Одне випадкове фото для телевізійної заставки, з альбому, обраного в
+  # input_select.tv_zastavka_album. Читає готовий список, побудований
+  # tv-photo-cache.sh: в альбомі 87758 фотографій і повний обхід NAS триває
+  # дві хвилини, а заставці треба новий шлях кожні 20 секунд.
+  #
+  # scan_interval добовий навмисне: сенсор оновлює не час, а скрипт заставки
+  # через homeassistant.update_entity перед кожним показом. Опитувати його
+  # самохіть означало б дарма будити NAS цілу добу.
+  - sensor:
+      name: TV zastavka foto
+      unique_id: tv_zastavka_foto
+      command: >-
+        /home/forlinx/tv-photo-random.sh
+        "{{ states('input_select.tv_zastavka_album') }}"
+      scan_interval: 86400
+      command_timeout: 15
   # Стан файлової системи /userdata. Перевірка при завантаженні знята
   # (fstab pass 0), інакше пошкоджений розділ не монтується і HA не
   # стартує взагалі - тож роль сторожа виконує цей сенсор.
@@ -1137,6 +1446,121 @@ command_line:
       device_class: connectivity
       icon: mdi:cctv
 
+  # --- Журнал показників лічильника свердловини (2026-08-22) ---
+  # Записи живуть у water_readings.json, а не в слотах input_text: слоти
+  # обмежені двадцятьма чотирма, не тримають історії правок і не пережили
+  # падіння HA 21.08 - тоді збережений показник 815.89 зник із таблиці,
+  # бо .storage/core.restore_state пишеться періодично, а не миттєво.
+  # Стан сенсора - кількість записів (ліміт стану 255 символів), самі рядки
+  # їдуть в атрибутах. Картка після кожного запису смикає update_entity,
+  # тож scan_interval тут лише страхувальний.
+  - sensor:
+      name: Zhurnal pokaznykiv vody
+      unique_id: well_water_readings_log
+      command: "/userdata/hass/venv/bin/python /userdata/hass/config/scripts/water_readings.py export --limit 60 --include-deleted"
+      value_template: "{{ value_json.count }}"
+      json_attributes:
+        - readings
+        - count
+        - updated_at
+        # Базова точка й енергетична поправка їдуть тим самим сенсором: картки
+        # та автоматизації беруть їх звідси, тому число існує в одному місці.
+        - calibration
+      unit_of_measurement: "записів"
+      icon: mdi:table-clock
+      scan_interval: 600
+
+  # --- Таблиця тарифів (2026-08-22) ---
+  # Ставка - це часовий ряд, а жила вона як два input_number. Через це вся
+  # минула вартість тихо перераховувалась за поточною ціною: до 3 серпня діяла
+  # плоска 2,50 цілодобово, а рахувалося все денними 5,00. Тепер періоди з
+  # датами дії лежать у tariffs.json, а скрипт віддає ставку на будь-який момент.
+  # Стан - чинна ставка; історія й межі вікон - в атрибутах. Періоди цілком
+  # (з примітками й джерелами) сюди свідомо не тягнемо: вони довгі, а сенсор
+  # мусить лишатись легким.
+  #
+  # НАСТУПНИЙ КРОК, ще не зроблений: грошові template-сенсори досі множать на
+  # input_number. Поки вони не почнуть питати цю таблицю, зміна ціни й далі
+  # переписуватиме минуле - див. docs/cost-history-recalc.md.
+  - sensor:
+      name: Taryf tablytsia
+      unique_id: tariff_table
+      command: "/userdata/hass/venv/bin/python /userdata/hass/config/scripts/tariffs.py export"
+      value_template: "{{ value_json.rate_now }}"
+      json_attributes:
+        - zone_now
+        - zone_label
+        - rates
+        - periods_count
+        - current_id
+        - current_from
+        - current_kind
+        - currency
+      unit_of_measurement: "UAH/kWh"
+      icon: mdi:cash-clock
+      scan_interval: 900
+
+  # --- Глибина довгострокової статистики (2026-08-22) ---
+  # 18 серпня корупція бази знищила всю статистику до цієї дати, і ніхто не
+  # помітив: за глибиною не стежив ніхто. Побічний наслідок видно на вкладці
+  # «Витрати» - картки «Цей місяць» і «Цей рік» показують однакове число, бо
+  # обидва вікна вміщаються в те, що лишилось.
+  #
+  # Стан - кількість РІЗНИХ календарних днів із записами, а не різниця крайніх
+  # дат: після втрати середини діапазону різниця бреше, а лічильник днів ні.
+  # Скрипт відкриває базу лише на читання і за будь-якої біди віддає JSON із
+  # полем error та кодом виходу 0 - інакше HA відкинув би вивід разом із
+  # причиною, і сторож замовк би саме тоді, коли має кричати.
+  - sensor:
+      name: Hlybyna statystyky
+      unique_id: lts_depth_days
+      command: "/userdata/hass/venv/bin/python /userdata/hass/config/scripts/lts_depth.py --db /userdata/hass/config/home-assistant_v2.db"
+      value_template: "{{ value_json.depth_days }}"
+      json_attributes:
+        - rows
+        - metadata
+        - hours
+        - oldest_date
+        - newest_date
+        - span_days
+        - lag_days
+        - missing_days_total
+        - error
+      unit_of_measurement: "днів"
+      state_class: measurement
+      icon: mdi:database-clock
+      scan_interval: 3600
+
+  # Сповіщення видно в системі, а не лише в телефоні.
+  #
+  # Стан - кількість НЕПРОЧИТАНИХ. Спершу тут була кількість за добу, і вона не
+  # спадала після прочитання: значок висів із одиницею, поки не мине доба. Тепер
+  # це поштова модель - одна мітка часу останнього прочитання, усе старіше за
+  # неї вважається прочитаним.
+  #
+  # Стан не текст, а число: у стану Home Assistant ліміт 255 символів, і одне
+  # довге повідомлення зробило б сутність недоступною. Самі записи лежать в
+  # атрибутах, де ліміту немає, і кожен має ознаку nove.
+  - sensor:
+      name: "Spovishchennia zhurnal"
+      unique_id: notify_log_recent
+      command: "/userdata/hass/venv/bin/python /userdata/hass/config/scripts/notify_log.py export --limit 40"
+      value_template: "{{ value_json.unread }}"
+      json_attributes:
+        - unread
+        - today
+        - total
+        - last_read
+        - items
+      unit_of_measurement: "непрочитаних"
+      scan_interval: 300
+      command_timeout: 30
+
+input_button:
+  spovishchennia_prochytano:
+    name: Сповіщення - позначити прочитаними
+    icon: mdi:email-open-outline
+
 shell_command:
   # Keep the clip folder bounded. It lives on the NAS, but an unbounded
   # folder is still bad manners - and if the mount ever silently fell away
@@ -1144,3 +1568,81 @@ shell_command:
   prepare_motion_dir: "d=/userdata/hass/config/media/video/ha-motion; mkdir -p $d/$(date +%Y-%m-%d); find $d -mindepth 1 -maxdepth 1 -type d -mtime +14 -exec rm -rf {} +"
   rebuild_clip_gallery: "/userdata/hass/venv/bin/python /userdata/hass/config/scripts-gen-gallery.py"
   update_motion_snapshot: "cd /userdata/hass/config/www/motion && ls -t motion_*.jpg 2>/dev/null | head -1 | xargs -I{} cp {} latest.jpg && ls -t motion_*.jpg 2>/dev/null | tail -n +31 | xargs -r rm --"
+  # --- Похвилинний рівень зберігання (додано 2026-08-23) ---
+  # Штатних рівнів три - сира зміна, пʼятихвилинна і погодинна, - і кроку
+  # «хвилина за 30 днів» серед них немає: purge_keep_days глобальний, не по
+  # сутностях. Цей рівень живе у власній базі minute_rollup.db збоку, тому не
+  # заважає recorder і переживає будь-яку операцію над основною базою.
+  minute_rollup_sample: "/userdata/hass/venv/bin/python /userdata/hass/config/scripts/minute_rollup.py sample --entities sensor.zagalne_navantazhennia,sensor.merezha_spozhyto,sensor.merezha_potuzhnist_usogo_vvodu"
+  minute_rollup_purge: "/userdata/hass/venv/bin/python /userdata/hass/config/scripts/minute_rollup.py purge --days 30"
+  # Копія довгострокової статистики на NAS. Щоденні бекапи Home Assistant її
+  # НЕ містять: у кожному backup.json стоїть "exclude_database": true, і ті
+  # 5-8 ГБ - це медіа. Саме тому корупція бази 18.08.2026 забрала три тижні
+  # безповоротно. Тут - 18 МБ незамінного замість 568 МБ усього.
+  backup_statistics: "/userdata/hass/venv/bin/python /userdata/hass/config/scripts/backup_statistics.py"
+  # Журнал сповіщень. Текст санітизується в автоматизації, а не тут:
+  # shell_command розбирає рядок через shlex, і апостроф у повідомленні зламав
+  # би розбір. Лапки, зворотні лапки й долар прибираються з тієї ж причини.
+  notify_log: >-
+    /userdata/hass/venv/bin/python /userdata/hass/config/scripts/notify_log.py log
+    --service '{{ sluzhba }}' --title '{{ zagolovok }}' --message '{{ tekst }}'
+  notify_log_mark_read: "/userdata/hass/venv/bin/python /userdata/hass/config/scripts/notify_log.py mark-read"
+  # Додати, виправити, приховати або повернути показник лічильника свердловини.
+  # Payload - це base64(JSON): Home Assistant рендерить команду в рядок і лише
+  # потім ріже її shlex, тому ім'я автора з лапкою чи нотатка з крапкою з комою
+  # ламали б виклик. Base64 складається тільки з [A-Za-z0-9+/=] і доїжджає цілим.
+  water_reading_apply: "/userdata/hass/venv/bin/python /userdata/hass/config/scripts/water_readings.py apply --payload {{ payload }}"
+
+# --- Сторож насоса свердловини (2026-08-22) ---
+# У поливу є повний набір захисту - максимальна тривалість, закриття клапанів,
+# безпечний стан після рестарту. У свердловини не було нічого: три автоматизації,
+# і всі лише рахують воду. Насос керується реле тиску, тож HA його не вмикає -
+# але якщо реле залипне, насос качатиме годинами, а система це мовчки порахує.
+# Лічильники дають те, чого не видно з миттєвої потужності: скільки разів на добу
+# насос стартував і скільки з того припало на ніч, коли розбору бути не повинно.
+counter:
+  nasos_sverdlovini_zapusky:
+    name: Запуски насоса свердловини за добу
+    icon: mdi:water-pump
+    initial: 0
+    step: 1
+  nasos_sverdlovini_zapusky_nich:
+    name: Нічні запуски насоса свердловини
+    icon: mdi:weather-night
+    initial: 0
+    step: 1
+
+# Вибір альбому для фотозаставки телевізора. Назви мусять збігатися з
+# іменами списків у /userdata/hass/tv-photos - скрипт-вибірник шукає файл
+# <назва>.list і мовчки відкочується на всі роки, якщо такого немає.
+input_select:
+  tv_zastavka_album:
+    name: Заставка телевізора - альбом
+    icon: mdi:image-multiple
+    options:
+      - Усі роки
+      - Різне
+      - S23 Ultra DVK
+      - Будівництво
+      - Kateryna Photos
+      - GoPro всі роки
+      - 2025
+      - 2024
+      - 2023
+      - 2022
+      - 2021
+      - 2020
+      - 2019
+      - 2018
+      - 2017
+      - 2016
+      - 2015
+      - 2014
+      - 2013
+      - 2012
+      - 2011
+      - 2010
+      - 2007
+      - 2006
+      - 1980-2004
+    initial: Усі роки

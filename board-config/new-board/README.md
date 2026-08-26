@@ -212,6 +212,43 @@ its own and only works through Cloudflare's network. While the zone was still
 already marked Proxied in the dashboard; proxying simply is not applied until
 the zone goes Active.
 
+## The TV slideshow reads a cache, because the album is too big to search
+
+The photo album on the NAS holds 87 758 JPEGs under `/mnt/homemate_media/foto`,
+and a full `find` across it takes just over two minutes. The slideshow needs a
+fresh path every 20 seconds, so searching on demand was never going to work.
+
+Two scripts split the job. `tv-photo-cache.sh` walks the album once a day at
+04:20 (`tv-photo-cache.timer`, `Persistent=true`, `IOSchedulingClass=idle`) and
+writes one list of paths per top-level album into `/userdata/hass/tv-photos/`,
+plus `__all.list`. `tv-photo-random.sh` takes an album name, draws one line with
+`shuf`, and prints a `media-source://` URI in about 300 ms.
+
+Two exclusions matter, and both were found by looking at what the picker
+actually returned rather than by reading the code:
+
+- **QNAP thumbnails.** `.@__thumb` directories sit beside almost every photo and
+  hold 8 kB previews. Before they were excluded they made up three quarters of
+  the cache - 369 662 entries fell to 87 758 once they were gone - so most of
+  what the TV showed would have been a blurry postage stamp.
+- **The recycle bin.** `@Recycle` is not only at the root; QNAP puts one inside
+  album folders too. The first version of the filter anchored the pattern at the
+  root and let 3 260 deleted photos through. It now matches at any depth.
+
+Home Assistant sees this through a `command_line` sensor,
+`sensor.tv_zastavka_foto`, whose `scan_interval` is a full day on purpose: the
+value is refreshed by `homeassistant.update_entity` from inside the slideshow
+loop, once per picture. Polling it on a timer would wake the NAS around the
+clock for a value nobody is looking at.
+
+`input_select.tv_zastavka_album` chooses the album. Its options must match the
+list filenames exactly - the picker looks for `<name>.list` and falls back to
+all years in silence when there is none, so a typo surfaces as "the year filter
+does nothing" rather than as an error.
+
+New photos on the NAS reach the slideshow the following day, after the timer
+runs. That is what the cache costs, and it is the right trade here.
+
 ## What is not in this directory
 
 `f_emul.service` and `a_emul.service` — the Freezemate and Aquamate Qt
