@@ -435,6 +435,36 @@ irrigation_unlimited:
 
 # --- Total load across all three phases (added 2026-08-02) ---
 template:
+  # --- Температура для смуги на телевізорі ---
+  # Погодна сутність віддає 22.7, а на екрані потрібне ціле: десяті на такій
+  # відстані не читаються і лише подовжують рядок. state-label округляти не
+  # вміє, тому округлення живе тут.
+  - sensor:
+      - name: Pogoda temp korotko
+        unique_id: pogoda_temp_korotko
+        state: >-
+          {% set t = state_attr('weather.forecast_golovna', 'temperature') %}
+          {{ t | round(0) | int if t is not none else '—' }}
+  # --- Кадр заставки як сутність-картинка ---
+  # picture-elements показує саме сутність: щойно tv-photo-nav.py підготує
+  # новий файл, URL зміниться і телевізор перемалює кадр сам. Поле image у
+  # картці так не вміє - шлях там фіксований і живе до перезавантаження
+  # сторінки.
+  - image:
+      name: TV kadr foto
+      unique_id: tv_kadr_foto
+      url: "http://127.0.0.1:8123{{ states('sensor.tv_kadr') }}"
+  # --- Годинник для смуги на телевізорі ---
+  # Саме trigger-сенсор, а не звичайний шаблон: звичайний перераховується лише
+  # тоді, коли зміниться щось усередині нього, а now() зміною не вважається -
+  # час на екрані просто стояв би.
+  - trigger:
+      - platform: time_pattern
+        minutes: "*"
+    sensor:
+      - name: Chas zaraz
+        unique_id: chas_zaraz
+        state: "{{ now().strftime('%H:%M') }}"
   # --- «Інше»: скільки коштує все, на чому немає власного лічильника ---
   #
   # Різниця між усім, що куплено з мережі, і сумою п'яти пристроїв із власними
@@ -1112,6 +1142,14 @@ lovelace:
       icon: mdi:home-variant
       show_in_sidebar: true
       filename: overview_dashboard.yaml
+    # Дашборд для телевізора. У бічному меню не потрібен: його ніхто не
+    # відкриває руками, він існує тільки для Home Assistant Cast.
+    tv-dashboard:
+      mode: yaml
+      title: Заставка ТВ
+      icon: mdi:television-play
+      show_in_sidebar: false
+      filename: tv_dashboard.yaml
 
 sensor:
   # Локальний інтеграл усього вводу: сума трьох фаз, проінтегрована в часі.
@@ -1343,6 +1381,42 @@ logger:
 # is just an ordinary empty directory, and writing clips into it would fill
 # /userdata - exactly the failure that took the whole system down earlier today.
 command_line:
+  # --- Кадр фотозаставки телевізора ---
+  # state.json складає tv-photo-nav.py. Там є те, чого сам шлях до файлу дати
+  # не може: URL зменшеної копії, яку відкриє браузер телевізора, дата зйомки
+  # з EXIF і місце кадру в історії - без нього стрілкам «назад» і «вперед» нема
+  # на що спиратися.
+  - sensor:
+      name: TV kadr
+      unique_id: tv_kadr
+      command: "cat /userdata/hass/tv-photos/state.json"
+      value_template: "{{ value_json.url }}"
+      json_attributes:
+        - taken
+        - name
+        - idx
+        - total
+        - album
+        - ok
+      scan_interval: 86400
+      command_timeout: 20
+  # --- Курси валют для смуги на екрані ---
+  # Пів години між опитуваннями: курс обмінника за цей час не рухається, а
+  # CoinGecko має обмеження на частоту звернень для безплатного доступу.
+  - sensor:
+      name: Kursy valiut
+      unique_id: kursy_valiut
+      command: "/userdata/hass/venv/bin/python /home/forlinx/tv-kursy.py"
+      value_template: "{{ value_json.usd | default(0) }}"
+      unit_of_measurement: "грн"
+      json_attributes:
+        - usd_txt
+        - eur_txt
+        - btc_txt
+        - line
+        - ok
+      scan_interval: 1800
+      command_timeout: 30
   # Одне випадкове фото для телевізійної заставки, з альбому, обраного в
   # input_select.tv_zastavka_album. Читає готовий список, побудований
   # tv-photo-cache.sh: в альбомі 87758 фотографій і повний обхід NAS триває
@@ -1562,6 +1636,13 @@ input_button:
     icon: mdi:email-open-outline
 
 shell_command:
+  # Стрілки заставки. Альбом підставляється шаблоном, тому нове фото береться
+  # саме з того альбому, що обраний на панелі; «назад» альбому не потребує -
+  # воно йде по вже переглянутому.
+  tv_foto_next: >-
+    /userdata/hass/venv/bin/python /home/forlinx/tv-photo-nav.py next
+    "{{ states('input_select.tv_zastavka_album') }}"
+  tv_foto_prev: "/userdata/hass/venv/bin/python /home/forlinx/tv-photo-nav.py prev"
   # Keep the clip folder bounded. It lives on the NAS, but an unbounded
   # folder is still bad manners - and if the mount ever silently fell away
   # this would be running against the board's own disk.

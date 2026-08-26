@@ -1,0 +1,85 @@
+# Дашборд, який телевізор показує через Home Assistant Cast.
+#
+# Чому picture-elements, а не markdown із власною версткою: markdown-картка
+# вирізає з HTML усі атрибути style під час санітизації - текст лишається, а
+# розташування зникає повністю. У picture-elements style є штатною
+# можливістю кожного елемента, тож підписи стоять там, де їх поставили.
+#
+# Кадр приходить сутністю image.tv_kadr_foto, а не полем image: у картці шлях
+# статичний і нове фото не з'явилося б без перезавантаження сторінки.
+#
+# Усі підписи - у нижніх кутах і з тінню: посередині вони затуляли б обличчя,
+# а суцільна плашка з'їдала б кадр. Тінь потрібна, бо на світлому небі білий
+# текст без неї зникає.
+views:
+- path: foto
+  type: panel
+  cards:
+  - type: picture-elements
+    image_entity: image.tv_kadr_foto
+    elements:
+    # --- Лівий нижній кут: коли зроблено знімок ---
+    - type: state-label
+      entity: sensor.tv_kadr
+      attribute: taken
+      style:
+        left: 2.2%
+        bottom: 3.2%
+        transform: none
+        color: rgba(255,255,255,0.94)
+        font-size: 2.5vh
+        font-weight: '500'
+        letter-spacing: 0.02em
+        text-shadow: 0 1px 5px rgba(0,0,0,0.95)
+        pointer-events: none
+    # --- Правий нижній кут, верхній рядок: курси ---
+    - type: state-label
+      entity: sensor.kursy_valiut
+      attribute: line
+      style:
+        right: 2.4%
+        bottom: 11.5%
+        transform: none
+        color: rgba(255,255,255,0.86)
+        font-size: 2.2vh
+        letter-spacing: 0.01em
+        text-shadow: 0 1px 5px rgba(0,0,0,0.95)
+        pointer-events: none
+    # --- Правий нижній кут, нижній рядок: погода і час ---
+    - type: state-icon
+      entity: weather.forecast_golovna
+      tap_action:
+        action: none
+      style:
+        right: 17.5%
+        bottom: 3.4%
+        transform: none
+        color: rgba(255,255,255,0.92)
+        '--mdc-icon-size': 3.6vh
+        filter: drop-shadow(0 1px 4px rgba(0,0,0,0.95))
+        pointer-events: none
+    - type: state-label
+      entity: sensor.pogoda_temp_korotko
+      suffix: °
+      style:
+        right: 12%
+        bottom: 4.1%
+        transform: none
+        color: rgba(255,255,255,0.94)
+        font-size: 2.9vh
+        font-weight: '500'
+        text-shadow: 0 1px 5px rgba(0,0,0,0.95)
+        pointer-events: none
+    - type: state-label
+      entity: sensor.chas_zaraz
+      style:
+        right: 2.4%
+        bottom: 2.6%
+        transform: none
+        color: '#fff'
+        font-size: 4.6vh
+        font-weight: '600'
+        line-height: '1'
+        letter-spacing: 0.01em
+        text-shadow: 0 2px 7px rgba(0,0,0,0.95)
+        pointer-events: none

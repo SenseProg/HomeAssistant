@@ -27,6 +27,7 @@ for _ in $(seq 1 12); do
   [ -n "$p" ] || exit 0
   uri="media-source://media_source/local/${p#/userdata/hass/config/media/}"
   if [ "${#uri}" -le 250 ]; then
+    printf "list=%s uri=%s\n" "${LIST##*/}" "$uri" >> /tmp/tv-photo-last-album 2>/dev/null || true
     printf '%s
 ' "$uri"
     exit 0

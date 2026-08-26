@@ -246,8 +246,72 @@ list filenames exactly - the picker looks for `<name>.list` and falls back to
 all years in silence when there is none, so a typo surfaces as "the year filter
 does nothing" rather than as an error.
 
+That the chosen album actually reaches the script was settled by observation,
+not by reading the integration. `tv-photo-random.sh` writes the album it was
+handed, the list it opened and the URI it returned to `/tmp/tv-photo-last-album`,
+overwriting rather than appending. Choosing 2014 in the panel and pressing
+**Оновити фото зараз** produced `2014`, `list=2014.list` and a URI under
+`/foto/2014/` on 2026-08-26. Had the template not been rendered, the trace would
+have read `{{ states('input_select.tv_zastavka_album') }}` with
+`list=__all.list` — and the photo would have looked exactly as good, which is
+why counting files proved nothing and the trace was needed.
+
+The **Оновити фото зараз** button on the Медіа tab polls the sensor on demand.
+During a slideshow it is redundant, since the loop refreshes the sensor before
+every picture; outside one it is the only way to see a newly chosen album
+without waiting for the next daily poll.
+
 New photos on the NAS reach the slideshow the following day, after the timer
 runs. That is what the cache costs, and it is the right trade here.
+
+## The television shows a page now, not a photo
+
+The slideshow used to hand each picture to the TV with `media_player.play_media`
+and the Default Media Receiver. That receiver draws the image and nothing else,
+so there was nowhere to put a caption. Once the screen had to carry the capture
+date, a clock, the weather and exchange rates, it had to become a page:
+`script.tv_idle_slideshow` casts the `tv-dashboard` view once with
+`cast.show_lovelace_view` and after that only changes what the page reads.
+
+`tv-photo-nav.py` prepares each frame. It keeps the last 300 paths in
+`history.json` so "back" has something to go back to, letterboxes the picture
+onto a 1920x1080 canvas, writes it into `www/tv/`, reads `DateTimeOriginal` out
+of the EXIF, and leaves all of it in `state.json` for `sensor.tv_kadr`.
+
+Three decisions there are deliberate:
+
+- **The canvas is always 16:9.** Left at its own proportions a portrait photo
+  makes the card taller than the screen, which puts a scrollbar on the TV and
+  moves the captions with every frame — `picture-elements` positions them in
+  percentages of the image.
+- **The filename changes every frame** and ends in four random digits. A fixed
+  name would come back from the browser cache, and `/local/` is served without
+  a password — through Cloudflare that means to the whole internet.
+- **The overlay is a `picture-elements` card, not markdown with its own HTML.**
+  The markdown card strips every `style` attribute while sanitising: the text
+  survives and the layout does not. That was tried first, and the elements sat
+  in a heap until the card was rewritten.
+
+The arrows are on the Медіа tab of the Пристрої dashboard rather than the
+remote. Cast pushes pictures to the television; the television's buttons do not
+travel back.
+
+Rates come from PrivatBank's cash desk rather than the official NBU rate,
+because the number on the screen should be the one seen at an exchange window;
+bitcoin has no NBU rate at all and comes from CoinGecko. The last good answer is
+cached, so a network blip leaves the old figures on screen instead of a gap.
+
+### What has not been checked
+
+The television was switched off through all of this — `media_player.televizor_tcl`
+stayed `unavailable` and pychromecast could not reach port 8009, even though the
+set answers a ping. Everything up to the television was exercised: the frames,
+the history, both arrows, the sensors and the layout in a browser. Nothing at
+all is known about how it looks on the actual screen, whether the receiver
+loads, or whether the toolbar steals a strip at the top there as it does in a
+browser window. `tv-photo-random.sh` and `sensor.tv_zastavka_foto` are therefore
+still in place, unused, as a way back to the old `play_media` slideshow if Cast
+turns out not to work on this TCL.
 
 ## What is not in this directory
 

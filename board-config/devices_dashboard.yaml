@@ -3775,15 +3775,42 @@ views:
       - type: select-options
       grid_options:
         columns: full
+    # Стрілки. Телевізор показує сторінку Home Assistant, а не голе фото, тому
+    # гортати доводиться звідси: Cast передає зображення на екран, але кнопки
+    # пульта назад у Home Assistant не повертаються.
+    - type: horizontal-stack
+      grid_options:
+        columns: full
+      cards:
+      - type: button
+        name: Попереднє
+        icon: mdi:chevron-left
+        show_state: false
+        tap_action:
+          action: call-service
+          service: script.tv_foto_poperednie
+      - type: button
+        name: Наступне
+        icon: mdi:chevron-right
+        show_state: false
+        tap_action:
+          action: call-service
+          service: script.tv_foto_nastupne
     - type: markdown
       grid_options:
         columns: full
       content: |-
-        {% set p = states('sensor.tv_zastavka_foto') %}
-        {% if p is string and p.startswith('media-source://') %}
-        **Останнє показане фото**
+        {% set n = state_attr('sensor.tv_kadr','name') %}
+        {% set t = state_attr('sensor.tv_kadr','taken') %}
+        {% set i = state_attr('sensor.tv_kadr','idx') %}
+        {% set tot = state_attr('sensor.tv_kadr','total') %}
+        {% if n %}
+        **Зараз на екрані** {% if t %}· знято {{ t }}{% endif %}
 
-        `{{ p.split('/local/foto/')[-1] }}`
+        `{{ n }}`
+
+        Кадр {{ i }} з {{ tot }} у памʼяті — стрілкою «Попереднє» можна
+        повернутися до вже побаченого.
         {% else %}
         Заставка ще не бралася до роботи — знімок зʼявиться тут після першого показу.
         {% endif %}
@@ -3822,7 +3849,17 @@ views:
         В альбомі 87 758 фотографій, і повний обхід NAS триває дві хвилини — надто
         довго, щоб шукати на льоту. Тому раз на добу о 04:20 таймер
         `tv-photo-cache` перебирає теку і складає списки шляхів, окремо на кожен
-        рік і альбом. Заставка бере випадковий рядок зі списку за чверть секунди.
+        рік і альбом. Заставка бере випадковий рядок зі списку миттєво, а тоді
+        готує кадр: зменшує знімок під екран і читає з нього дату зйомки. Разом
+        це близько двох секунд.
+
+        На екран іде не голе фото, а сторінка Home Assistant, тому внизу
+        вміщаються дата зйомки, годинник, погода і курси. Через це ж гортати
+        доводиться звідси, з панелі: зображення на телевізор Cast передає, а
+        кнопки пульта назад у Home Assistant не повертаються.
+
+        «Попереднє» працює завдяки памʼяті на 300 останніх кадрів — якщо
+        знімок змінився зарано, до нього можна повернутися.
 
         Нові фотографії на NAS зʼявляться у заставці наступного дня, після
         чергового оновлення списків.

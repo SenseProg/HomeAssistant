@@ -211,6 +211,14 @@ tv_idle_slideshow:
   sequence:
   - variables:
       tv: media_player.televizor_tcl
+  # Телевізор показує не голе фото, а сторінку Home Assistant. Інакше на екран
+  # не можна було б винести ні дату зйомки, ні час, ні погоду з курсами:
+  # play_media вміє тільки картинку, накласти на неї нічого не можна.
+  - action: cast.show_lovelace_view
+    data:
+      entity_id: '{{ tv }}'
+      dashboard_path: tv-dashboard
+      view_path: foto
   - repeat:
       while:
       - condition: template
@@ -219,26 +227,10 @@ tv_idle_slideshow:
        and (kind == 'image/jpeg'
             or app in ['Default Media Receiver', 'Home Assistant Cast'])) }}"
       sequence:
-      # Сенсор віддає нове фото лише коли його про це попросити - опитувати
-      # його за розкладом означало б дарма будити NAS цілодобово.
-      - action: homeassistant.update_entity
-        target:
-          entity_id: sensor.tv_zastavka_foto
-      - variables:
-          photo: "{{ states('sensor.tv_zastavka_foto') | default('', true) }}"
-      # Якщо NAS відпав або скрипт не знайшов списку, сенсор віддасть порожнє
-      # чи unavailable. Тоді просто не чіпаємо телевізор: на екрані лишиться
-      # попереднє фото, а не помилка відтворення.
-      - if:
-        - condition: template
-          value_template: "{{ photo.startswith('media-source://') }}"
-        then:
-        - action: media_player.play_media
-          target:
-            entity_id: '{{ tv }}'
-          data:
-            media_content_id: '{{ photo }}'
-            media_content_type: image/jpeg
+      # Сам скрипт готує наступний кадр і оновлює sensor.tv_kadr, а сторінка на
+      # телевізорі перемальовується від зміни сутності. Нічого пересилати на
+      # екран щокадру більше не потрібно.
+      - action: script.tv_foto_nastupne
       - delay: 00:00:20
 poliv_zona_4:
   alias: Полити зону 4
@@ -374,3 +366,25 @@ poliv_zona_5:
       entity_id: timer.poliv_zoni_5
     data:
       duration: '{{ duration }}'
+tv_foto_nastupne:
+  alias: Заставка - наступне фото
+  icon: mdi:chevron-right
+  # queued, а не single: якщо натиснути стрілку двічі поспіль, друге натискання
+  # має дочекатися першого, а не пропасти - кадр готується близько двох секунд.
+  mode: queued
+  max: 5
+  sequence:
+  - action: shell_command.tv_foto_next
+  - action: homeassistant.update_entity
+    target:
+      entity_id: sensor.tv_kadr
+tv_foto_poperednie:
+  alias: Заставка - попереднє фото
+  icon: mdi:chevron-left
+  mode: queued
+  max: 5
+  sequence:
+  - action: shell_command.tv_foto_prev
+  - action: homeassistant.update_entity
+    target:
+      entity_id: sensor.tv_kadr
