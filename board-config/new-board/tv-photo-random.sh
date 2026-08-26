@@ -5,6 +5,13 @@
 set -u
 OUT=/userdata/hass/tv-photos
 ALBUM="${1:-Усі роки}"
+
+# Слід останнього виклику: перезаписується, не росте. Потрібен, щоб було чим
+# довести, що Home Assistant справді підставляє обраний альбом у команду, а не
+# передає сам шаблон - у другому випадку скрипт мовчки взяв би всі роки і
+# результат виглядав би точно так само.
+printf '%s	%s
+' "$(date "+%F %T")" "$ALBUM" > /tmp/tv-photo-last-album 2>/dev/null || true
 case "$ALBUM" in
   "Усі роки"|""|"unknown"|"unavailable") LIST="$OUT/__all.list" ;;
   *) LIST="$OUT/$ALBUM.list" ;;
