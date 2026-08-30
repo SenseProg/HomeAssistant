@@ -114,6 +114,52 @@ irrigation pump control prominent in the Overview hero and at the top of the
 when those YAML files cannot yet be deployed; it must suppress itself once the
 native cards are present so the UI never shows duplicates.
 
+## A drop in the integrator is not a meter reset
+
+The three water cards — `well-daily-water-card.js`, `well-hourly-water-card.js`
+and `well-water-overview-card.js` — rebuild consumption by walking raw history
+and summing deltas. Until 2026-08-30 all three shared this line:
+
+```js
+const delta = value >= prev.value ? value - prev.value : value;   // WRONG here
+```
+
+Any drop was treated as a counter reset, so the **entire accumulated integral**
+was added to the current bucket. That rule is right for a device total that
+really restarts at zero, and wrong for
+`sensor.t34_smart_plug_nasos_sverdlovini_spozhito`, which is a Riemann
+integrator: it never resets, but on every HA start it restores from Recorder and
+comes back slightly **lower** than it actually was, because `commit_interval: 30`
+did not persist the last increments.
+
+The restart at 20:33:23 on 2026-08-30 dropped it 5.6321 → 5.5940 — 0.038 kWh —
+and the daily card added 5.594 kWh whole. With the day's real 0.771 kWh that is
+6.365 kWh × 802 L = **5 105 L shown instead of 618 L**; the hourly card showed
+4.2 m³ in one hour the same way. So every HA restart minted a fake bar the size
+of the entire integral.
+
+The fix, applied to all three:
+
+```js
+const delta = value >= prev.value ? value - prev.value
+                                  : (value <= prev.value * 0.1 ? value : 0);
+```
+
+Only a fall to near zero counts as a reset. Verified by replaying the card's own
+algorithm over 9 644 real history points: 30.08 goes 5 150.8 → 664.5 L, days
+23–29.08 are untouched, and the new 30-day total 4 264.6 L matches the
+independent `input_number.sverdlovina_rozrakhunkova_voda` = 4.264 m³ to the litre.
+
+Two things to remember when touching these cards:
+
+- **`state` versus `change`.** The cards read raw history, not statistics, so
+  they do not get the Recorder's own reset handling for free. Any new card that
+  sums deltas needs this same guard.
+- **The browser caches them.** Resources are registered as `/local/…js?v=1` and
+  the version was not bumped, because `lovelace_resources` lives in `.storage`,
+  which this project forbids editing. After changing a card, a hard refresh
+  (Ctrl+Shift+R) is required or the old code keeps running.
+
 ## Safe verification
 
 1. Confirm MCP transport readiness: expected IP/MAC, established HA TCP session

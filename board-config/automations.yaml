@@ -581,6 +581,14 @@
       - select.pidloha_1_za_tarifom
       - select.pidloha_2_za_tarifom
       - select.nasos_za_tarifom
+      # Додані 30.08: без них ці лічильники назавжди лишалися в тарифі, який
+      # був активний при створенні, і все нічне споживання зараховувалось на
+      # день. У бойлера бабусі, який гріється саме вночі, нічний лічильник
+      # через це стояв на нулі.
+      - select.boiler_babusi_za_tarifom
+      - select.lichylnyk_za_tarifom
+      - select.lichylnyk_dobovyi
+      - select.lichylnyk_misiachnyi
     data:
       option: '{{ ''den'' if 7 <= now().hour < 23 else ''nich'' }}'
   mode: single
@@ -2240,9 +2248,23 @@
   mode: single
 - id: boiler_babusi_heat_start
   alias: Бойлер бабусі - початок нагріву
-  description: Вмикає розетку бойлера о часі з input_datetime.boiler_babusi_pochatok.
+  description: 'Вмикає розетку бойлера о часі з input_datetime.boiler_babusi_pochatok.
     Час тримається в helper, а не тут, щоб міняти його з дашборда без правки YAML.
     Нічний тариф 23:00-06:59, тож типове вікно 04:00-07:00 повністю в ньому.
+
+    Чому не одна команда, а п''ять спроб. 27 серпня о 04:00 хмара Tuya відповіла
+    "Remote api run unknown failed", скрипт обірвався на першій же дії, і бойлер
+    не грівся цілу добу - помітили це лише за порожнім графіком споживання.
+    continue_on_error тут обов''язковий: без нього виняток інтеграції валить весь
+    скрипт, і жоден повтор не відпрацює.
+
+    П''ять спроб по дві хвилини - це десять хвилин, вони цілком уміщаються в
+    нічний тариф навіть при старті о 04:00. Стан перевіряється не наосліп:
+    homeassistant.update_entity примусово перепитує розетку, бо хмарний статус
+    цієї розетки буває несвіжим на добу.
+
+    Якщо не вдалося - приходить сповіщення. Тихий провал гірший за будь-який
+    інший: бойлер не гріє, а дізнаєшся про це аж коли по воді.'
   triggers:
   - trigger: time
     at: input_datetime.boiler_babusi_pochatok
@@ -2251,20 +2273,495 @@
     entity_id: input_boolean.boiler_babusi_rozklad
     state: 'on'
   actions:
-  - action: switch.turn_on
-    target:
-      entity_id: switch.smart_plug_socket_1
+  - action: persistent_notification.dismiss
+    data:
+      notification_id: boiler_babusi_start_failed
+  - repeat:
+      count: 5
+      sequence:
+      - action: switch.turn_on
+        target:
+          entity_id: switch.smart_plug_socket_1
+        continue_on_error: true
+      - delay: '00:02:00'
+      - action: homeassistant.update_entity
+        target:
+          entity_id: switch.smart_plug_socket_1
+        continue_on_error: true
+      - if:
+        - condition: state
+          entity_id: switch.smart_plug_socket_1
+          state: 'on'
+        then:
+        - stop: Розетка увімкнулась
+  - action: notify.mobile_app_sm_s918b
+    data:
+      title: Бойлер бабусі не увімкнувся
+      message: 'П''ять спроб за десять хвилин, розетка досі {{ states(''switch.smart_plug_socket_1'')
+        }}. Вода сьогодні холодна, і нічний тариф уже спливає. Найчастіша причина
+        - розетка не відповідає хмарі Tuya.'
+  - action: persistent_notification.create
+    data:
+      notification_id: boiler_babusi_start_failed
+      title: Бойлер бабусі не увімкнувся
+      message: 'Розетка switch.smart_plug_socket_1 не перейшла в on після п''яти
+        спроб. Перевірити зв''язок розетки з Wi-Fi та її стан у застосунку Smart
+        Life. Увімкнути вручну зараз можна, але це вже денний тариф.'
   mode: single
 - id: boiler_babusi_heat_stop
   alias: Бойлер бабусі - кінець нагріву
-  description: Вимикає розетку о часі з input_datetime.boiler_babusi_kinets. Вимикає
+  description: 'Вимикає розетку о часі з input_datetime.boiler_babusi_kinets. Вимикає
     безумовно, навіть якщо розклад був вимкнений посеред нагріву - інакше бойлер
     лишився б гріти на денному тарифі.
+
+    Тут повтори важать більше, ніж на вмиканні. Провалене вмикання коштує однієї
+    холодної доби; провалене вимикання лишає бойлер грітися по 5 грн за кВт·год
+    доти, доки хтось не помітить. Тому пауза між спробами коротша - хвилина, а не
+    дві, і сповіщення написане як тривога, а не як зауваження.'
   triggers:
   - trigger: time
     at: input_datetime.boiler_babusi_kinets
   actions:
+  - action: persistent_notification.dismiss
+    data:
+      notification_id: boiler_babusi_stop_failed
+  - repeat:
+      count: 5
+      sequence:
+      - action: switch.turn_off
+        target:
+          entity_id: switch.smart_plug_socket_1
+        continue_on_error: true
+      - delay: '00:01:00'
+      - action: homeassistant.update_entity
+        target:
+          entity_id: switch.smart_plug_socket_1
+        continue_on_error: true
+      - if:
+        - condition: state
+          entity_id: switch.smart_plug_socket_1
+          state: 'off'
+        then:
+        - stop: Розетка вимкнулась
+  - action: notify.mobile_app_sm_s918b
+    data:
+      title: УВАГА - бойлер бабусі не вимкнувся
+      message: 'П''ять спроб, розетка досі {{ states(''switch.smart_plug_socket_1'')
+        }}. Нічний тариф скінчився, і кожна година гріє по денній ціні. Вимкнути
+        вручну - у застосунку Smart Life або автоматом на самій розетці.'
+      data:
+        ttl: 0
+        priority: high
+  - action: persistent_notification.create
+    data:
+      notification_id: boiler_babusi_stop_failed
+      title: Бойлер бабусі не вимкнувся
+      message: 'Розетка switch.smart_plug_socket_1 не перейшла в off після п''яти
+        спроб. Це прямі втрати грошей, поки триває.'
+  mode: single
+- id: svitlo_znyklo
+  alias: Світло - зникло
+  description: Повідомляє всім, щойно зникла мережа, і одразу перелічує великі
+    споживачі, які лишились увімкненими - поки вони працюють, батарея сідає
+    у кілька разів швидше.
+  triggers:
+  - trigger: state
+    entity_id: binary_sensor.svitlo_vidsutnie
+    from: 'off'
+    to: 'on'
+  conditions: []
+  actions:
+  # Три стани, а не два. Недоступний прилад це не вимкнений прилад: під час
+  # відключення terneo зникають зі звʼязку, і зараховувати їх до вимкнених
+  # означало б написати «все гаразд» там, де насправді нічого не відомо.
+  - variables:
+      uvimkneno: >-
+        {% set ns = namespace(l=[]) %}
+        {% if is_state('water_heater.144036023323246_water_heater', 'on') %}
+          {% set ns.l = ns.l + ['бойлер'] %}
+        {% endif %}
+        {% if is_state('switch.terneo_1_power', 'on') %}
+          {% set ns.l = ns.l + ['тепла підлога, контур 1'] %}
+        {% endif %}
+        {% if is_state('switch.terneo_2_power', 'on') %}
+          {% set ns.l = ns.l + ['тепла підлога, контур 2'] %}
+        {% endif %}
+        {% if is_state('switch.sushka_socket', 'on') %}
+          {% set ns.l = ns.l + ['сушарка'] %}
+        {% endif %}
+        {% if is_state('switch.2_floor_heater', 'on') %}
+          {% set ns.l = ns.l + ['обігрів другого поверху'] %}
+        {% endif %}
+        {% if is_state('input_boolean.nasos_sverdlovini_pratsiuie', 'on') %}
+          {% set ns.l = ns.l + ['насос свердловини'] %}
+        {% endif %}
+        {{ ns.l | join(', ') }}
+      nevidomo: >-
+        {% set ns = namespace(l=[]) %}
+        {% if states('water_heater.144036023323246_water_heater') in ['unavailable', 'unknown'] %}
+          {% set ns.l = ns.l + ['бойлер'] %}
+        {% endif %}
+        {% if states('switch.terneo_1_power') in ['unavailable', 'unknown'] %}
+          {% set ns.l = ns.l + ['тепла підлога, контур 1'] %}
+        {% endif %}
+        {% if states('switch.terneo_2_power') in ['unavailable', 'unknown'] %}
+          {% set ns.l = ns.l + ['тепла підлога, контур 2'] %}
+        {% endif %}
+        {{ ns.l | join(', ') }}
+  - action: script.spovistyty_vsikh
+    data:
+      title: ⚡ Світло зникло
+      message: >-
+        Будинок живиться від інвертора. Батарея {{ states('sensor.inverter_battery') }}%,
+        споживання {{ states('sensor.spozhyvannia_zaraz_kvt') }} кВт.
+        {% if uvimkneno | trim %}Увімкнено: {{ uvimkneno | trim }}.{% endif %}
+        {% if nevidomo | trim %}Немає звʼязку, стан невідомий: {{ nevidomo | trim }}.{% endif %}
+        {% if not uvimkneno | trim and not nevidomo | trim %}Великих споживачів не увімкнено.{% endif %}
+  mode: single
+- id: svitlo_zyavylos
+  alias: Світло - з'явилось
+  description: Парне повідомлення до попереднього, щоб не доводилось заходити в
+    застосунок і перевіряти самому.
+  triggers:
+  - trigger: state
+    entity_id: binary_sensor.svitlo_vidsutnie
+    from: 'on'
+    to: 'off'
+  conditions: []
+  actions:
+  - action: script.spovistyty_vsikh
+    data:
+      title: ✅ Світло з'явилось
+      message: >-
+        Мережа повернулась. Батарея {{ states('sensor.inverter_battery') }}%,
+        споживання {{ states('sensor.spozhyvannia_zaraz_kvt') }} кВт.
+  mode: single
+- id: bez_svitla_velyke_spozhyvannia
+  alias: Без світла - завелике споживання
+  description: Поки немає мережі, кожен зайвий кіловат - це години автономії.
+    Поріг і витримка беруться з input_number, тож їх можна змінити з панелі,
+    не чіпаючи автоматизацію.
+  triggers:
+  - trigger: numeric_state
+    entity_id: sensor.spozhyvannia_zaraz_kvt
+    above: input_number.bez_svitla_porih_kvt
+    for:
+      minutes: "{{ states('input_number.bez_svitla_zatrymka_hv') | int(3) }}"
+  conditions:
+  - condition: state
+    entity_id: binary_sensor.svitlo_vidsutnie
+    state: 'on'
+  actions:
+  - action: script.spovistyty_vsikh
+    data:
+      title: 🔌 Забагато споживання без світла
+      message: >-
+        Зараз {{ states('sensor.spozhyvannia_zaraz_kvt') }} кВт при порозі
+        {{ states('input_number.bez_svitla_porih_kvt') }} кВт. Батарея
+        {{ states('sensor.inverter_battery') }}%. Варто вимкнути зайве.
+  mode: single
+- id: batareia_poperedzhennia
+  alias: Батарея - попередження
+  description: Перший рівень тривоги. Спрацьовує лише без світла - при мережі
+    просадка заряду нічого не означає.
+  triggers:
+  - trigger: numeric_state
+    entity_id: sensor.inverter_battery
+    below: input_number.batareia_porih_uvaha
+  conditions:
+  - condition: state
+    entity_id: binary_sensor.svitlo_vidsutnie
+    state: 'on'
+  actions:
+  - action: script.spovistyty_vsikh
+    data:
+      title: 🔋 Батарея сідає
+      message: >-
+        Залишилось {{ states('sensor.inverter_battery') }}%, споживання
+        {{ states('sensor.spozhyvannia_zaraz_kvt') }} кВт. Світла ще немає.
+  mode: single
+- id: batareia_krytychno
+  alias: Батарея - критичний рівень
+  description: Другий рівень, зі звуком навіть у тихому режимі. Нижче цього
+    інвертор невдовзі почне вимикати навантаження сам.
+  triggers:
+  - trigger: numeric_state
+    entity_id: sensor.inverter_battery
+    below: input_number.batareia_porih_krytychno
+  conditions:
+  - condition: state
+    entity_id: binary_sensor.svitlo_vidsutnie
+    state: 'on'
+  actions:
+  - action: script.spovistyty_vsikh
+    data:
+      title: 🪫 Батарея на межі
+      message: >-
+        {{ states('sensor.inverter_battery') }}% і світла немає. Споживання
+        {{ states('sensor.spozhyvannia_zaraz_kvt') }} кВт. Вимкніть усе зайве.
+      critical: true
+  mode: single
+- id: bez_svitla_vymknuty_vazhke
+  alias: Без світла - вимкнути важкі споживачі
+  description: >-
+    Вимикає важкі споживачі, поки будинок живиться від батареї. Тригерів три,
+    а не один: окрім самого зникнення мережі, автоматизація реагує на вмикання
+    кожного з приладів - інакше бойлер, увімкнений вручну через годину після
+    початку відключення, працював би до самого кінця.
+  triggers:
+  - trigger: state
+    entity_id: binary_sensor.svitlo_vidsutnie
+    from: 'off'
+    to: 'on'
+  - trigger: state
+    entity_id: water_heater.144036023323246_water_heater
+    to: 'on'
+  - trigger: state
+    entity_id:
+    - switch.terneo_1_power
+    - switch.terneo_2_power
+    - switch.sushka_socket
+    - switch.mala_pralna_mashina_socket
+    - switch.t34_smart_plug_switch_1_2
+    - switch.mini_switch_k601_2_switch_1_2
+    to: 'on'
+  conditions:
+  - condition: state
+    entity_id: input_boolean.bez_svitla_vymykaty
+    state: 'on'
+  # Друга умова обовʼязкова: тригери на самі прилади спрацьовують і тоді, коли
+  # світло є, а вимикати їх тоді не можна.
+  - condition: state
+    entity_id: binary_sensor.svitlo_vidsutnie
+    state: 'on'
+  actions:
+  - variables:
+      bulo: >-
+        {% set ns = namespace(l=[]) %}
+        {% if is_state('water_heater.144036023323246_water_heater', 'on') %}
+          {% set ns.l = ns.l + ['бойлер'] %}
+        {% endif %}
+        {% if is_state('switch.terneo_1_power', 'on') %}
+          {% set ns.l = ns.l + ['тепла підлога, контур 1'] %}
+        {% endif %}
+        {% if is_state('switch.terneo_2_power', 'on') %}
+          {% set ns.l = ns.l + ['тепла підлога, контур 2'] %}
+        {% endif %}
+        {% if is_state('switch.sushka_socket', 'on') %}
+          {% set ns.l = ns.l + ['сушарка'] %}
+        {% endif %}
+        {% if is_state('switch.mala_pralna_mashina_socket', 'on') %}
+          {% set ns.l = ns.l + ['мала пральна машина'] %}
+        {% endif %}
+        {% if is_state('switch.t34_smart_plug_switch_1_2', 'on') %}
+          {% set ns.l = ns.l + ['насос свердловини'] %}
+        {% endif %}
+        {% if is_state('switch.mini_switch_k601_2_switch_1_2', 'on') %}
+          {% set ns.l = ns.l + ['насос поливу'] %}
+        {% endif %}
+        {% if is_state('fan.2_floor_supply_fan', 'on') or is_state('fan.2_floor_extract_fan', 'on') %}
+          {% set ns.l = ns.l + ['рекуператор PRANA'] %}
+        {% endif %}
+        {% if is_state('fan.siku_blauberg_fan_192_168_50_27', 'on') or is_state('fan.siku_blauberg_fan_192_168_50_123', 'on') %}
+          {% set ns.l = ns.l + ['рекуператори Blauberg'] %}
+        {% endif %}
+        {% if is_state('sensor.pralnia_pralna_mashina_machine_state', 'run') %}
+          {% set ns.l = ns.l + ['велика пральна машина (на паузу)'] %}
+        {% endif %}
+        {{ ns.l | join(', ') }}
+  # Вимикаємо беззастережно, а не в гілці if: вимкнути вже вимкнене нічого не
+  # коштує, а от пропустити увімкнене через чужу умову - коштує автономії.
+  # continue_on_error через недоступні terneo: помилка на них не має зупиняти
+  # ні вимикання бойлера, ні сповіщення.
+  - action: water_heater.turn_off
+    target:
+      entity_id: water_heater.144036023323246_water_heater
+    continue_on_error: true
   - action: switch.turn_off
     target:
-      entity_id: switch.smart_plug_socket_1
+      entity_id:
+      # тепла підлога
+      - switch.terneo_1_power
+      - switch.terneo_2_power
+      # пральня
+      - switch.sushka_socket
+      - switch.mala_pralna_mashina_socket
+      # насоси: свердловина і полив
+      - switch.t34_smart_plug_switch_1_2
+      - switch.mini_switch_k601_2_switch_1_2
+      # догрівач рекуператора PRANA
+      - switch.2_floor_heater
+    continue_on_error: true
+  # Рекуператори окремим кроком: вони у домені fan, а не switch.
+  - action: fan.turn_off
+    target:
+      entity_id:
+      - fan.2_floor_supply_fan
+      - fan.2_floor_extract_fan
+      - fan.siku_blauberg_fan_192_168_50_123
+      - fan.siku_blauberg_fan_192_168_50_27
+    continue_on_error: true
+  # Велику пральну машину не вимикають, а ставлять на паузу: знеструмлення
+  # посеред циклу лишає воду в баку. Пауза зупиняє двигун і нагрів, а цикл
+  # зберігається і його можна продовжити, коли дадуть світло.
+  - if:
+    - condition: state
+      entity_id: sensor.pralnia_pralna_mashina_machine_state
+      state: run
+    then:
+    - action: select.select_option
+      target:
+        entity_id: select.pralnia_pralna_mashina
+      data:
+        option: pause
+      continue_on_error: true
+  - if:
+    - condition: template
+      value_template: "{{ bulo | trim != '' }}"
+    then:
+    - action: script.spovistyty_vsikh
+      data:
+        title: 🔌 Вимкнено на час відключення
+        message: >-
+          Світла немає, тож вимкнено: {{ bulo | trim }}.
+          {% if 'бойлер' in bulo %}Вода була
+          {{ state_attr('water_heater.144036023323246_water_heater',
+          'current_temperature') }}°.{% endif %}
+          Увімкнути назад можна на панелі - автоматика цього не робить.
+  mode: single
+- id: svitlo_zyavylos_nahadaty_boiler
+  alias: Світло - нагадати про бойлер
+  description: >-
+    Назад бойлер сам не вмикається - рішення, коли гріти воду, лишається за
+    людьми, а не за автоматикою. Тому лише нагадування.
+  triggers:
+  - trigger: state
+    entity_id: binary_sensor.svitlo_vidsutnie
+    from: 'on'
+    to: 'off'
+  conditions:
+  - condition: state
+    entity_id: water_heater.144036023323246_water_heater
+    state: 'off'
+  - condition: state
+    entity_id: input_boolean.bez_svitla_vymykaty
+    state: 'on'
+  actions:
+  - delay: 00:02:00
+  - action: script.spovistyty_vsikh
+    data:
+      title: 🚿 Бойлер лишився вимкненим
+      message: >-
+        Світло повернулось. Бойлер вимкнули на час відключення - увімкніть,
+        якщо потрібна гаряча вода.
+  mode: single
+- id: pralka_prannia_zaversheno
+  alias: Пральна машина - прання завершено
+  description: >-
+    Тригер саме на перехід run -> stop, а не на job_state finish: finish буває
+    коротким і його легко проґавити, а перехід стану машини надійний і не
+    повторюється після перезавантаження Home Assistant.
+  triggers:
+  - trigger: state
+    entity_id: sensor.pralnia_pralna_mashina_machine_state
+    from: run
+    to: stop
+  conditions: []
+  actions:
+  - action: script.spovistyty_vsikh
+    data:
+      title: 🧺 Прання завершено
+      message: >-
+        Машина закінчила.
+        {%- set e = states('sensor.pralnia_pralna_mashina_energy_difference') | float(0) %}
+        {%- if e > 0 %} Цикл спожив {{ e | round(2) }} кВт·год.{% endif %}
+        {%- set w = states('sensor.pralnia_pralna_mashina_water_consumption') | float(0) %}
+        {%- if w > 0 %} Усього води за час обліку: {{ (w / 1000) | round(1) }} м³.{% endif %}
+        Не забудьте дістати білизну.
+  mode: single
+- id: bez_svitla_pralka_pratsiuie
+  alias: Без світла - пральна машина працює
+  description: >-
+    Окрема автоматизація, а не рядок у переліку важких споживачів: пральну
+    машину не можна просто вимкнути, як бойлер. Обірваний цикл означає воду в
+    баку і мокру білизну, тому тут лише попередження - рішення за людиною.
+  triggers:
+  - trigger: state
+    entity_id: binary_sensor.svitlo_vidsutnie
+    from: 'off'
+    to: 'on'
+  - trigger: state
+    entity_id: sensor.pralnia_pralna_mashina_machine_state
+    to: run
+  conditions:
+  - condition: state
+    entity_id: binary_sensor.svitlo_vidsutnie
+    state: 'on'
+  - condition: state
+    entity_id: sensor.pralnia_pralna_mashina_machine_state
+    state: run
+  actions:
+  - action: script.spovistyty_vsikh
+    data:
+      title: 🧺 Пральна машина працює без світла
+      message: >-
+        Світла немає, а машина в циклі
+        ({{ states('sensor.pralnia_pralna_mashina_job_state') }}).
+        Зараз бере {{ states('sensor.pralnia_pralna_mashina_power') }} Вт,
+        батарея {{ states('sensor.inverter_battery') }}%.
+        {%- set t = states('sensor.pralnia_pralna_mashina_completion_time') %}
+        {%- if t not in ['unknown', 'unavailable', ''] %} Мала б закінчити о
+        {{ as_timestamp(t) | timestamp_custom('%H:%M', true) }}.{% endif %}
+        Зупиняти цикл автоматика не буде - вода лишиться в баку.
+  mode: single
+- id: inverter_bez_zviazku
+  alias: Інвертор - немає звʼязку
+  description: >-
+    Десять хвилин витримки навмисне: коротка втрата пакета трапляється щодня і
+    сама минає, а ось десять хвилин мовчання - це вже справжня втрата звʼязку.
+  triggers:
+  - trigger: state
+    entity_id: sensor.inverter_battery
+    to: unavailable
+    for: '00:10:00'
+  - trigger: state
+    entity_id: sensor.inverter_battery
+    to: unknown
+    for: '00:10:00'
+  conditions: []
+  actions:
+  - action: script.spovistyty_vsikh
+    data:
+      title: ⚠️ Інвертор не відповідає
+      message: >-
+        Home Assistant втратив звʼязок з інвертором Deye. Поки так, НЕ працюють:
+        сповіщення про зникнення світла, пороги батареї і автовимикання бойлера.
+        Стан мережі показується як «світло є» лише тому, що даних немає.
+        Найчастіша причина - Wi-Fi модуль інвертора не піднявся після
+        знеструмлення; допомагає перезавантаження інвертора.
+      critical: true
+  mode: single
+- id: inverter_zviazok_vidnovleno
+  alias: Інвертор - звʼязок відновлено
+  description: Парне повідомлення, щоб було видно, що моніторинг знову бачить дім.
+  triggers:
+  - trigger: state
+    entity_id: sensor.inverter_battery
+    from: unavailable
+  - trigger: state
+    entity_id: sensor.inverter_battery
+    from: unknown
+  conditions:
+  - condition: template
+    value_template: >-
+      {{ states('sensor.inverter_battery') not in ['unavailable', 'unknown', 'none'] }}
+  actions:
+  - action: script.spovistyty_vsikh
+    data:
+      title: ✅ Інвертор на звʼязку
+      message: >-
+        Звʼязок з інвертором відновлено. Батарея
+        {{ states('sensor.inverter_battery') }}%, мережа
+        {{ 'є' if is_state('binary_sensor.inverter_grid', 'on') else 'відсутня' }}.
+        Сповіщення про світло знову працюють.
   mode: single
