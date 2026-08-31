@@ -8,7 +8,11 @@ Type=simple
 User=forlinx
 Group=forlinx
 WorkingDirectory=/home/forlinx/wyoming-vosk
-ExecStart=/home/forlinx/wyoming-vosk-venv-314/bin/python -m wyoming_vosk --uri tcp://127.0.0.1:10300 --data-dir /home/forlinx/wyoming-vosk-data --sentences-dir /home/forlinx/wyoming-vosk-sentences --language uk --preload-language uk --model-for-language uk vosk-model-small-uk-v3-small
+# --preload-language знято 2026-08-22: модель трималась у памʼяті цілодобово
+# (208 МБ RSS) на платі, де всього 1.93 ГБ і zram-своп заповнений наполовину.
+# Тепер вона вантажиться на першому голосовому запиті й далі лишається в кеші,
+# тож платимо кількома секундами один раз замість памʼяті постійно.
+ExecStart=/home/forlinx/wyoming-vosk-venv-314/bin/python -m wyoming_vosk --uri tcp://127.0.0.1:10300 --data-dir /home/forlinx/wyoming-vosk-data --sentences-dir /home/forlinx/wyoming-vosk-sentences --language uk --model-for-language uk vosk-model-small-uk-v3-small
 Restart=on-failure
 RestartSec=5s
 TimeoutStartSec=5min

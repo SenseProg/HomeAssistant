@@ -388,3 +388,45 @@ tv_foto_poperednie:
   - action: homeassistant.update_entity
     target:
       entity_id: sensor.tv_kadr
+spovistyty_vsikh:
+  alias: Сповістити всіх у додатку
+  description: Розсилає повідомлення на всі три телефони. Винесено в окремий
+    скрипт, щоб перелік пристроїв був в одному місці - інакше додавання
+    четвертого телефону означало б правку кожної автоматизації окремо.
+  icon: mdi:cellphone-message
+  mode: parallel
+  max: 10
+  fields:
+    title:
+      description: Заголовок
+      example: Світло зникло
+      selector:
+        text:
+    message:
+      description: Текст
+      example: Будинок на інверторі
+      selector:
+        text:
+    critical:
+      description: Показати як термінове, зі звуком навіть у тихому режимі
+      example: true
+      selector:
+        boolean:
+  sequence:
+  - repeat:
+      for_each:
+      - notify.mobile_app_m2006c3mng
+      - notify.mobile_app_sm_s21
+      - notify.mobile_app_sm_s918b
+      sequence:
+      - action: "{{ repeat.item }}"
+        data:
+          title: "{{ title }}"
+          message: "{{ message }}"
+          # ttl 0 і priority high проштовхують повідомлення повз режим
+          # економії батареї Android, інакше воно може дочекатися ранку.
+          data: >-
+            {{ {'ttl': 0, 'priority': 'high',
+                'push': {'importance': 'high'}} if critical | default(false)
+               else {} }}
+        continue_on_error: true

@@ -37,6 +37,14 @@ power-flow card or treating the inverter grid sensor as whole-site demand.
 
 1. Never read, copy, edit, commit, or disclose `/userdata/hass/config/.storage/`,
    `secrets.yaml`, the recorder database, tokens, passwords, or local keys.
+   This bans touching those files. It does **not** ban Home Assistant's own
+   WebSocket APIs, which own that same data and are the correct way in:
+   `recorder/statistics_during_period` and `recorder/adjust_sum_statistics`
+   instead of opening the database, `lovelace/resources/update` instead of
+   editing `.storage/lovelace_resources`. Authenticate with the token from
+   `/home/forlinx/.ha_token`; never print it. If that file is missing, restore it
+   with `scripts/install-ha-token.sh` — without it `house-analyst.service`, the
+   MCP `energy-flow-health` check and every statistics tool fail at once.
 2. Before editing, compare Git with the board. A clean Git tree does not prove
    the board matches the repository. Use `repo_board_sync`/`cli.py sync`.
 3. If a target file differs, pull it to a temporary path and inspect the diff.
@@ -143,6 +151,36 @@ For the well pump, run `ha_well_pump_health` or
 `python mcp-server/cli.py well-pump-health` before changing its monitoring path.
 Do not confuse this T34 plug with the irrigation pump at `.91`; the two pumps
 have different entity models and safety rules.
+
+## Custom Lovelace cards
+
+Nine cards live in `/userdata/hass/config/www/*.js` and carry a large part of the
+water and energy dashboards. Until 2026-08-30 eight of the nine existed only on
+the board: they were outside Git and outside `SYNC_TARGETS`, so a wrong card
+could not be reviewed, diffed or rolled back. They are now both.
+
+Three rules when touching them:
+
+- **Deploy like any other file** — back up to the NAS, upload to `.new`, verify,
+  rename atomically. No reload or restart is needed; cards are static assets.
+- **Bump the resource version, always.** Changing the file is not enough: the
+  browser caches the module under its unchanged `/local/…js?v=N` URL, and on
+  2026-08-30 a corrected card kept drawing the old chart on every device. Use
+  the API — `lovelace/resources` to list, `lovelace/resources/update` with
+  `resource_id`, `res_type: "module"` and the url rewritten to `?v=N+1`. A hard
+  refresh is a hope, not a fix, and it does nothing for the phone in another room.
+- **Cards read raw history, not statistics.** They walk
+  `/api/history/period` and sum deltas themselves, so they get none of the
+  recorder's own reset handling. Any card that sums deltas needs a guard against
+  a source that dips: see the worked example in `references/well-water.md`, where
+  a 0.038 kWh dip after a restart was read as a counter reset and printed a
+  5 148 L bar instead of 618 L.
+
+Three NFS mount units are deliberately absent from `SYNC_TARGETS`: their names
+contain systemd escaping with a backslash
+(`userdata-hass-config\x2dstandalone-backups.mount`), which is not a legal
+filename on the Windows working copy. They are started by `nas-mounts.service`,
+which is tracked.
 
 ## Diagnose before changing
 

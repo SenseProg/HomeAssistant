@@ -2,7 +2,7 @@
 set -euo pipefail
 
 readonly SOURCE_DIR=/home/forlinx/wyoming-vosk
-readonly PYTHON=/home/forlinx/hass-venv-314/bin/python
+readonly PYTHON=/userdata/hass/venv/bin/python
 readonly VENV_DIR=/home/forlinx/wyoming-vosk-venv-314
 readonly DATA_DIR=/home/forlinx/wyoming-vosk-data
 readonly SENTENCES_DIR=/home/forlinx/wyoming-vosk-sentences

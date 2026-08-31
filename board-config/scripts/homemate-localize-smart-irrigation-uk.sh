@@ -34,8 +34,8 @@ python3 "${OVERLAY_SCRIPT}" "${COMPONENT_ROOT}"
 chown -R forlinx:forlinx "${COMPONENT_ROOT}"
 find "${COMPONENT_ROOT}" -type d -exec chmod 0755 {} +
 find "${COMPONENT_ROOT}" -type f -exec chmod 0644 {} +
-/home/forlinx/hass-venv-314/bin/python -m compileall -q "${COMPONENT_ROOT}"
-/home/forlinx/hass-venv-314/bin/hass --script check_config -c "${CONFIG_ROOT}"
+/userdata/hass/venv/bin/python -m compileall -q "${COMPONENT_ROOT}"
+/userdata/hass/venv/bin/hass --script check_config -c "${CONFIG_ROOT}"
 
 trap - ERR
 sudo systemctl restart home-assistant

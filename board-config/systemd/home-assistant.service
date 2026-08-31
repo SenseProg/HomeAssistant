@@ -2,6 +2,10 @@
 Description=Home Assistant
 After=network-online.target
 Wants=network-online.target
+# Конфіг живе на /userdata: без цього розділу HA піднявся б із порожньою
+# текою і почав створювати все з нуля.
+Requires=userdata.mount
+After=userdata.mount
 
 [Service]
 Type=simple
@@ -9,10 +13,15 @@ User=forlinx
 Group=forlinx
 WorkingDirectory=/userdata/hass/config
 Environment=PYTHONUNBUFFERED=1
-ExecStart=/home/forlinx/hass-venv-314/bin/hass -c /userdata/hass/config
+# Кеш uv і тимчасові файли - на /userdata. На корені цієї плати лишається
+# менше гігабайта (там чужий робочий інструментарій), і перший же запуск HA,
+# який доставляє залежності, заповнив його вщент: "No space left on device".
+Environment=UV_CACHE_DIR=/userdata/hass/uv-cache
+Environment=TMPDIR=/userdata/hass/tmp
+ExecStart=/userdata/hass/venv/bin/hass -c /userdata/hass/config
 Restart=on-failure
 RestartSec=15
-TimeoutStartSec=600
+TimeoutStartSec=900
 TimeoutStopSec=120
 
 [Install]

@@ -5,7 +5,7 @@ Rezhymy:
   fix      - onovyty unit_of_measurement u metadanykh (stari zapysy zberihayutsia)
 
 Zapuskaty venvom HA:
-  /home/forlinx/hass-venv-314/bin/python stats_tool.py inspect
+  /userdata/hass/venv/bin/python stats_tool.py inspect
 """
 import asyncio
 import json

@@ -47,7 +47,7 @@ PY
 # remain unchanged, so existing entities and registry entries are preserved.
 python3 "${SMART_UK_OVERLAY}" "${smart_source}"
 
-/home/forlinx/hass-venv-314/bin/python -m compileall -q \
+/userdata/hass/venv/bin/python -m compileall -q \
   "${iu_source}" "${smart_source}"
 
 install -d -m 0755 "${COMPONENT_ROOT}"
@@ -76,5 +76,5 @@ for component in irrigation_unlimited smart_irrigation; do
   mv "${staged}" "${target}"
 done
 
-/home/forlinx/hass-venv-314/bin/hass --script check_config -c "${CONFIG_ROOT}"
+/userdata/hass/venv/bin/hass --script check_config -c "${CONFIG_ROOT}"
 echo "Installed Irrigation Unlimited ${IU_VERSION} and Smart Irrigation ${SMART_VERSION}."

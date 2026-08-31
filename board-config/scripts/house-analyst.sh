@@ -20,7 +20,7 @@ if [ ! -r "$TOKEN_FILE" ]; then
 fi
 TOKEN=$(cat "$TOKEN_FILE")
 
-CONTEXT=$(/home/forlinx/hass-venv-314/bin/python - "$HA" "$TOKEN" <<'PY'
+CONTEXT=$(/userdata/hass/venv/bin/python - "$HA" "$TOKEN" <<'PY'
 import json
 import sys
 import urllib.request
@@ -82,7 +82,7 @@ if [ "$RC" -ne 0 ] || [ -z "$RESULT" ]; then
 fi
 
 printf '%s' "$RESULT" >"$OUT_MD"
-/home/forlinx/hass-venv-314/bin/python - "$HA" "$TOKEN" "$OUT_MD" "$OUT_JSON" <<'PY'
+/userdata/hass/venv/bin/python - "$HA" "$TOKEN" "$OUT_MD" "$OUT_JSON" <<'PY'
 import datetime
 import json
 import sys

@@ -10,7 +10,7 @@ ConditionPathExists=/root/netcfg.bak.yaml
 
 [Service]
 Type=oneshot
-ExecStart=/bin/sh -c 'sleep 45; ip -4 addr show eth1 | grep -q "inet " && exit 0; logger -t netplan-fallback "eth1 has no IPv4 after 45 s - restoring the DHCP config"; cp /root/netcfg.bak.yaml /etc/netplan/01-netcfg.yaml; netplan apply'
+ExecStart=/bin/sh -c 'sleep 45; ip -4 addr show eth0 | grep -q "inet " && exit 0; logger -t netplan-fallback "eth0 has no IPv4 after 45 s - restoring the DHCP config"; cp /root/netcfg.bak.yaml /etc/netplan/01-netcfg.yaml; netplan apply'
 
 [Install]
 WantedBy=multi-user.target

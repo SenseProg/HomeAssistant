@@ -683,6 +683,29 @@ views:
 
         Правило зростання цієї сторінки: новий пристрій додає **рядок у таблицю
         або в акордеон**, а не ще одну картку.
+  - type: grid
+    cards:
+    - type: heading
+      heading: Автоматизації
+      icon: mdi:robot
+      grid_options:
+        columns: full
+    - type: entities
+      grid_options:
+        columns: full
+      entities:
+      - entity: automation.zviazok_kontroler_polivu_nedostupnii
+        name: "Звʼязок - контролер поливу недоступний"
+      - entity: automation.zviazok_kamera_oflain
+        name: "Звʼязок - камера офлайн"
+    - type: markdown
+      title: Що вони роблять
+      grid_options:
+        columns: full
+      content: |-
+        **Звʼязок - контролер поливу недоступний** — Диск і файлова система мали сторожів, увесь мережевий шар - жодного. Про мертвий контролер клапанів дізнавались уночі, коли полив не відбувався. Це сповіщення про ЗВʼЯЗОК, а не про режим роботи. Насос без відкритого клапана - нормальний стан (на ділянці є водяні розетки для шланга), і жодне з цих правил не має права вважати його аварією.
+
+        **Звʼязок - камера офлайн** — Камера двору - єдине джерело кліпів і знімків руху. Її зникнення досі було видно лише тому, хто відкриє потрібну вкладку.
 - title: Клімат
   path: climate
   icon: mdi:home-thermometer-outline
@@ -1227,6 +1250,25 @@ views:
         нуль і не нормальний показник. У кімнатах хлопців та Олесі Blauberg передає лише вологість, у
         **великому будинку** температурних датчиків ще немає. Відсутні показники не підміняються даними
         з інших кімнат.
+  - type: grid
+    cards:
+    - type: heading
+      heading: Автоматизації
+      icon: mdi:robot
+      grid_options:
+        columns: full
+    - type: entities
+      grid_options:
+        columns: full
+      entities:
+      - entity: automation.bez_svitla_vimknuti_vazhki_spozhivachi
+        name: "Без світла - вимкнути важкі споживачі"
+    - type: markdown
+      title: Що вони роблять
+      grid_options:
+        columns: full
+      content: |-
+        **Без світла - вимкнути важкі споживачі** — Знімає з батареї все, що гріє і крутиться: підлогу, рекуператори, насоси, пральню. Велику пральну машину при цьому не вимикає, а ставить на паузу, щоб не лишити воду в баку.
 - title: Інвертор Deye
   path: deye-inverter
   icon: mdi:solar-power-variant
@@ -1469,6 +1511,53 @@ views:
         дашборд, щоб випадкове натискання не знеструмило будинок.
 
         '
+  - type: grid
+    cards:
+    - type: heading
+      heading: Автоматизації
+      icon: mdi:robot
+      grid_options:
+        columns: full
+    - type: entities
+      grid_options:
+        columns: full
+      entities:
+      - entity: automation.svitlo_zniklo
+        name: "Світло - зникло"
+      - entity: automation.svitlo_z_iavilos
+        name: "Світло - з'явилось"
+      - entity: automation.bez_svitla_zavelike_spozhivannia
+        name: "Без світла - завелике споживання"
+      - entity: automation.batareia_poperedzhennia
+        name: "Батарея - попередження"
+      - entity: automation.batareia_kritichnii_riven
+        name: "Батарея - критичний рівень"
+      - entity: automation.bez_svitla_vimknuti_vazhki_spozhivachi
+        name: "Без світла - вимкнути важкі споживачі"
+      - entity: automation.invertor_nemaie_zviazku
+        name: "Інвертор - немає звʼязку"
+      - entity: automation.invertor_zviazok_vidnovleno
+        name: "Інвертор - звʼязок відновлено"
+    - type: markdown
+      title: Що вони роблять
+      grid_options:
+        columns: full
+      content: |-
+        **Світло - зникло** — Повідомляє всім, щойно зникла мережа, і одразу перелічує великі споживачі, які лишились увімкненими - поки вони працюють, батарея сідає у кілька разів швидше.
+
+        **Світло - з'явилось** — Парне повідомлення до попереднього, щоб не доводилось заходити в застосунок і перевіряти самому.
+
+        **Без світла - завелике споживання** — Поки немає мережі, кожен зайвий кіловат - це години автономії. Поріг і витримка беруться з input_number, тож їх можна змінити з панелі, не чіпаючи автоматизацію.
+
+        **Батарея - попередження** — Перший рівень тривоги. Спрацьовує лише без світла - при мережі просадка заряду нічого не означає.
+
+        **Батарея - критичний рівень** — Другий рівень, зі звуком навіть у тихому режимі. Нижче цього інвертор невдовзі почне вимикати навантаження сам.
+
+        **Без світла - вимкнути важкі споживачі** — Вимикає важкі споживачі, поки будинок живиться від батареї. Тригерів три, а не один: окрім самого зникнення мережі, автоматизація реагує на вмикання кожного з приладів - інакше бойлер, увімкнений вручну через годину після початку відключення, працював би до самого кінця.
+
+        **Інвертор - немає звʼязку** — Десять хвилин витримки навмисне: коротка втрата пакета трапляється щодня і сама минає, а ось десять хвилин мовчання - це вже справжня втрата звʼязку.
+
+        **Інвертор - звʼязок відновлено** — Парне повідомлення, щоб було видно, що моніторинг знову бачить дім.
 - title: Бойлер
   path: midea
   icon: mdi:water-boiler
@@ -1696,6 +1785,33 @@ views:
       entities:
       - entity: sensor.smart_plug_power
         name: Потужність
+  - type: grid
+    cards:
+    - type: heading
+      heading: Автоматизації
+      icon: mdi:robot
+      grid_options:
+        columns: full
+    - type: entities
+      grid_options:
+        columns: full
+      entities:
+      - entity: automation.boiler_babusi_pochatok_nagrivu
+        name: "Бойлер бабусі - початок нагріву"
+      - entity: automation.boiler_babusi_kinets_nagrivu
+        name: "Бойлер бабусі - кінець нагріву"
+      - entity: automation.svitlo_nagadati_pro_boiler
+        name: "Світло - нагадати про бойлер"
+    - type: markdown
+      title: Що вони роблять
+      grid_options:
+        columns: full
+      content: |-
+        **Бойлер бабусі - початок нагріву** — Вмикає розетку бойлера о часі з input_datetime.boiler_babusi_pochatok. Час тримається в helper, а не тут, щоб міняти його з дашборда без правки YAML. Нічний тариф 23:00-06:59, тож типове вікно 04:00-07:00 повністю в ньому. Чому не одна команда, а п'ять спроб. 27 серпня о 04:00 хмара Tuya відповіла "Remote api run unknown failed", скрипт обірвався на першій же дії, і бойлер не грівся цілу добу - помітили це лише за порожнім графіком споживання. continue_on_error тут обов'язковий: без нього виняток інтеграції валить весь скрипт, і жоден повтор не відпрацює. П'ять спроб по дві хвилини - це десять хвилин, вони цілком уміщаються в нічний тариф навіть при старті о 04:00. Стан перевіряється не наосліп: homeassistant.update_entity примусово перепитує розетку, бо хмарний статус цієї розетки буває несвіжим на добу. Якщо не вдалося - приходить сповіщення. Тихий провал гірший за будь-який інший: бойлер не гріє, а дізнаєшся про це аж коли по воді.
+
+        **Бойлер бабусі - кінець нагріву** — Вимикає розетку о часі з input_datetime.boiler_babusi_kinets. Вимикає безумовно, навіть якщо розклад був вимкнений посеред нагріву - інакше бойлер лишився б гріти на денному тарифі. Тут повтори важать більше, ніж на вмиканні. Провалене вмикання коштує однієї холодної доби; провалене вимикання лишає бойлер грітися по 5 грн за кВт·год доти, доки хтось не помітить. Тому пауза між спробами коротша - хвилина, а не дві, і сповіщення написане як тривога, а не як зауваження.
+
+        **Світло - нагадати про бойлер** — Назад бойлер сам не вмикається - рішення, коли гріти воду, лишається за людьми, а не за автоматикою. Тому лише нагадування.
 - title: Тепла підлога
   path: floor
   icon: mdi:heating-coil
@@ -1820,6 +1936,29 @@ views:
         Номер контуру визначається станом сутностей, а не вписаний у текст: до 22 серпня 2026 тут
         стояло «контур 2», тоді як насправді мовчав контур 1, і сторінка суперечила власним же
         показникам поруч.
+  - type: grid
+    cards:
+    - type: heading
+      heading: Автоматизації
+      icon: mdi:robot
+      grid_options:
+        columns: full
+    - type: entities
+      grid_options:
+        columns: full
+      entities:
+      - entity: automation.bez_svitla_vimknuti_vazhki_spozhivachi
+        name: "Без світла - вимкнути важкі споживачі"
+      - entity: automation.svitlo_zniklo
+        name: "Світло - зникло"
+    - type: markdown
+      title: Що вони роблять
+      grid_options:
+        columns: full
+      content: |-
+        **Без світла - вимкнути важкі споживачі** — Щойно зникає мережа, вимикає обидва контури підлоги разом з рештою важких споживачів. Спрацьовує і тоді, коли підлогу вмикають уже під час відключення.
+
+        **Світло - зникло** — Повідомляє всім про зникнення мережі й перелічує, що лишилось увімкненим. Якщо терморегулятори при цьому поза звʼязком, так і пише: стан невідомий, а не «вимкнено».
 - title: Камера і рух
   path: motion
   icon: mdi:cctv
@@ -1827,33 +1966,48 @@ views:
   cards:
   - type: vertical-stack
     cards:
-    - type: horizontal-stack
+    - type: vertical-stack
       cards:
-      - type: picture-entity
-        entity: camera.cam1
-        name: Двір (Cam1)
-        show_state: false
-        show_name: true
-        camera_view: live
-      - type: entities
-        title: Сенсори
-        entities:
-        - entity: binary_sensor.cam1_motion
-          name: Рух
-          secondary_info: last-changed
-        - entity: binary_sensor.cam1_illegal_access
-          name: Illegal access
-        - entity: binary_sensor.cam1_video_mismatch
-          name: Video mismatch (діагностика)
-      - type: history-graph
-        title: Активність руху за 24 години
-        hours_to_show: 24
-        entities:
-        - entity: binary_sensor.cam1_motion
-          name: Рух
-    - type: iframe
-      url: /local/motion/gallery.html?v=12
-      aspect_ratio: 115%
+      - type: horizontal-stack
+        cards:
+        - type: picture-entity
+          entity: camera.cam1
+          name: Двір (Cam1)
+          show_state: false
+          show_name: true
+          camera_view: live
+        - type: entities
+          title: Сенсори
+          entities:
+          - entity: binary_sensor.cam1_motion
+            name: Рух
+            secondary_info: last-changed
+          - entity: binary_sensor.cam1_illegal_access
+            name: Illegal access
+          - entity: binary_sensor.cam1_video_mismatch
+            name: Video mismatch (діагностика)
+        - type: history-graph
+          title: Активність руху за 24 години
+          hours_to_show: 24
+          entities:
+          - entity: binary_sensor.cam1_motion
+            name: Рух
+      - type: iframe
+        url: /local/motion/gallery.html?v=12
+        aspect_ratio: 115%
+    - type: entities
+      title: Автоматизації
+      entities:
+      - entity: automation.kamera_znimok_pri_viiavlenni_rukhu
+        name: "Камера - знімок при виявленні руху"
+      - entity: automation.kamera_videoklip_pri_viiavlenni_rukhu
+        name: "Камера - відеокліп при виявленні руху"
+    - type: markdown
+      title: Що вони роблять
+      content: |-
+        **Камера - знімок при виявленні руху** — При спрацюванні датчика руху зберігає кадр з камери, оновлює `latest.jpg` для дашборда і лишає останні 30 знімків.
+
+        **Камера - відеокліп при виявленні руху** — Пише 15 секунд відео на NAS від моменту руху. Пре-ролю немає навмисно: він потребує постійного потоку з камери, а це розхитувало живлення плати. Кліпи пишуться лише коли мережева шара змонтована — інакше вони лягали б на саму плату.
 - title: Автополив
   path: poliv
   icon: mdi:sprinkler-variant
@@ -2471,6 +2625,61 @@ views:
       grid_options:
         columns: full
       content: 'Єдиний захист: автостоп після 3 годин безперервної роботи.'
+  - type: grid
+    cards:
+    - type: heading
+      heading: Автоматизації
+      icon: mdi:robot
+      grid_options:
+        columns: full
+    - type: entities
+      grid_options:
+        columns: full
+      entities:
+      - entity: automation.poliv_fiksatsiia_lichilnika_na_starti_sesii
+        name: "Полив - фіксація лічильника на старті сесії"
+      - entity: automation.poliv_zakriti_klapani_iakshcho_nasos_davno_vimknenii
+        name: "Полив - закрити клапани, якщо насос давно вимкнений"
+      - entity: automation.poliv_bezpechnii_stan_pislia_zapusku_ha
+        name: "Полив - безпечний стан після запуску HA"
+      - entity: automation.poliv_maksimalna_robota_nasosa_3_godini
+        name: "Полив - максимальна робота насоса (0 = без ліміту)"
+      - entity: automation.poliv_rozklad_za_chasom_i_dniami_tizhnia
+        name: "Полив - розклад за часом і днями тижня"
+      - entity: automation.poliv_vechirnie_pitannia_pro_doshch
+        name: "Полив - вечірнє питання про дощ"
+      - entity: automation.poliv_zhurnal_peremikan_iz_dzherelom
+        name: "Полив - журнал перемикань із джерелом"
+      - entity: automation.poliv_zarakhuvati_vilitu_vodu_v_balans_zoni
+        name: "Полив - зарахувати вилиту воду в баланс зони"
+      - entity: automation.poliv_storozh_maister_polivaie_a_klapan_zakritii
+        name: "Полив - сторож: майстер поливає, а клапан закритий"
+      - entity: automation.poliv_rankovii_pererakhunok_smart_irrigation
+        name: "Полив - ранковий перерахунок Smart Irrigation"
+    - type: markdown
+      title: Що вони роблять
+      grid_options:
+        columns: full
+      content: |-
+        **Полив - фіксація лічильника на старті сесії** — На кожному вмиканні насоса запам'ятовує поточний показ наростаючого лічильника енергії, щоб сенсор "спожито за сесію" рахував від нуля.
+
+        **Полив - закрити клапани, якщо насос давно вимкнений** — Прибирає забутий відкритий клапан після ручного пуску. Irrigation Unlimited закриває свої клапани за 3 секунди після зупинки насоса, тому 5-хвилинна витримка у його роботу не втручається.
+
+        **Полив - безпечний стан після запуску HA** — Після запуску Home Assistant вимикає насос і всі клапани.
+
+        **Полив - максимальна робота насоса (0 = без ліміту)** — Ліміт 0 навмисно вимикає автостоп за часом. Насос використовується не лише автоматичними зонами, а й вручну зі шлангом, коли жоден клапан зон не відкритий, тому вимикати насос через відсутність відкритого клапана або через фіксовані 3 години не можна. Щоб повернути часовий захист, встановити max_runtime_hours > 0.
+
+        **Полив - розклад за часом і днями тижня** — Слухає подію Smart Irrigation про початок поливу. Момент старту рахує сама SI: offset_minutes=0 разом з account_for_duration означає "почати рівно за стільки, скільки триватиме полив, щоб він ЗАКІНЧИВСЯ на схід сонця". Для газону з дощуванням зверху це правильний час - вода встигає всотатися до спеки, а листя висихає одразу після сходу. За розкладом поливаються зони 1, 2 і 5 - усі три заведені у Smart Irrigation, і їхня сумарна тривалість задає зсув від сходу. Зона 5 додана до SI 2026-08-08: 100 м², 20 л/хв, тобто та сама інтенсивність 12 мм/год, що й у зон 1-2 (200 м², 40 л/хв). Зони 3 і 4 автоматично не поливаються взагалі, лише вручну з дашборда. Виконує полив Irrigation Unlimited, бо тільки він керує насосом-майстром: прямий контроль клапанів у SI вимкнено навмисно - її valve_runner про насос не знає і відкривав би клапани всуху. УВАГА про нумерацію: Irrigation Unlimited нумерує зони ЗА ПОРЯДКОМ у списку controllers.zones, а не за zone_id. Зона 5 стоїть четвертою, тому її сутність - binary_sensor.irrigation_unlimited_c1_z4, а не ..._z5. Якщо порядок зон у configuration.yaml зміниться, ці посилання поїдуть. ДВА ТРИГЕРИ навмисно. Подія Smart Irrigation дає точний старт, але SI НЕ реєструє тригер узагалі, якщо сумарна тривалість її зон дорівнює нулю (а це нормальна ситуація наступного дня після поливу). Другий тригер від сонця на -75 хв лишається запобіжником на випадок, коли SI не реєструє свою подію (нульова сумарна тривалість). mode: single не дасть запуститися двічі, якщо спрацюють обидва. ЗАПИС АПАРАТНОГО ТАЙМЕРА (додано 2026-08-10, підтверджено вимірюванням). Уночі проти 10.08 усі три зони отримали по 10 хвилин замість 27/28/25, а насос пропрацював повні 80 хвилин, з них близько 50 - на закриті клапани. Причина виміряна тестом на зоні 5 того ж дня. Фаза A, без запису DP: клапан відкрито 10:26:18, закрито 10:36:21 - рівно 10 хв 03 с, - і при цьому IU z4, майстер і насос лишалися on ще 2,5 хвилини, поки IU дораховував свої 13 хвилин. Отже клапан закриває сам контролер DP-WBS01 за власним відліком (DP 13-20), а irrigation_unlimited.manual_run перемикає лише DP клапана і цей відлік не задає. Irrigation Unlimited раннього закриття не бачить: його check_back перевіряє клапан лише протягом ~90 секунд після команди (3 спроби через 30 с), а не весь полив. Фаза B, з записом DP 17 = 900 ДО старту зони, поки клапан закритий: клапан пробув відкритим усі 13 хвилин без раннього закриття, а зупинив полив саме IU - спершу насос (10:54:09), потім клапан (10:54:13). Тому запис таймера стоїть ПЕРЕД manual_run, значення - тривалість IU плюс 180 секунд запасу. Запас піднято з 60 до 180 секунд 2026-08-11: у першу ж ніч кожна зона відпрацювала приблизно на хвилину довше за номінал (зона 2 - 50,3 хв при плані 49,35), тобто від апаратного відліку лишалося менше секунд, ніж здавалося. Зупинку однаково робить Home Assistant, а відлік контролера лишається страховкою, якщо HA впаде посеред поливу. Писати DP у вже відкритий клапан тут навмисно не робимо - це неперевірений шлях. Ручні скрипти з дашборда задають таймер разом з відкриттям клапана від початку, тому недолив бачили лише на нічному розкладі.
+
+        **Полив - вечірнє питання про дощ** — О 21:00 дивиться погодинний прогноз на завтрашній ранок (03:00-09:00 - вікно, у яке потрапляє старт за 1:15 до сходу) і, якщо очікується дощ, питає, чи поливати. Відповідь запам'ятовується у input_boolean.poliv_propustyty_zavtra, і ранковий розклад просто її виконує. Питати о 04:30, як було раніше, не мало сенсу: о пів на п'яту ніхто не бачить сповіщення, 30 хвилин минають, і день пропускається за замовчуванням. Тепер питання ставиться, коли на нього реально можуть відповісти. Мовчання = пропустити, як і просили. Але прапорець скидається на початку перевірки, тож якщо дощу не прогнозують, ранок поллється без жодних питань.
+
+        **Полив - журнал перемикань із джерелом** — Пише в журнал HA кожне перемикання насоса й клапанів 1-5 разом із тим, ХТО його зробив. Без цього в логах видно лише факт "клапан закрився", і неможливо відрізнити ручне натискання від роботи автоматизації чи від того, що клапан закрив сам контролер за власним відліком - а саме це питання виникло 10.08.2026 при розборі недоливу. Джерело визначається за контекстом Home Assistant: user_id заповнений і батьківського контексту немає - людина натиснула в інтерфейсі; parent_id заповнений - дію породила автоматизація або скрипт (можливо, запущені людиною); обидва порожні - команди з Home Assistant не було АБО її подала інтеграція власним контекстом. Контексту недостатньо, щоб відрізнити Irrigation Unlimited від самого контролера: IU викликає сервіси зі свіжим контекстом без parent_id, тому 10.08 його команди підписувалися як "пристрій сам". Тому в рядок додано стан IU, а окремим маркером POLIV-АНОМАЛІЯ позначається саме та ситуація, яка призвела до недоливу: клапан закрився, поки майстер IU ще поливає. IU так ніколи не робить - він спершу зупиняє насос і аж потім закриває клапан, - отже це апаратний відлік контролера. Пише через system_log на рівні warning, тому потрапляє і в journalctl, і в Налаштування - Журнали. Домени automation і script виключені з recorder, тому іншого сліду про авторство не лишається.
+
+        **Полив - зарахувати вилиту воду в баланс зони** — Додає вилиту воду до водного балансу Smart Irrigation після кожного закриття клапана - незалежно від того, хто його відкрив: розклад, кнопка на дашборді чи тумблер. НАВІЩО. Модуль observed watering усередині Smart Irrigation уміє це сам, але для зон 1 і 2 він мовчить: їм прив'язана сутність, яка ніколи не змінює стан (інцидент 0cfd77b0, найімовірніше застарілий хмарний дубль switch.avtopoliv_kontroler_switch_N). Прив'язка лежить у .storage і правиться лише з панелі Smart Irrigation, тому до її виправлення зарахування робить ця автоматизація. Без неї полив зон 1 і 2 не потрапляє ні в баланс, ні на графік "Вода за 7 днів", і дефіцит накопичується щодоби. ЧОМУ НЕ БУДЕ ПОДВІЙНОГО РАХУНКУ. Після закриття клапана автоматизація запам'ятовує баланс, чекає 20 секунд і дивиться, чи він змінився сам. Якщо змінився - зарахував штатний модуль (так працює зона 5), і автоматизація не робить нічого. Дописує тільки там, де не зарахував ніхто. Через це її можна лишати ввімкненою і після виправлення прив'язки: вона просто перестане спрацьовувати. ЯК РАХУЄТЬСЯ. Тими самими числами, що й у самому модулі: мм = хвилини * продуктивність / площа. Зони 1 і 2 - 40 л/хв на 200 м². Результат обрізається зверху максимальним балансом зони, інакше сервіс set_zone відхиляє значення. ЗОНА 5 СЮДИ НЕ ВХОДИТЬ навмисно. Їй штатний модуль зараховує сам: його внутрішній id 2 прив'язаний саме до клапана 5. 11.08 о 05:15 обидва спрацювали разом і зона отримала 6,82 мм обліку на 3,41 мм вилитої води, бо модуль дописує в ту саму секунду, коли клапан закрився, - тобто до першого заміру балансу цією автоматизацією. Пробіги коротші за 30 секунд ігноруються: це не полив, а перевірка клапана або збій зв'язку.
+
+        **Полив - сторож: майстер поливає, а клапан закритий** — Зупиняє полив, якщо Irrigation Unlimited вважає, що поливає, а жоден клапан не відкритий. Це той стан, у якому насос працює в глухий кут. НАВІЩО ОКРЕМО ВІД ЗАПИСУ ТАЙМЕРА. Запис DP лікує одну конкретну причину - апаратний відлік контролера. Сторож ловить весь клас: обрив LocalTuya посеред поливу, відмову котушки клапана, ручне закриття клапана під час циклу, збій контролера. У ніч проти 10.08 така ситуація тривала близько 50 хвилин і ніхто її не помітив, бо check_back у Irrigation Unlimited перевіряє клапан лише ~90 секунд після команди. ВИТРИМКА ХВИЛИНА навмисна. Між зонами Irrigation Unlimited на кілька секунд лишає всі клапани закритими при увімкненому майстрі - це нормальний перехід, і без витримки сторож рубав би кожен багатозонний полив. Хвилини вистачає з запасом: 11.08 найдовший такий перехід тривав 17 секунд. Зупиняє через той самий script.poliv_stop_all, що й кнопка на дашборді, тобто у правильному порядку: спершу насос, потім клапани.
+
+        **Полив - ранковий перерахунок Smart Irrigation** — Перераховує зони о 07:00, коли нічний полив уже завершився і зарахований. НАВІЩО. Тривалість зберігається в зоні і перераховується ЛИШЕ на розрахунку. Автоматичний був один - о 19:55, - тому цілий день на панелі й на картках висів учорашній план, який до реальності вже не мав стосунку. 11.08 зона 2 показувала запас +2.63 мм і поруч "3021 секунда", бо це число порахували ще при дефіциті -10.07. Ранковий розрахунок робить денну картину чесною: після нього тривалість відповідає балансу, який лишився після поливу. НА НІЧНИЙ ПОЛИВ ЦЕ НЕ ВПЛИВАЄ. Полив бере тривалість з розрахунку о 19:55, а він відбувається пізніше і перезаписує ранкову. ПРО ПОГОДНІ ДАНІ. Кожен розрахунок застосовує накопичене випаровування і стирає використані дані. Тепер доба ділиться на дві частини: 23:59-07:00 і 07:00-19:55. Сумарне випаровування від цього не змінюється - воно просто застосовується двома порціями замість однієї. Пропускаємо, якщо в цю мить іде полив: розрахунок посеред циклу міняв би тривалість зони, яку Irrigation Unlimited уже виконує.
 - title: Свердловина
   path: well
   icon: mdi:water-pump
@@ -2552,6 +2761,41 @@ views:
       grid_options:
         columns: 6
         rows: 1
+  - type: grid
+    cards:
+    - type: heading
+      heading: Автоматизації
+      icon: mdi:robot
+      grid_options:
+        columns: full
+    - type: entities
+      grid_options:
+        columns: full
+      entities:
+      - entity: automation.sverdlovina_onoviti_rozrakhunkovu_vodu
+        name: "Свердловина — оновити розрахункову воду"
+      - entity: automation.sverdlovina_koefitsiient_iz_zhurnalu_pokaznikiv
+        name: "Свердловина — коефіцієнт із журналу показників"
+      - entity: automation.sverdlovina_trasuvannia_sempliv_nasosa
+        name: "Свердловина — трасування семплів насоса"
+      - entity: automation.sverdlovina_pochatok_ruchnogo_zamiru
+        name: "Свердловина — початок ручного заміру"
+      - entity: automation.sverdlovina_pidsumok_ruchnogo_zamiru
+        name: "Свердловина — підсумок ручного заміру"
+    - type: markdown
+      title: Що вони роблять
+      grid_options:
+        columns: full
+      content: |-
+        **Свердловина — оновити розрахункову воду** — Оновлює накопичувальну оцінку води за енергією насоса і зафіксованим коефіцієнтом.
+
+        **Свердловина — коефіцієнт із журналу показників** — Джерелом показників стала таблиця water_readings.json, тож коефіцієнт м³/кВт·год тепер рахується від останнього живого рядка журналу, а не від кнопки «Зберегти показник». Так само працює запис заднім числом і виправлення помилки: щойно журнал змінився, калібрування перераховується саме. Базову точку та енергетичну поправку бере з атрибута calibration того ж сенсора — числа в шаблоні лишилися тільки як запас на випадок, коли сенсор недоступний.
+
+        **Свердловина — трасування семплів насоса** — Пише у .private/pump-trace.log кожну зміну електричних сутностей насоса з міткою часу до мікросекунди. Питання, заради якого це заведено: чи справді розетка віддає один семпл на пуск, чи їх більше, а губить їх Home Assistant. Фізика бака каже, що пуск триває близько 26 секунд при подачі 80 л/хв і що система бачить менш ніж половину пусків — трасування має це підтвердити або спростувати. Це тимчасова діагностика: коли питання закриється, автоматизацію і платформу notify.pump_trace слід прибрати.
+
+        **Свердловина — початок ручного заміру** — Знімає показання трьох лічильників у момент, коли людина біля насоса вмикає секундомір. Без цього знімка на зупинці не буде від чого рахувати різницю.
+
+        **Свердловина — підсумок ручного заміру** — Порівнює живий час із зарахованим. Реальні секунди беруться з того, скільки секундомір був увімкнений; зараховані — з приросту history_stats, який живиться тими самими рідкими семплами розетки. Відношення між ними і є шуканою похибкою: якщо система зараховує третину справжнього часу, то стільки ж вона втрачає і в енергії, а отже коефіцієнт калібрування завищений рівно настільки.
 - title: Заряджання авто
   path: ev-charging
   icon: mdi:ev-station
@@ -3168,6 +3412,37 @@ views:
         статистики між автомобілями або станціями.
 
         </details>
+  - type: grid
+    cards:
+    - type: heading
+      heading: Автоматизації
+      icon: mdi:robot
+      grid_options:
+        columns: full
+    - type: entities
+      grid_options:
+        columns: full
+      entities:
+      - entity: automation.tarif_peremknuti_lichilniki_den_nich
+        name: "Тариф - перемкнути лічильники день/ніч"
+      - entity: automation.zariadzhannia_start_vikna_rozkladu
+        name: "Заряджання - старт вікна розкладу"
+      - entity: automation.zariadzhannia_kinets_vikna_rozkladu
+        name: "Заряджання - кінець вікна розкладу"
+      - entity: automation.zariadzhannia_avto_pidkliuchili_vseredini_vikna
+        name: "Заряджання - авто підключили всередині вікна"
+    - type: markdown
+      title: Що вони роблять
+      grid_options:
+        columns: full
+      content: |-
+        **Тариф - перемкнути лічильники день/ніч** — Тримає всі utility_meter у тому самому тарифі, що й sensor.tarif_elektroenergii_zaraz: день 07:00-22:59, ніч 23:00-06:59. Без цієї автоматизації лічильники назавжди лишились би в тарифі, який був активний при створенні, і весь розподіл день/ніч був би неправильний. Тригер на старт Home Assistant обов'язковий: після перезапуску серед ночі лічильники інакше лишалися б у денному тарифі до наступної сьомої ранку. Затримка потрібна, щоб сутності utility_meter встигли з'явитися.
+
+        **Заряджання - старт вікна розкладу** — О часі початку вікна виставляє струм і дозволяє заряджання. Потрібне саме тут, а не в самій станції - її власні таймери set_delay_time і set_define_time відлічують час від підключення авто, а не за годинником, тому нічний тариф ними не спіймати.
+
+        **Заряджання - кінець вікна розкладу** — О часі кінця вікна зупиняє заряджання. Зупиняє саме командою Close charging - перемикач switch.zariadka_7_5kvt на сесію не впливає, це перевірено 2026-08-09.
+
+        **Заряджання - авто підключили всередині вікна** — Якщо машину під'єднали посеред дозволеного вікна, заряджання має початися одразу, а не чекати наступної ночі. Спрацьовує на виході станції зі стану no_connet.
 - title: Вентиляція
   path: ventilation
   icon: mdi:hvac
@@ -3618,6 +3893,25 @@ views:
         а не за відчуттям духоти, яке запізнюється.
 
         </details>
+  - type: grid
+    cards:
+    - type: heading
+      heading: Автоматизації
+      icon: mdi:robot
+      grid_options:
+        columns: full
+    - type: entities
+      grid_options:
+        columns: full
+      entities:
+      - entity: automation.bez_svitla_vimknuti_vazhki_spozhivachi
+        name: "Без світла - вимкнути важкі споживачі"
+    - type: markdown
+      title: Що вони роблять
+      grid_options:
+        columns: full
+      content: |-
+        **Без світла - вимкнути важкі споживачі** — Вимикає обидва рекуператори Blauberg і припливний вентилятор PRANA разом з догрівачем, щойно будинок переходить на батарею. Вентиляція повертається до роботи вручну.
 - title: Присутність
   path: presence
   icon: mdi:map-marker-account
@@ -3883,3 +4177,336 @@ views:
         entity_id:
         - binary_sensor.tcl_tv_online
         - script.tv_idle_slideshow
+  - type: grid
+    cards:
+    - type: heading
+      heading: Автоматизації
+      icon: mdi:robot
+      grid_options:
+        columns: full
+    - type: entities
+      grid_options:
+        columns: full
+      entities:
+      - entity: automation.tcl_zapustiti_fotozastavku_pislia_5_khvilin_prostoiu
+        name: "TCL - запустити фотозаставку після 5 хвилин простою"
+      - entity: automation.tcl_zupiniti_fotozastavku_pri_aktivnosti
+        name: "TCL - зупинити фотозаставку при активності"
+    - type: markdown
+      title: Що вони роблять
+      grid_options:
+        columns: full
+      content: |-
+        **TCL - запустити фотозаставку після 5 хвилин простою** — Не вмикає телевізор. Стартує лише якщо вже ввімкнений TCL безперервно перебуває у стані idle п'ять хвилин.
+
+        **TCL - зупинити фотозаставку при активності** — Не дає заставці перебивати відео чи застосунок, який запустив користувач. Дві секунди потрібні, щоб не прийняти власний запуск JPEG через стандартний Cast receiver за сторонню активність.
+- title: Пральня
+  path: pralka
+  icon: mdi:washing-machine
+  type: sections
+  max_columns: 4
+  dense_section_placement: true
+  sections:
+  - type: grid
+    cards:
+    - type: heading
+      heading: Що зараз робить
+      icon: mdi:washing-machine
+      grid_options:
+        columns: full
+    - type: markdown
+      grid_options:
+        columns: full
+      content: |-
+        {% set m = states('sensor.pralnia_pralna_mashina_machine_state') %}
+        {% set j = states('sensor.pralnia_pralna_mashina_job_state') %}
+        {% set faza = {'wash': 'прання', 'rinse': 'полоскання', 'spin': 'віджим',
+        'pre_wash': 'замочування', 'drying': 'сушіння', 'cooling': 'охолодження',
+        'weight_sensing': 'зважування білизни', 'wrinkle_prevent': 'проти зминання',
+        'ai_wash': 'розумне прання', 'ai_rinse': 'розумне полоскання',
+        'ai_spin': 'розумний віджим', 'air_wash': 'освіження',
+        'delay_wash': 'відкладений старт', 'finish': 'завершено',
+        'freeze_protection': 'захист від замерзання'}.get(j, j) %}
+        {% if m == 'run' %}
+        **Працює** — {{ faza }}.
+        {% set t = states('sensor.pralnia_pralna_mashina_completion_time') %}
+        {% if t not in ['unknown', 'unavailable', ''] %}
+        Закінчить приблизно о **{{ as_timestamp(t) | timestamp_custom('%H:%M', true) }}**.
+        {% endif %}
+        Зараз бере {{ states('sensor.pralnia_pralna_mashina_power') }} Вт.
+        {% elif m == 'pause' %}
+        **На паузі** — {{ faza }}.
+        {% else %}
+        Машина не працює.
+        {% endif %}
+    - type: tile
+      entity: sensor.pralnia_pralna_mashina_machine_state
+      name: Стан
+      grid_options:
+        columns: 6
+    - type: tile
+      entity: sensor.pralnia_pralna_mashina_job_state
+      name: Фаза циклу
+      grid_options:
+        columns: 6
+    - type: tile
+      entity: sensor.pralnia_pralna_mashina_power
+      name: Потужність зараз
+      grid_options:
+        columns: 6
+    - type: tile
+      entity: sensor.pralnia_pralna_mashina_completion_time
+      name: Закінчить о
+      grid_options:
+        columns: 6
+  - type: grid
+    cards:
+    - type: heading
+      heading: Керування
+      icon: mdi:tune-variant
+      grid_options:
+        columns: full
+    # Дистанційний запуск працює лише тоді, коли на самій машині натиснуто
+    # «Дистанційне керування». Поки цей рядок «Вимкнено», кнопка «Запустити»
+    # нижче не подіє - це захист Samsung, а не обмеження Home Assistant.
+    - type: entities
+      grid_options:
+        columns: full
+      entities:
+      - entity: binary_sensor.pralnia_pralna_mashina_remote_control
+        name: Дистанційне керування дозволене
+      - entity: binary_sensor.pralnia_pralna_mashina_power
+        name: Живлення
+      - entity: binary_sensor.pralnia_pralna_mashina_child_lock
+        name: Блокування від дітей
+      - entity: select.pralnia_pralna_mashina
+        name: Цикл
+      - entity: select.pralnia_pralna_mashina_spin_level
+        name: Віджим
+      - entity: select.pralnia_pralna_mashina_water_temperature
+        name: Температура води
+      - entity: switch.pralnia_pralna_mashina_bubble_soak
+        name: Bubble Soak
+  - type: grid
+    cards:
+    - type: heading
+      heading: Спожита електроенергія і вода
+      icon: mdi:lightning-bolt
+      grid_options:
+        columns: full
+    - type: tile
+      entity: sensor.pralnia_pralna_mashina_energy
+      name: Спожито всього
+      grid_options:
+        columns: 6
+    - type: tile
+      entity: sensor.pralnia_pralna_mashina_water_consumption
+      name: Води всього
+      grid_options:
+        columns: 6
+    - type: statistics-graph
+      title: Спожито за добу
+      chart_type: bar
+      period: day
+      days_to_show: 14
+      stat_types:
+      - change
+      grid_options:
+        columns: full
+      entities:
+      - entity: sensor.pralnia_pralna_mashina_energy
+        name: Пральна машина
+    - type: custom:mini-graph-card
+      name: Потужність · 24 години
+      hours_to_show: 24
+      points_per_hour: 4
+      line_width: 3
+      animate: true
+      show:
+        labels: true
+        points: false
+      color_thresholds:
+      - value: 0
+        color: '#43a047'
+      - value: 500
+        color: '#fb8c00'
+      - value: 1800
+        color: '#e53935'
+      grid_options:
+        columns: full
+      entities:
+      - entity: sensor.pralnia_pralna_mashina_power
+        name: Потужність
+    - type: history-graph
+      title: Стан машини за 24 години
+      hours_to_show: 24
+      grid_options:
+        columns: full
+      entities:
+      - entity: sensor.pralnia_pralna_mashina_machine_state
+        name: Стан
+      - entity: sensor.pralnia_pralna_mashina_job_state
+        name: Фаза
+  - type: grid
+    cards:
+    - type: heading
+      heading: Сушарка
+      icon: mdi:tumble-dryer
+      grid_options:
+        columns: full
+    # Розетка Tuya з вимірюванням. На відміну від самої пральної машини, тут
+    # потужність справжня і оновлюється - саме нею видно, чи прилад працює.
+    - type: tile
+      entity: switch.sushka_socket
+      name: Живлення сушарки
+      grid_options:
+        columns: 6
+    - type: tile
+      entity: sensor.sushka_power
+      name: Потужність
+      grid_options:
+        columns: 6
+    - type: tile
+      entity: sensor.sushka_total_energy
+      name: Спожито всього
+      grid_options:
+        columns: 6
+    - type: tile
+      entity: sensor.sushka_voltage
+      name: Напруга
+      grid_options:
+        columns: 6
+    - type: custom:mini-graph-card
+      name: Потужність сушарки · 24 години
+      hours_to_show: 24
+      points_per_hour: 4
+      line_width: 3
+      animate: true
+      show:
+        labels: true
+        points: false
+      color_thresholds:
+      - value: 0
+        color: '#43a047'
+      - value: 800
+        color: '#fb8c00'
+      - value: 2000
+        color: '#e53935'
+      grid_options:
+        columns: full
+      entities:
+      - entity: sensor.sushka_power
+        name: Потужність
+  - type: grid
+    cards:
+    - type: heading
+      heading: Пральна машина мала
+      icon: mdi:washing-machine
+      grid_options:
+        columns: full
+    - type: tile
+      entity: switch.mala_pralna_mashina_socket
+      name: Живлення
+      grid_options:
+        columns: 6
+    - type: tile
+      entity: sensor.mala_pralna_mashina_power
+      name: Потужність
+      grid_options:
+        columns: 6
+    - type: tile
+      entity: sensor.mala_pralna_mashina_energy
+      name: Спожито всього
+      grid_options:
+        columns: 6
+    - type: tile
+      entity: sensor.mala_pralna_mashina_voltage
+      name: Напруга
+      grid_options:
+        columns: 6
+    - type: custom:mini-graph-card
+      name: Потужність малої пралки · 24 години
+      hours_to_show: 24
+      points_per_hour: 4
+      line_width: 3
+      animate: true
+      show:
+        labels: true
+        points: false
+      color_thresholds:
+      - value: 0
+        color: '#43a047'
+      - value: 800
+        color: '#fb8c00'
+      - value: 2000
+        color: '#e53935'
+      grid_options:
+        columns: full
+      entities:
+      - entity: sensor.mala_pralna_mashina_power
+        name: Потужність
+    - type: markdown
+      grid_options:
+        columns: full
+      content: |-
+        Обидва прилади під розетками Tuya з лічильником. Розетка вимірює
+        справжню потужність, тож за нею видно, коли прилад працює, навіть якщо
+        сам прилад нічого про себе не повідомляє.
+
+        Третя розетка, **«велика пралка»**, зараз недоступна — або знеструмлена,
+        або поза мережею. Щойно вона озветься, її показники підхопляться самі.
+  - type: grid
+    cards:
+    - type: heading
+      heading: Як це працює
+      icon: mdi:information-outline
+      grid_options:
+        columns: full
+    - type: markdown
+      grid_options:
+        columns: full
+      content: |-
+        Машина під'єднана через **SmartThings**, тобто через хмару Samsung —
+        працює лише коли є інтернет. Локального керування Samsung не дає.
+
+        **Повідомлення надходять** на всі три телефони, коли цикл завершився,
+        і окремо — якщо машина працює, поки немає світла.
+
+        **Під час відключення машину не вимикають навмисно.** Обірваний цикл
+        означає воду в баку і мокру білизну, тож автоматика лише попереджає,
+        а рішення лишається за людиною.
+
+        **Щоб запустити прання дистанційно**, на самій машині треба спершу
+        натиснути «Дистанційне керування» — інакше команда не подіє. Це вимога
+        Samsung: захист від запуску незакритої машини.
+    - type: logbook
+      hours_to_show: 72
+      grid_options:
+        columns: full
+      target:
+        entity_id:
+        - sensor.pralnia_pralna_mashina_machine_state
+        - select.pralnia_pralna_mashina
+  - type: grid
+    cards:
+    - type: heading
+      heading: Автоматизації
+      icon: mdi:robot
+      grid_options:
+        columns: full
+    - type: entities
+      grid_options:
+        columns: full
+      entities:
+      - entity: automation.pralna_mashina_prannia_zaversheno
+        name: "Пральна машина - прання завершено"
+      - entity: automation.bez_svitla_pralna_mashina_pratsiuie
+        name: "Без світла - пральна машина працює"
+    - type: markdown
+      title: Що вони роблять
+      grid_options:
+        columns: full
+      content: |-
+        **Пральна машина - прання завершено** — Тригер саме на перехід run -> stop, а не на job_state finish: finish буває коротким і його легко проґавити, а перехід стану машини надійний і не повторюється після перезавантаження Home Assistant.
+
+        **Без світла - пральна машина працює** — Окрема автоматизація, а не рядок у переліку важких споживачів: пральну машину не можна просто вимкнути, як бойлер. Обірваний цикл означає воду в баку і мокру білизну, тому тут лише попередження - рішення за людиною.

@@ -1,0 +1,14 @@
+[Unit]
+Description=Stable alias address for the mirror board (DHCP lease keeps moving)
+After=network.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+# DHCP уже двічі змінював адресу цієї плати (.168 -> .203), і щоразу
+# посилання на стенд ставало недійсним. Додаткова стала адреса нічого не
+# ламає: основна й далі приходить від роутера.
+ExecStart=/bin/sh -c "ip addr add 192.168.50.142/24 dev eth0 2>/dev/null; true"
+
+[Install]
+WantedBy=multi-user.target

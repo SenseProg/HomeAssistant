@@ -40,16 +40,34 @@ SYNC_TARGETS: dict[str, str] = {
     "board-config/scripts.yaml": "/userdata/hass/config/scripts.yaml",
     "board-config/scenes.yaml": "/userdata/hass/config/scenes.yaml",
     "board-config/network_monitoring.yaml": "/userdata/hass/config/network_monitoring.yaml",
+    # Кастомні картки. До 2026-08-30 їх тут не було, і вісім із дев'яти жили
+    # лише на платі: правку картки води ніхто не бачив у git, а sync мовчав.
+    "board-config/www/home-energy-flow-card.js": "/userdata/hass/config/www/home-energy-flow-card.js",
+    "board-config/www/well-daily-water-card.js": "/userdata/hass/config/www/well-daily-water-card.js",
+    "board-config/www/well-hourly-water-card.js": "/userdata/hass/config/www/well-hourly-water-card.js",
+    "board-config/www/well-water-overview-card.js": "/userdata/hass/config/www/well-water-overview-card.js",
+    "board-config/www/well-monthly-water-card.js": "/userdata/hass/config/www/well-monthly-water-card.js",
+    "board-config/www/well-meter-entry-card.js": "/userdata/hass/config/www/well-meter-entry-card.js",
+    "board-config/www/well-pump-runs-card.js": "/userdata/hass/config/www/well-pump-runs-card.js",
+    "board-config/www/well-pump-log-card.js": "/userdata/hass/config/www/well-pump-log-card.js",
+    "board-config/www/well-readings-log-card.js": "/userdata/hass/config/www/well-readings-log-card.js",
+    # systemd. Три NFS-маунти свідомо не тут: їхні імена містять
+    # systemd-екранування зі зворотним слешем
+    # (userdata-hass-config\x2dstandalone-backups.mount), а такий символ
+    # неприпустимий в імені файлу на Windows, де живе робоча копія.
+    # Ними керує nas-mounts.service, який під контролем.
     "board-config/systemd/home-assistant.service": "/etc/systemd/system/home-assistant.service",
     "board-config/systemd/zram-swap.service": "/etc/systemd/system/zram-swap.service",
-    "board-config/systemd/homemate-nas-sync.service": "/etc/systemd/system/homemate-nas-sync.service",
-    "board-config/systemd/homemate-nas-sync.timer": "/etc/systemd/system/homemate-nas-sync.timer",
-    "board-config/systemd/userdata-hass-config-backups.mount": "/etc/systemd/system/userdata-hass-config-backups.mount",
-    "board-config/systemd/homemate-ha-backups-mount.timer": "/etc/systemd/system/homemate-ha-backups-mount.timer",
     "board-config/systemd/mnt-homemate_media-foto.mount": "/etc/systemd/system/mnt-homemate_media-foto.mount",
+    "board-config/systemd/wyoming-vosk.service": "/etc/systemd/system/wyoming-vosk.service",
+    "board-config/systemd/nas-mounts.service": "/etc/systemd/system/nas-mounts.service",
+    "board-config/systemd/nas-mounts.timer": "/etc/systemd/system/nas-mounts.timer",
+    "board-config/systemd/netplan-fallback.service": "/etc/systemd/system/netplan-fallback.service",
+    "board-config/systemd/mirror-alias-ip.service": "/etc/systemd/system/mirror-alias-ip.service",
+    # Ці два лишаються навмисно, хоч на платі їх немає: нічний аналіз дому
+    # зник разом із ними, і remote_missing тут - потрібний сигнал, а не шум.
     "board-config/systemd/house-analyst.service": "/etc/systemd/system/house-analyst.service",
     "board-config/systemd/house-analyst.timer": "/etc/systemd/system/house-analyst.timer",
-    "board-config/systemd/wyoming-vosk.service": "/etc/systemd/system/wyoming-vosk.service",
 }
 
 
@@ -141,18 +159,24 @@ def repo_board_sync(files: Iterable[str] | None = None) -> dict[str, Any]:
     """Compare SHA-256 hashes without copying or changing either side."""
     targets = resolve_targets(files)
     remote_paths = list(targets.values())
-    script_parts = []
-    for remote_path in remote_paths:
-        quoted = shlex.quote(remote_path)
-        # Другий, LFHASH-рядок - той самий файл без CR. Дає змогу відрізнити
-        # реальну розбіжність від різниці переносів рядків Windows і плати.
-        script_parts.append(
-            f"if [ -f {quoted} ]; then sha256sum {quoted}; "
-            f"printf 'LFHASH %s ' {quoted}; "
-            f"tr -d '\\r' < {quoted} | sha256sum | cut -c1-64; "
-            f"else printf 'MISSING  %s\\n' {quoted}; fi"
-        )
-    remote = _ssh("; ".join(script_parts), timeout=150)
+    # Шляхи перелічуються один раз і обходяться циклом. Раніше кожен шлях
+    # підставлявся в команду чотири рази, і на 26 таргетах рядок переріс ліміт
+    # аргументів: ssh діставав обрізаний скрипт, bash відповідав
+    # "syntax error: unexpected end of file", а sync позначав УСІ файли як
+    # remote_error - тобто виглядав як недоступна плата (2026-08-31).
+    #
+    # Другий, LFHASH-рядок - той самий файл без CR. Дає змогу відрізнити
+    # реальну розбіжність від різниці переносів рядків Windows і плати.
+    quoted_paths = ' '.join(shlex.quote(path) for path in remote_paths)
+    script = (
+        f"for p in {quoted_paths}; do "
+        'if [ -f "$p" ]; then sha256sum "$p"; '
+        'printf %s "LFHASH $p "; '
+        'tr -d "\\r" < "$p" | sha256sum | cut -c1-64; '
+        'else printf "MISSING  %s\\n" "$p"; fi; '
+        'done'
+    )
+    remote = _ssh(script, timeout=150)
     remote_hashes: dict[str, str | None] = {}
     remote_lf_hashes: dict[str, str] = {}
     if remote["ok"]:

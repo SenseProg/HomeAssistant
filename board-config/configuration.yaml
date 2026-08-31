@@ -54,6 +54,42 @@ frontend:
     - /local/home-energy-flow-card.js?v=20260822-thin
 
 input_number:
+  # --- Пороги сповіщень про відключення світла ---
+  # Винесені в налаштування навмисне: правильне число залежить від сезону і від
+  # того, скільки лишилось у батареї, а лізти в YAML заради 1.4 замість 1.5 кВт
+  # не має сенсу.
+  bez_svitla_porih_kvt:
+    name: Без світла - поріг споживання
+    min: 0.2
+    max: 6
+    step: 0.1
+    initial: 1.5
+    unit_of_measurement: кВт
+    icon: mdi:flash-alert
+  bez_svitla_zatrymka_hv:
+    name: Без світла - затримка перед сповіщенням
+    min: 1
+    max: 30
+    step: 1
+    initial: 3
+    unit_of_measurement: хв
+    icon: mdi:timer-sand
+  batareia_porih_uvaha:
+    name: Батарея - попередження
+    min: 5
+    max: 90
+    step: 5
+    initial: 25
+    unit_of_measurement: "%"
+    icon: mdi:battery-alert
+  batareia_porih_krytychno:
+    name: Батарея - критичний рівень
+    min: 2
+    max: 50
+    step: 1
+    initial: 10
+    unit_of_measurement: "%"
+    icon: mdi:battery-alert-variant-outline
   poliv_zona_1_hvylyn:
     name: Зона 1 - хвилин поливу
     min: 1
@@ -211,6 +247,13 @@ input_datetime:
 # every scheduled/weather-driven irrigation automation. Manual controls and
 # emergency stop remain available independently.
 input_boolean:
+  # Чи вимикати важкі споживачі самотужки, щойно зникне світло. Увімкнено за
+  # замовчуванням: бойлер на 2 кВт з'їдає автономію в рази швидше, ніж решта
+  # будинку разом. Якщо колись заважатиме - вимикається тут, без правки YAML.
+  bez_svitla_vymykaty:
+    name: Без світла - вимикати важкі споживачі
+    icon: mdi:power-plug-off
+    initial: true
   # Вимикач самого розкладу. Off - бойлер лишається під ручним керуванням,
   # автоматика його не чіпає. Автоматизації перевіряють саме цей прапорець.
   boiler_babusi_rozklad:
@@ -435,6 +478,37 @@ irrigation_unlimited:
 
 # --- Total load across all three phases (added 2026-08-02) ---
 template:
+  # --- Чи є світло в мережі ---
+  # Питаємо інвертор, а не лічильник: лічильник живиться від тієї самої
+  # мережі і при відключенні просто стає unavailable, а unavailable буває і
+  # від пропалого Wi-Fi. Інвертор бачить саму мережу і переживає її зникнення.
+  #
+  # Частота підстраховує binary_sensor: якщо той на мить стане unknown,
+  # нулі на всіх трьох фазах однаково скажуть правду.
+  #
+  # Півхвилини затримки в обидва боки - щоб коротке блимання не розсилало
+  # людям пару повідомлень підряд.
+  - binary_sensor:
+      - name: Svitlo vidsutnie
+        unique_id: svitlo_vidsutnie
+        device_class: problem
+        icon: mdi:transmission-tower-off
+        delay_on: "00:00:30"
+        delay_off: "00:00:30"
+        state: >-
+          {{ is_state('binary_sensor.inverter_grid', 'off')
+             and (states('sensor.inverter_grid_frequency') | float(50)) < 45 }}
+  # Те саме навантаження, що й sensor.inverter_load_power, тільки в кіловатах:
+  # поріг у налаштуваннях теж у кіловатах, а numeric_state порівнює числа як є,
+  # без перерахунку одиниць.
+  - sensor:
+      - name: Spozhyvannia zaraz kvt
+        unique_id: spozhyvannia_zaraz_kvt
+        unit_of_measurement: кВт
+        device_class: power
+        state_class: measurement
+        state: >-
+          {{ (states('sensor.inverter_load_power') | float(0) / 1000) | round(2) }}
   # --- Температура для смуги на телевізорі ---
   # Погодна сутність віддає 22.7, а на екрані потрібне ціле: десяті на такій
   # відстані не читаються і лише подовжують рядок. state-label округляти не

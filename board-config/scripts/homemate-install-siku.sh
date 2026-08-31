@@ -35,7 +35,7 @@ if manifest.get("domain") != "siku" or manifest.get("version") != sys.argv[2]:
 print(f"Validated siku {manifest['version']}")
 PY
 
-/home/forlinx/hass-venv-314/bin/python -m compileall -q "${source_path}"
+/userdata/hass/venv/bin/python -m compileall -q "${source_path}"
 
 install -d -m 0755 "${COMPONENT_ROOT}"
 install -d -o forlinx -g forlinx -m 0755 "${BACKUP_ROOT}"
@@ -57,5 +57,5 @@ if [ -e "${target}" ]; then
 fi
 mv "${staged}" "${target}"
 
-/home/forlinx/hass-venv-314/bin/hass --script check_config -c "${CONFIG_ROOT}"
+/userdata/hass/venv/bin/hass --script check_config -c "${CONFIG_ROOT}"
 echo "Installed Siku (Blauberg) Fan ${SIKU_VERSION} at ${SIKU_COMMIT}."
