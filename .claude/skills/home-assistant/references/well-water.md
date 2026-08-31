@@ -155,10 +155,21 @@ Two things to remember when touching these cards:
 - **`state` versus `change`.** The cards read raw history, not statistics, so
   they do not get the Recorder's own reset handling for free. Any new card that
   sums deltas needs this same guard.
-- **The browser caches them.** Resources are registered as `/local/…js?v=1` and
-  the version was not bumped, because `lovelace_resources` lives in `.storage`,
-  which this project forbids editing. After changing a card, a hard refresh
-  (Ctrl+Shift+R) is required or the old code keeps running.
+- **The browser caches them, and a hard refresh is not reliable enough.** After
+  editing a card the file on disk was correct and the server served it, yet the
+  dashboard still drew the old bars — the browser kept the module cached under
+  the unchanged `/local/…js?v=1` URL. Bump the version instead. It does not
+  require touching `.storage` by hand: the Lovelace WebSocket API owns those
+  records, exactly as the recorder API owns statistics.
+
+  ```
+  lovelace/resources            → list, gives each resource id and url
+  lovelace/resources/update     → resource_id, res_type ("module"), url
+  ```
+
+  Rewrite the url from `?v=N` to `?v=N+1`; the changed URL is a cache miss, so
+  every device reloads the module on its next page load. Done on 2026-08-30 for
+  the three water cards (v1 → v2).
 
 ## Safe verification
 
