@@ -56,9 +56,21 @@ gathers everything above in one place, duplicating the toggles that also live
 on the Deye, Boiler and Washer tabs on purpose: hero (grid present / gone
 since / inverter silent, battery %, estimated autonomy, load), the load-shed
 list with its master switch, the four thresholds, the notifying automations,
-the acting ones, the Yasno schedule (shows setup instructions while the
-integration has no config entry), and a 72-hour history of the grid sensor,
+the acting ones, the Yasno schedule, and a 72-hour history of the grid sensor,
 the inverter link and the battery.
+
+**Yasno** was configured on 2026-09-02 through the config-flow API (region
+Київ → ПРАТ «ДТЕК Київські електромережі» → group 3.1). Entities:
+`sensor.yasno_kiiv_3_1_electricity` (normal / outage / possible),
+`_next_planned_outage`, `_next_probable_outage`, `_next_connectivity`,
+`_status_today`, `_status_tomorrow`, `_schedule_updated_on`, and the calendars
+`calendar.yasno_kiiv_3_1_planned_outages` / `_probable_outages`. Two derived
+template entities: `sensor.do_vidkliuchennia_hodyn` (hours to the next outage,
+planned before probable, attribute `typ`) and
+`binary_sensor.vidkliuchennia_skoro` (a **planned** outage within 3 h) — the
+latter is the battery-reserve switch in `docs/solar-boilers-spec.md` and adds
+a line to the Overview hero. The owner also wants a second entry "by address";
+it needs the street and house number, which the flow searches interactively.
 
 `sensor.avtonomiia_batarei` (hours) = usable SOC above the critical threshold
 × capacity ÷ current load. Capacity is `number.inverter_battery_capacity`

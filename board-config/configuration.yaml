@@ -511,6 +511,38 @@ template:
           iemnist_kvtg: >-
             {{ (states('number.inverter_battery_capacity') | float(200) * 51.2 / 1000) | round(1) }}
 
+  # --- Відключення за графіком Yasno (інтеграцію налаштовано 02.09.2026, група 3.1) ---
+  #
+  # Два похідні від sensor.yasno_kiiv_3_1_*: години до найближчого відключення
+  # (планове має пріоритет над імовірним) і прапорець «менше трьох годин до
+  # планового» - саме він у ТЗ сонячного нагріву перемикає режим збереження
+  # батареї, а на «Огляді» дає рядок у hero. Шаблон читає now(), тому HA
+  # перераховує його щохвилини сам.
+  - sensor:
+      - name: Do vidkliuchennia hodyn
+        unique_id: hours_to_next_outage
+        unit_of_measurement: "год"
+        icon: mdi:calendar-clock
+        state: >-
+          {% set pl = 'sensor.yasno_kiiv_3_1_next_planned_outage' %}
+          {% set pr = 'sensor.yasno_kiiv_3_1_next_probable_outage' %}
+          {% set t = states(pl) if has_value(pl) else states(pr) %}
+          {{ (((t | as_timestamp(0)) - now().timestamp()) / 3600) | round(1) }}
+        availability: >-
+          {{ has_value('sensor.yasno_kiiv_3_1_next_planned_outage')
+             or has_value('sensor.yasno_kiiv_3_1_next_probable_outage') }}
+        attributes:
+          typ: >-
+            {{ 'планове' if has_value('sensor.yasno_kiiv_3_1_next_planned_outage') else 'імовірне' }}
+  - binary_sensor:
+      - name: Vidkliuchennia skoro
+        unique_id: planned_outage_within_3h
+        device_class: problem
+        icon: mdi:transmission-tower-off
+        state: >-
+          {% set h = states('sensor.do_vidkliuchennia_hodyn') | float(99) %}
+          {{ is_state_attr('sensor.do_vidkliuchennia_hodyn', 'typ', 'планове') and 0 <= h <= 3 }}
+
   # --- Канали зв'язку: локально / хмара / інвертор (додано 02.09.2026) ---
   #
   # Відповідь на «не зрозуміло, який пристрій хмарний, а який локальний, і що

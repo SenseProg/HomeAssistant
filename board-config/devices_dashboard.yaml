@@ -4985,12 +4985,14 @@ views:
         columns: full
       content: |-
         Перша — єдина, що діє сама. Нічні розклади бойлера бабусі і зарядки тут для довідки: під час відключення вони теж виконаються, якщо їх не вимкнути.
-  # --- Секція 6 · Графік відключень ---
+  # --- Секція 6 · Графік відключень (Yasno, налаштовано 02.09.2026 за групою 3.1) ---
+  # Сутності інтеграції yasno_outages: sensor.yasno_kiiv_3_1_* і два календарі.
+  # Другий запис «за адресою» додасться після уточнення адреси власником.
   - type: grid
     column_span: 4
     cards:
     - type: heading
-      heading: Графік відключень
+      heading: Графік відключень · Yasno, група 3.1
       icon: mdi:calendar-clock
       grid_options:
         columns: full
@@ -4998,13 +5000,45 @@ views:
       grid_options:
         columns: full
       content: |-
-        {% set ids = integration_entities('yasno_outages') %}
-        {% if ids | count == 0 %}
-        Інтеграція **Yasno Outages** встановлена, але не налаштована (0 сутностей). Щоб тут з'явився графік планових відключень, а автоматизації могли готуватись до них заздалегідь: Налаштування → Пристрої та служби → Додати інтеграцію → Yasno Outages → регіон і група черги. Це дія власника, з YAML її зробити не можна.
-        {% else %}
-        {% for e in ids %}- {{ state_attr(e, 'friendly_name') or e }}: **{{ states(e) }}**
-        {% endfor %}
-        {% endif %}
+        {% set el = states('sensor.yasno_kiiv_3_1_electricity') %}
+        {% set st = {'normal': 'заживлено', 'outage': 'відключення', 'possible': 'можливе відключення'} %}
+        {% set td = {'no_outages': 'без відключень', 'outages': 'є відключення', 'possible_outages': 'можливі відключення', 'waiting_for_schedule': 'графіка ще немає'} %}
+        {% set today = states('sensor.yasno_kiiv_3_1_status_today') %}
+        {% set tomorrow = states('sensor.yasno_kiiv_3_1_status_tomorrow') %}
+        ## {{ '🟢' if el == 'normal' else '🟠' }} За графіком зараз: {{ st.get(el, el) }} · сьогодні: {{ td.get(today, today) }} · завтра: {{ td.get(tomorrow, tomorrow) }}
+        {% if has_value('sensor.do_vidkliuchennia_hodyn') %}Наступне **{{ state_attr('sensor.do_vidkliuchennia_hodyn', 'typ') }}** відключення через {{ states('sensor.do_vidkliuchennia_hodyn') }} год{{ ' — режим збереження батареї' if is_state('binary_sensor.vidkliuchennia_skoro', 'on') else '' }}.{% else %}Найближчих відключень у графіку немає.{% endif %} Графік оновлено {{ (states('sensor.yasno_kiiv_3_1_schedule_updated_on') | as_datetime | as_local).strftime('%d.%m %H:%M') if has_value('sensor.yasno_kiiv_3_1_schedule_updated_on') else '—' }}.
+    - type: tile
+      entity: sensor.yasno_kiiv_3_1_electricity
+      name: За графіком зараз
+      grid_options:
+        columns: 12
+        rows: 1
+    - type: tile
+      entity: sensor.yasno_kiiv_3_1_next_planned_outage
+      name: Наступне планове
+      grid_options:
+        columns: 12
+        rows: 1
+    - type: tile
+      entity: sensor.yasno_kiiv_3_1_next_probable_outage
+      name: Наступне імовірне
+      grid_options:
+        columns: 12
+        rows: 1
+    - type: tile
+      entity: sensor.yasno_kiiv_3_1_next_connectivity
+      name: Наступне заживлення
+      grid_options:
+        columns: 12
+        rows: 1
+    - type: calendar
+      title: Заплановані та імовірні відключення
+      initial_view: listWeek
+      entities:
+      - calendar.yasno_kiiv_3_1_planned_outages
+      - calendar.yasno_kiiv_3_1_probable_outages
+      grid_options:
+        columns: full
   # --- Секція 7 · Історія ---
   - type: grid
     column_span: 4

@@ -101,6 +101,9 @@ views:
         {{ '\n' }}{% if ns.bad %}⚠️ {{ ns.bad | length }} {{ 'проблема' if ns.bad | length == 1 else 'проблеми' }}: {{ ns.bad | join('; ') }}{% else %}✅ Система: все гаразд{% endif %}
         {%- set novykh = states('sensor.spovishchennia_zhurnal') | int(0) -%}
         {{ '\n' }}{% if novykh > 0 %}🔔 {{ novykh }} {{ 'нове сповіщення' if novykh == 1 else 'нових сповіщень' }} · [журнал](/pristroi-dashboard/alerts){% else %}🔕 Нових сповіщень немає · [журнал](/pristroi-dashboard/alerts){% endif %}
+        {%- if is_state('binary_sensor.vidkliuchennia_skoro', 'on') -%}
+        {{ '\n' }}⚡ Планове відключення через {{ states('sensor.do_vidkliuchennia_hodyn') }} год · батарея {{ states('sensor.inverter_battery') }} % · [блекаут](/pristroi-dashboard/blackout)
+        {%- endif %}
     - type: tile
       entity: switch.mini_switch_k601_2_switch_1_2
       name: Насос поливу · ручне керування
