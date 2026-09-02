@@ -2252,16 +2252,22 @@
     Час тримається в helper, а не тут, щоб міняти його з дашборда без правки YAML.
     Нічний тариф 23:00-06:59, тож типове вікно 04:00-07:00 повністю в ньому.
 
-    Чому не одна команда, а п''ять спроб. 27 серпня о 04:00 хмара Tuya відповіла
-    "Remote api run unknown failed", скрипт обірвався на першій же дії, і бойлер
-    не грівся цілу добу - помітили це лише за порожнім графіком споживання.
-    continue_on_error тут обов''язковий: без нього виняток інтеграції валить весь
-    скрипт, і жоден повтор не відпрацює.
+    Керування ЛОКАЛЬНЕ - switch.boiler_babusi_socket з LocalTuya. Раніше тут
+    стояв хмарний switch.smart_plug_socket_1, і 27 серпня о 04:00 хмара Tuya
+    відповіла "Remote api run unknown failed": скрипт обірвався на першій же дії,
+    бойлер не грівся цілу добу, а помітили це лише за порожнім графіком
+    споживання. continue_on_error лишається обов''язковим і на локальному каналі:
+    без нього виняток інтеграції валить весь скрипт, і жоден повтор не відпрацює.
 
     П''ять спроб по дві хвилини - це десять хвилин, вони цілком уміщаються в
-    нічний тариф навіть при старті о 04:00. Стан перевіряється не наосліп:
-    homeassistant.update_entity примусово перепитує розетку, бо хмарний статус
-    цієї розетки буває несвіжим на добу.
+    нічний тариф навіть при старті о 04:00. Стільки спроб потрібно й локально:
+    після рестарту Home Assistant LocalTuya піднімає зʼєднання близько трьох
+    хвилин, і команда, віддана в цьому вікні, просто нікуди не йде.
+
+    Шоста спроба - хмарою. Це єдине місце, де хмара ще потрібна для бойлера: коли
+    локальна сесія мертва, вона лишається єдиним способом дістати розетку. Тобто
+    токен Tuya більше не вирішує, чи буде гаряча вода, - він вирішує лише, чи
+    спрацює запасний вихід.
 
     Якщо не вдалося - приходить сповіщення. Тихий провал гірший за будь-який
     інший: бойлер не гріє, а дізнаєшся про це аж коли по воді.'
@@ -2281,32 +2287,45 @@
       sequence:
       - action: switch.turn_on
         target:
-          entity_id: switch.smart_plug_socket_1
+          entity_id: switch.boiler_babusi_socket
         continue_on_error: true
       - delay: '00:02:00'
       - action: homeassistant.update_entity
         target:
-          entity_id: switch.smart_plug_socket_1
+          entity_id: switch.boiler_babusi_socket
         continue_on_error: true
       - if:
         - condition: state
-          entity_id: switch.smart_plug_socket_1
+          entity_id: switch.boiler_babusi_socket
           state: 'on'
         then:
-        - stop: Розетка увімкнулась
+        - stop: Розетка увімкнулась локально
+  - action: switch.turn_on
+    target:
+      entity_id: switch.smart_plug_socket_1
+    continue_on_error: true
+  - delay: '00:02:00'
+  - if:
+    - condition: template
+      value_template: '{{ is_state(''switch.boiler_babusi_socket'', ''on'') or is_state(''switch.smart_plug_socket_1'',
+        ''on'') }}'
+    then:
+    - stop: Розетка увімкнулась хмарою
   - action: notify.mobile_app_sm_s918b
     data:
       title: Бойлер бабусі не увімкнувся
-      message: 'П''ять спроб за десять хвилин, розетка досі {{ states(''switch.smart_plug_socket_1'')
-        }}. Вода сьогодні холодна, і нічний тариф уже спливає. Найчастіша причина
-        - розетка не відповідає хмарі Tuya.'
+      message: 'П''ять локальних спроб і одна хмарна за дванадцять хвилин. Локально
+        розетка {{ states(''switch.boiler_babusi_socket'') }}, хмарою {{ states(''switch.smart_plug_socket_1'')
+        }}. Вода сьогодні холодна, і нічний тариф уже спливає.'
   - action: persistent_notification.create
     data:
       notification_id: boiler_babusi_start_failed
       title: Бойлер бабусі не увімкнувся
-      message: 'Розетка switch.smart_plug_socket_1 не перейшла в on після п''яти
-        спроб. Перевірити зв''язок розетки з Wi-Fi та її стан у застосунку Smart
-        Life. Увімкнути вручну зараз можна, але це вже денний тариф.'
+      message: 'Ні switch.boiler_babusi_socket, ні switch.smart_plug_socket_1 не
+        перейшли в on. Мовчать обидва канали одразу - отже, справа не в LocalTuya
+        і не в хмарі, а в самій розетці: перевірити її звʼязок з Wi-Fi та стан у
+        застосунку Smart Life. Увімкнути вручну зараз можна, але це вже денний
+        тариф.'
   mode: single
 - id: boiler_babusi_heat_stop
   alias: Бойлер бабусі - кінець нагріву
@@ -2314,10 +2333,17 @@
     безумовно, навіть якщо розклад був вимкнений посеред нагріву - інакше бойлер
     лишився б гріти на денному тарифі.
 
+    Керування таке саме локальне, як і на вмиканні: switch.boiler_babusi_socket,
+    а хмарний switch.smart_plug_socket_1 лишився шостою, запасною спробою.
+
     Тут повтори важать більше, ніж на вмиканні. Провалене вмикання коштує однієї
     холодної доби; провалене вимикання лишає бойлер грітися по 5 грн за кВт·год
     доти, доки хтось не помітить. Тому пауза між спробами коротша - хвилина, а не
-    дві, і сповіщення написане як тривога, а не як зауваження.'
+    дві, і сповіщення написане як тривога, а не як зауваження.
+
+    Успіх зараховується, якщо off підтвердив БУДЬ-ЯКИЙ із двох каналів. Вимагати
+    згоди обох означало б бити на сполох щоразу, коли один із них недоступний,
+    хоча розетка вже розімкнена.'
   triggers:
   - trigger: time
     at: input_datetime.boiler_babusi_kinets
@@ -2330,25 +2356,37 @@
       sequence:
       - action: switch.turn_off
         target:
-          entity_id: switch.smart_plug_socket_1
+          entity_id: switch.boiler_babusi_socket
         continue_on_error: true
       - delay: '00:01:00'
       - action: homeassistant.update_entity
         target:
-          entity_id: switch.smart_plug_socket_1
+          entity_id: switch.boiler_babusi_socket
         continue_on_error: true
       - if:
         - condition: state
-          entity_id: switch.smart_plug_socket_1
+          entity_id: switch.boiler_babusi_socket
           state: 'off'
         then:
-        - stop: Розетка вимкнулась
+        - stop: Розетка вимкнулась локально
+  - action: switch.turn_off
+    target:
+      entity_id: switch.smart_plug_socket_1
+    continue_on_error: true
+  - delay: '00:01:00'
+  - if:
+    - condition: template
+      value_template: '{{ is_state(''switch.boiler_babusi_socket'', ''off'') or is_state(''switch.smart_plug_socket_1'',
+        ''off'') }}'
+    then:
+    - stop: Розетка вимкнулась хмарою
   - action: notify.mobile_app_sm_s918b
     data:
       title: УВАГА - бойлер бабусі не вимкнувся
-      message: 'П''ять спроб, розетка досі {{ states(''switch.smart_plug_socket_1'')
-        }}. Нічний тариф скінчився, і кожна година гріє по денній ціні. Вимкнути
-        вручну - у застосунку Smart Life або автоматом на самій розетці.'
+      message: 'П''ять локальних спроб і одна хмарна. Локально розетка {{ states(''switch.boiler_babusi_socket'')
+        }}, хмарою {{ states(''switch.smart_plug_socket_1'') }}. Нічний тариф
+        скінчився, і кожна година гріє по денній ціні. Вимкнути вручну - у
+        застосунку Smart Life або кнопкою на самій розетці.'
       data:
         ttl: 0
         priority: high
@@ -2356,8 +2394,9 @@
     data:
       notification_id: boiler_babusi_stop_failed
       title: Бойлер бабусі не вимкнувся
-      message: 'Розетка switch.smart_plug_socket_1 не перейшла в off після п''яти
-        спроб. Це прямі втрати грошей, поки триває.'
+      message: 'Жоден із каналів - ні switch.boiler_babusi_socket, ні
+        switch.smart_plug_socket_1 - не підтвердив off. Це прямі втрати грошей,
+        поки триває.'
   mode: single
 - id: svitlo_znyklo
   initial_state: true

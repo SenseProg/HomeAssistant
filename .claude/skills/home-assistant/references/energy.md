@@ -11,15 +11,32 @@
 
 ## Main devices
 
-- House import: `sensor.inverter_total_energy_import` is the preferred stable
-  native Energy source when configured; verify actual Energy preferences through
-  HA before assuming.
+- Grid source of the native Energy dashboard: `sensor.merezha_spozhyto`, since
+  2026-09-02. It is the local template sensor built on LocalTuya DP 1 of the
+  inlet meter, with the anchor helpers bridging the first minutes after a
+  restart. It replaced the cloud `sensor.energy_meter_total_energy`, which had
+  been the last thing on the Energy dashboard that a Tuya token expiry could
+  freeze. Its statistics begin on 2026-08-23, so the panel shows no grid history
+  before that date; the cloud statistic still accrues untouched, and putting the
+  old id back in Energy preferences restores the full series.
+- `sensor.inverter_total_energy_import` is **not** the grid source: the Deye sits
+  downstream of the meter and never sees loads outside its branch. Keep it for
+  PV/battery/inverter detail only.
 - Inlet meter: local Tuya entities at `.219` provide fresher per-phase data.
 - EV charger: `.36`, dedicated dashboard and cumulative charging energy.
 - Deye logger: `.179`, TCP 8899, `Deye-Inverter`; its load can represent only the
   backup/essential circuit and must not be equated with whole-house demand.
 - Boiler helpers display power/energy but must not be recreated in YAML when they
   already exist as UI helpers.
+- Granny's boiler is switched **locally**: `switch.boiler_babusi_socket`
+  (LocalTuya), with the cloud `switch.smart_plug_socket_1` kept only as the sixth
+  and last retry in both night-tariff automations. Its instantaneous readings on
+  the Devices tab are local too. The one deliberate exception is the tile
+  "Спожито всього" and the utility meter `boiler_babusi_za_tarifom`, which still
+  read the cloud `sensor.smart_plug_total_energy`: the local
+  `sensor.boiler_babusi_energy` counts from a different origin (1.19 vs 1.908 kWh
+  on 2026-09-02), so swapping it in would break the accumulated total. Move that
+  one only together with a statistics migration.
 - Irrigation pump energy uses measured/confirmed pump power when available; do
   not replace an actual measurement with the nominal 1.1 kW label.
 - Well-pump power is the LocalTuya entity `sensor.t34_smart_plug_power_2` at
@@ -200,10 +217,15 @@ never pass through it. Measured confirmation: on 7 August the meter recorded
 
 So the meter — not the inverter — is the only source that sees everything bought
 from the grid, and it should become the single grid source, with the Deye kept for
-PV/battery/inverter-branch detail only. Blocking issue as of 2026-08-11:
-`sensor.energy_meter_total_energy` has had no statistics **since 9 August**, and
-the log shows `tuya_sharing: net work error = network error:(1010) token is
-expired`. Re-authenticate the Tuya integration before planning any of this.
+PV/battery/inverter-branch detail only.
+
+Done on 2026-09-02, and with the *local* meter sensor rather than the cloud one.
+The 2026-08-11 blocker (`sensor.energy_meter_total_energy` had no statistics
+since 9 August because of `tuya_sharing: network error:(1010) token is expired`)
+no longer applies to the Energy dashboard: `sensor.merezha_spozhyto` reads
+LocalTuya DP 1 over the LAN, so the same token expiry would now cost nothing
+here. Re-authentication is still worth doing, but it is no longer a
+prerequisite for anything on this panel.
 
 ## Troubleshooting missing daily energy
 

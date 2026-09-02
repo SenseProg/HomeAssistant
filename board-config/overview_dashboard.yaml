@@ -56,9 +56,10 @@ views:
         rows: 1
     # Бойлер бабусі - та сама розетка Tuya з вимірюванням, що й на вкладці
     # Бойлер. Плитка навмисне така сама, як у насоса поливу вище: перемикач
-    # унизу, щоб вмикати одним дотиком просто з Огляду.
+    # унизу, щоб вмикати одним дотиком просто з Огляду. Сутність локальна
+    # (LocalTuya): дотик до неї не залежить від хмари Tuya.
     - type: tile
-      entity: switch.smart_plug_socket_1
+      entity: switch.boiler_babusi_socket
       name: Бойлер бабусі
       icon: mdi:water-boiler
       color: red
@@ -338,12 +339,12 @@ views:
       grid_options:
         columns: full
     # Бойлер бабусі - розетка Tuya з вимірюванням, у яку він увімкнений.
-    # Кнопка перемикає живлення; чи справді гріє, видно за потужністю на
-    # вкладці Пристрої.
+    # Кнопка перемикає живлення локальним каналом; чи справді гріє, видно за
+    # потужністю на вкладці Пристрої.
     - type: button
       name: Бойлер бабусі
       icon: mdi:water-boiler
-      entity: switch.smart_plug_socket_1
+      entity: switch.boiler_babusi_socket
       tap_action:
         action: toggle
       grid_options:
