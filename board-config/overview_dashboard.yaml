@@ -47,7 +47,7 @@ views:
       above: 0
     tap_action:
       action: navigate
-      navigation_path: /pristroi-dashboard/alerts
+      navigation_path: /spovishchennia-zhurnal/zhurnal
   sections:
   # --- Секція 1 · Hero: привітання, погода, полив, тариф, NAS ---
   - type: grid
@@ -100,7 +100,7 @@ views:
            інакше статус прилипає до рядка про полив. #}
         {{ '\n' }}{% if ns.bad %}⚠️ {{ ns.bad | length }} {{ 'проблема' if ns.bad | length == 1 else 'проблеми' }}: {{ ns.bad | join('; ') }}{% else %}✅ Система: все гаразд{% endif %}
         {%- set novykh = states('sensor.spovishchennia_zhurnal') | int(0) -%}
-        {{ '\n' }}{% if novykh > 0 %}🔔 {{ novykh }} {{ 'нове сповіщення' if novykh == 1 else 'нових сповіщень' }} · [журнал](/pristroi-dashboard/alerts){% else %}🔕 Нових сповіщень немає · [журнал](/pristroi-dashboard/alerts){% endif %}
+        {{ '\n' }}{% if novykh > 0 %}🔔 {{ novykh }} {{ 'нове сповіщення' if novykh == 1 else 'нових сповіщень' }} · [журнал](/spovishchennia-zhurnal/zhurnal){% else %}🔕 Нових сповіщень немає · [журнал](/spovishchennia-zhurnal/zhurnal){% endif %}
         {%- if is_state('binary_sensor.vidkliuchennia_skoro', 'on') -%}
         {{ '\n' }}⚡ Планове відключення через {{ states('sensor.do_vidkliuchennia_hodyn') }} год · батарея {{ states('sensor.inverter_battery') }} % · [блекаут](/pristroi-dashboard/blackout)
         {%- endif %}

@@ -29,6 +29,7 @@
     export [--limit N] [--since-days D]     JSON для command_line-сенсора
     mark-read [--ts N] | mark-read --key K  усе донині / лише один запис
     stats                                   що всередині
+    backfill-keys                           ключі записам без ключа (до 02.09.2026)
     purge --days N                          прибрати старіше за N діб
 """
 
@@ -198,6 +199,25 @@ def cmd_mark_read(args: argparse.Namespace) -> None:
     print(json.dumps({"marked_until": ts, "unread": unread}))
 
 
+def cmd_backfill_keys(_: argparse.Namespace) -> None:
+    """Дописати ключ записам, зробленим до 02.09.2026 (без --key).
+
+    Ключ - md5 від "заголовок|текст", як рахує автоматизація notify_log_capture
+    (там ті самі, уже очищені рядки). Після цього старі непрочитані записи
+    можна повернути в панель HA і закривати по одному.
+    """
+    import hashlib
+
+    conn = connect()
+    rows = conn.execute("select id, title, message from notifications where key is null").fetchall()
+    for row_id, title, message in rows:
+        key = hashlib.md5(f"{title or ''}|{message or ''}".encode("utf-8")).hexdigest()
+        conn.execute("update notifications set key = ? where id = ?", (key, row_id))
+    conn.commit()
+    conn.close()
+    print(json.dumps({"backfilled": len(rows)}))
+
+
 def cmd_stats(_: argparse.Namespace) -> None:
     if not DB_PATH.is_file():
         print(json.dumps({"error": "no_db", "db": str(DB_PATH)}))
@@ -260,6 +280,9 @@ def main() -> None:
 
     p = sub.add_parser("stats")
     p.set_defaults(func=cmd_stats)
+
+    p = sub.add_parser("backfill-keys")
+    p.set_defaults(func=cmd_backfill_keys)
 
     p = sub.add_parser("purge")
     p.add_argument("--days", type=int, required=True)

@@ -67,9 +67,17 @@ which phone was actually reached.
   toggles with `secondary_info: last-triggered`; the acting ones stay under
   «Автоматизації». New alert automation = one entry in the right section of
   the right tab, plus its line in «Що вони повідомляють».
-- `Пристрої → Сповіщення` (`/pristroi-dashboard/alerts`): the history —
-  counts, the mark-read button, the folded list with 🔵 for unread, 📱/🔔
-  for push/panel.
+- The sidebar entry «Сповіщення» (`/spovishchennia-zhurnal/zhurnal`), right
+  next to HA's own bell: the history — counts, the mark-read button, the
+  folded list with 🔵 for unread, 📱/🔔 for push/panel. Source of truth is
+  `board-config/notifications_dashboard.yaml`; on the board it is a
+  **storage** dashboard pushed with
+  `scripts/lovelace_push.py notifications_dashboard.yaml spovishchennia-zhurnal`
+  (WebSocket `lovelace/dashboards/create` + `lovelace/config/save`), because
+  registering a YAML dashboard needs a restart the permission classifier
+  blocks. Deploy = copy the file, run the script; no reload. It used to be a
+  tab of «Пристрої» (`/pristroi-dashboard/alerts`) until the owner asked for
+  it in the sidebar on 2026-09-02.
 - Overview hero: a line "🔔 N нових сповіщень · журнал", and a badge over the
   page while N > 0.
 - `python mcp-server/cli.py notify-log` / MCP `ha_notify_log`: the same export

@@ -4791,31 +4791,47 @@ views:
         green: 40
       grid_options:
         columns: 8
+    # Миттєве споживання всього дому за лічильником вводу (прохання власника
+    # 02.09.2026). Це більше за «споживання від інвертора» нижче: сюди входить
+    # і те, що живиться повз Deye і при відключенні згасне одразу.
+    - type: gauge
+      entity: sensor.zagalne_navantazhennia
+      name: Споживання дому зараз
+      unit: кВт
+      min: 0
+      max: 15
+      needle: true
+      severity:
+        green: 0
+        yellow: 6
+        red: 11
+      grid_options:
+        columns: 8
     - type: tile
       entity: sensor.avtonomiia_batarei
       name: Автономія
       icon: mdi:battery-clock
       grid_options:
-        columns: 10
+        columns: 8
         rows: 1
     - type: tile
       entity: sensor.spozhyvannia_zaraz_kvt
-      name: Споживання
+      name: Споживання від інвертора
       icon: mdi:flash
       grid_options:
-        columns: 10
+        columns: 8
         rows: 1
     - type: tile
       entity: binary_sensor.svitlo_vidsutnie
       name: Мережа зникла
       grid_options:
-        columns: 10
+        columns: 8
         rows: 1
     - type: tile
       entity: binary_sensor.invertor_zviazok
       name: Зв'язок з інвертором
       grid_options:
-        columns: 10
+        columns: 8
         rows: 1
   # --- Секція 2 · Що вимкнеться без світла ---
   - type: grid
@@ -5159,83 +5175,6 @@ views:
       entities:
       - entity: sensor.inverter_battery
         name: Батарея, %
-- title: Сповіщення
-  path: alerts
-  icon: mdi:bell-outline
-  type: sections
-  max_columns: 4
-  dense_section_placement: true
-  sections:
-  # --- Секція 1 · Hero: скільки нових, і одна кнопка ---
-  # Джерело - власний журнал сповіщень (config/scripts/notify_log.py,
-  # notifications.db). Він ловить КОЖЕН виклик notify.* і
-  # persistent_notification.create, тому тут є і те, що прийшло на телефон,
-  # і те, що показала панель, і те, що зникло при рестарті.
-  - type: grid
-    column_span: 4
-    cards:
-    - type: markdown
-      grid_options:
-        columns: full
-      content: |-
-        {% set n = states('sensor.spovishchennia_zhurnal') | int(0) %}
-        {% set sohodni = state_attr('sensor.spovishchennia_zhurnal', 'today') | int(0) %}
-        {% set usoho = state_attr('sensor.spovishchennia_zhurnal', 'total') | int(0) %}
-        ## {{ '🔵 ' ~ n ~ ' нових' if n > 0 else '✅ Нових немає' }} · {{ sohodni }} за добу · {{ usoho }} у журналі
-        Прочитано до {{ state_attr('sensor.spovishchennia_zhurnal', 'last_read') }}. Записи лишаються назавжди: старі відповідають на «коли це почалося» і «чи було таке раніше».
-    - type: button
-      name: Позначити прочитаними
-      icon: mdi:email-open-outline
-      entity: input_button.spovishchennia_prochytano
-      show_state: false
-      tap_action:
-        action: perform-action
-        perform_action: input_button.press
-        target:
-          entity_id: input_button.spovishchennia_prochytano
-      grid_options:
-        columns: 12
-        rows: 1
-    - type: tile
-      entity: sensor.spovishchennia_zhurnal
-      name: Нових
-      icon: mdi:bell-badge-outline
-      grid_options:
-        columns: 12
-        rows: 1
-  # --- Секція 2 · Журнал ---
-  # Один запис на подію: script.spovistyty_vsikh шле той самий текст на три
-  # телефони, тому notify_log.py згортає сусідні дублі і віддає kopii.
-  # Кожен рядок списку - в один рядок Jinja: перенос усередині {% if %} у циклі
-  # ламає розмітку (пастка з dashboard-design).
-  - type: grid
-    column_span: 4
-    cards:
-    - type: heading
-      heading: Журнал
-      icon: mdi:history
-      grid_options:
-        columns: full
-    - type: markdown
-      grid_options:
-        columns: full
-      content: |-
-        {% set items = state_attr('sensor.spovishchennia_zhurnal', 'items') or [] %}
-        {% if items | count == 0 %}Журнал порожній або сенсор ще не оновився.{% endif %}
-        {% for it in items %}
-        - {{ '🔵' if it.nove else '▫️' }} **{{ it.chas[5:] }}** {{ '📱' if 'mobile_app' in (it.service or '') else '🔔' }} **{{ it.title }}**{{ ' ×' ~ it.kopii if (it.kopii | default(1) | int) > 1 else '' }} — {{ it.message }}
-        {% endfor %}
-    - type: markdown
-      text_only: true
-      grid_options:
-        columns: full
-      content: |-
-        <details><summary>Як читати</summary>
-
-        🔵 — нове, ще не позначене прочитаним. 📱 — пішло на телефони, 🔔 — показане на панелі Home Assistant. «×3» — той самий текст на три телефони, згорнуто в один рядок.
-        Кнопка «Позначити прочитаними» ставить одну мітку на весь журнал (поштова модель). Закриття сповіщення на панелі HA робить те саме автоматично.
-        Сенсор оновлюється раз на п'ять хвилин і одразу після натискання кнопки.
-        </details>
 - title: Зв'язок
   path: links
   icon: mdi:lan-connect
