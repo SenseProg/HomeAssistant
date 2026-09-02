@@ -2360,6 +2360,7 @@
         спроб. Це прямі втрати грошей, поки триває.'
   mode: single
 - id: svitlo_znyklo
+  initial_state: true
   alias: Світло - зникло
   description: Повідомляє всім, щойно зникла мережа, і одразу перелічує великі
     споживачі, які лишились увімкненими - поки вони працюють, батарея сідає
@@ -2419,6 +2420,7 @@
         {% if not uvimkneno | trim and not nevidomo | trim %}Великих споживачів не увімкнено.{% endif %}
   mode: single
 - id: svitlo_zyavylos
+  initial_state: true
   alias: Світло - з'явилось
   description: Парне повідомлення до попереднього, щоб не доводилось заходити в
     застосунок і перевіряти самому.
@@ -2437,6 +2439,7 @@
         споживання {{ states('sensor.spozhyvannia_zaraz_kvt') }} кВт.
   mode: single
 - id: bez_svitla_velyke_spozhyvannia
+  initial_state: true
   alias: Без світла - завелике споживання
   description: Поки немає мережі, кожен зайвий кіловат - це години автономії.
     Поріг і витримка беруться з input_number, тож їх можна змінити з панелі,
@@ -2461,6 +2464,7 @@
         {{ states('sensor.inverter_battery') }}%. Варто вимкнути зайве.
   mode: single
 - id: batareia_poperedzhennia
+  initial_state: true
   alias: Батарея - попередження
   description: Перший рівень тривоги. Спрацьовує лише без світла - при мережі
     просадка заряду нічого не означає.
@@ -2481,6 +2485,7 @@
         {{ states('sensor.spozhyvannia_zaraz_kvt') }} кВт. Світла ще немає.
   mode: single
 - id: batareia_krytychno
+  initial_state: true
   alias: Батарея - критичний рівень
   description: Другий рівень, зі звуком навіть у тихому режимі. Нижче цього
     інвертор невдовзі почне вимикати навантаження сам.
@@ -2502,6 +2507,7 @@
       critical: true
   mode: single
 - id: bez_svitla_vymknuty_vazhke
+  initial_state: true
   alias: Без світла - вимкнути важкі споживачі
   description: >-
     Вимикає важкі споживачі, поки будинок живиться від батареї. Тригерів три,
@@ -2596,10 +2602,15 @@
   - action: fan.turn_off
     target:
       entity_id:
-      - fan.2_floor_supply_fan
-      - fan.2_floor_extract_fan
       - fan.siku_blauberg_fan_192_168_50_123
       - fan.siku_blauberg_fan_192_168_50_27
+    continue_on_error: true
+  # PRANA окремо і не через fan.turn_off. Перевірено живим тестом 01.09.2026:
+  # прилад має третій канал bounded, якого немає в Home Assistant, і саме він
+  # вимикає його цілком. Команда ж fan.turn_off на потоці supply чи extract
+  # поводиться як перемикач - на вже вимкненому приладі вона його вмикає, тож
+  # два виклики поспіль лишали вентиляцію працювати на батареї.
+  - action: rest_command.prana_stop
     continue_on_error: true
   # Велику пральну машину не вимикають, а ставлять на паузу: знеструмлення
   # посеред циклу лишає воду в баку. Пауза зупиняє двигун і нагрів, а цикл
@@ -2630,6 +2641,7 @@
           Увімкнути назад можна на панелі - автоматика цього не робить.
   mode: single
 - id: svitlo_zyavylos_nahadaty_boiler
+  initial_state: true
   alias: Світло - нагадати про бойлер
   description: >-
     Назад бойлер сам не вмикається - рішення, коли гріти воду, лишається за
@@ -2680,6 +2692,7 @@
         Не забудьте дістати білизну.
   mode: single
 - id: bez_svitla_pralka_pratsiuie
+  initial_state: true
   alias: Без світла - пральна машина працює
   description: >-
     Окрема автоматизація, а не рядок у переліку важких споживачів: пральну
@@ -2715,6 +2728,7 @@
         Зупиняти цикл автоматика не буде - вода лишиться в баку.
   mode: single
 - id: inverter_bez_zviazku
+  initial_state: true
   alias: Інвертор - немає звʼязку
   description: >-
     Десять хвилин витримки навмисне: коротка втрата пакета трапляється щодня і
@@ -2742,6 +2756,7 @@
       critical: true
   mode: single
 - id: inverter_zviazok_vidnovleno
+  initial_state: true
   alias: Інвертор - звʼязок відновлено
   description: Парне повідомлення, щоб було видно, що моніторинг знову бачить дім.
   triggers:
@@ -2764,4 +2779,83 @@
         {{ states('sensor.inverter_battery') }}%, мережа
         {{ 'є' if is_state('binary_sensor.inverter_grid', 'on') else 'відсутня' }}.
         Сповіщення про світло знову працюють.
+  mode: single
+- id: storozh_hotovnist_do_vidkliuchennia
+  initial_state: true
+  alias: Сторож - готовність до відключення
+  description: >-
+    Перевіряє те, чого не видно у YAML - чи всі автоматизації блекауту справді
+    увімкнені і чи на звязку прилади, які вони мають гасити. Вимкнена
+    автоматизація виглядає точнісінько як робоча скрізь, окрім свого стану, а
+    розетка поза Wi-Fi може тримати реле замкненим і живити прилад далі.
+  triggers:
+  - trigger: time_pattern
+    hours: /6
+  - trigger: homeassistant
+    event: start
+  conditions: []
+  actions:
+  # Пауза після старту: інтеграції піднімаються не миттєво, і без неї сторож
+  # доповідав би про недоступність усього підряд.
+  - delay:
+      minutes: 5
+  # Два прості рядки, а не один JSON: Home Assistant рендерить шаблони з
+  # нативною типізацією, тож JSON-рядок повертається вже словником і from_json
+  # на ньому падає - умова тихо стає хибною. Перевірено 01.09.2026.
+  - variables:
+      vymkneni: >-
+        {% set autos = [
+          "automation.svitlo_zniklo",
+          "automation.svitlo_z_iavilos",
+          "automation.bez_svitla_vimknuti_vazhki_spozhivachi",
+          "automation.bez_svitla_zavelike_spozhivannia",
+          "automation.bez_svitla_pralna_mashina_pratsiuie",
+          "automation.batareia_poperedzhennia",
+          "automation.batareia_kritichnii_riven",
+          "automation.svitlo_nagadati_pro_boiler",
+          "automation.invertor_nemaie_zviazku",
+          "automation.invertor_zviazok_vidnovleno" ] %}
+        {% set ns = namespace(l=[]) %}
+        {% for e in autos %}
+          {% if not is_state(e, "on") %}
+            {% set ns.l = ns.l + [state_attr(e, "friendly_name") or e] %}
+          {% endif %}
+        {% endfor %}
+        {{ ns.l | join(", ") }}
+      bez_zviazku: >-
+        {% set prylady = [
+          "switch.terneo_1_power",
+          "switch.terneo_2_power",
+          "switch.sushka_socket",
+          "switch.mala_pralna_mashina_socket",
+          "switch.t34_smart_plug_switch_1_2",
+          "switch.mini_switch_k601_2_switch_1_2",
+          "switch.2_floor_heater",
+          "fan.siku_blauberg_fan_192_168_50_123",
+          "fan.siku_blauberg_fan_192_168_50_27",
+          "water_heater.144036023323246_water_heater" ] %}
+        {% set ns = namespace(l=[]) %}
+        {% for e in prylady %}
+          {% if states(e) in ["unavailable", "unknown"] %}
+            {% set ns.l = ns.l + [state_attr(e, "friendly_name") or e] %}
+          {% endif %}
+        {% endfor %}
+        {{ ns.l | join(", ") }}
+  - if:
+    - condition: template
+      value_template: >-
+        {{ vymkneni | trim != "" or bez_zviazku | trim != "" }}
+    then:
+    - action: script.spovistyty_vsikh
+      data:
+        title: ⚠️ Автоматика відключення не в повній готовності
+        message: >-
+          {%- if vymkneni | trim != "" %}
+          Вимкнені автоматизації - {{ vymkneni }}.
+          Поки вони вимкнені, під час відключення нічого не спрацює.
+          {%- endif %}
+          {%- if bez_zviazku | trim != "" %}
+          Поза звязком - {{ bez_zviazku }}.
+          Команда вимкнення до них не дійде, а реле може лишатись замкненим.
+          {%- endif %}
   mode: single

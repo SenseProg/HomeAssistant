@@ -1770,6 +1770,21 @@ counter:
 # Вибір альбому для фотозаставки телевізора. Назви мусять збігатися з
 # іменами списків у /userdata/hass/tv-photos - скрипт-вибірник шукає файл
 # <назва>.list і мовчки відкочується на всі роки, якщо такого немає.
+
+# --- PRANA: справжнє вимикання ---
+# Прилад має три канали: supply, extract і bounded. Home Assistant показує
+# лише перші два, а вимикає прилад цілком саме bounded. Команда fan.turn_off
+# на окремому потоці поводиться як перемикач: на вимкненому приладі вона його
+# вмикає. Тому для скидання навантаження PRANA гаситься напряму по HTTP.
+rest_command:
+  prana_stop:
+    url: "http://192.168.50.246/setSpeedIsOn"
+    method: POST
+    content_type: "application/json"
+    payload: >-
+      {"value": false, "fanType": "bounded"}
+    timeout: 10
+
 input_select:
   tv_zastavka_album:
     name: Заставка телевізора - альбом
