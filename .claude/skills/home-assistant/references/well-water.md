@@ -101,7 +101,23 @@ coefficient; each subsequent reading refines it.
 The `sverdlovina-dashboard` dashboard, the reading log, and several helpers are
 storage-managed. Inspect and change them only through supported Home Assistant
 UI/API flows in an authorized session. Never inspect `.storage` directly to
-recover their configuration.
+recover their configuration. Since 2026-09-02 the dashboard's source of truth
+is `board-config/sverdlovina_dashboard.yaml`, taken through the WebSocket
+`lovelace/config` call and pushed back with
+`scripts/lovelace_push.py sverdlovina_dashboard.yaml sverdlovina-dashboard`;
+editing it in the UI and forgetting the file would reintroduce drift, so pull
+it through the API before editing.
+
+Badges over the water page (owner's request the same day: "is the pump even
+connected right now, and what did the last run give"):
+`binary_sensor.nasos_sverdlovini_zviazok` (plug answers locally),
+`switch.t34_smart_plug_switch_1_2` (relay), `input_boolean.nasos_sverdlovini_pratsiuie`
+(running), `sensor.nasos_sverdlovini_ostannii_pusk` (trigger template: state =
+start time of the last run, attributes `voda_txt`, `tryvalist_txt`,
+`enerhiia_kvtg`, `tryvaie`) and `counter.nasos_sverdlovini_zapusky`. The
+per-run litres come from the Riemann integrator delta × the current
+coefficient, so a short run is a lower bound — the integrator books part of
+the energy after the stop.
 
 The current calibrated coefficient is exposed in both directions on the water
 dashboard: litres per kWh and kWh per cubic metre. `well-daily-water-card`

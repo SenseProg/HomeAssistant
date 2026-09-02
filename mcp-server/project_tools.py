@@ -73,6 +73,7 @@ SYNC_TARGETS: dict[str, str] = {
     # Storage-дашборд журналу сповіщень: джерело правди - файл, на плату він
     # їде через lovelace_push.py, а не через lovelace.dashboards (рестарт).
     "board-config/notifications_dashboard.yaml": "/userdata/hass/config/notifications_dashboard.yaml",
+    "board-config/sverdlovina_dashboard.yaml": "/userdata/hass/config/sverdlovina_dashboard.yaml",
     # systemd. Три NFS-маунти свідомо не тут: їхні імена містять
     # systemd-екранування зі зворотним слешем
     # (userdata-hass-config\x2dstandalone-backups.mount), а такий символ

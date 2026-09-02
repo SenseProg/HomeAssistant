@@ -1,0 +1,370 @@
+# Дашборд «Свердловина» (облік води). Забрано з .storage у Git 02.09.2026 через
+# WebSocket lovelace/config (не читанням файла). На платі лишається
+# STORAGE-дашбордом url_path sverdlovina-dashboard; деплой -
+# scripts/lovelace_push.py <цей файл> sverdlovina-dashboard.
+#
+# Бейджі над сторінкою (прохання власника 02.09): зв'язок з розеткою T34,
+# живлення насоса, чи працює зараз, останній пуск (час · набрав · тривалість)
+# і пусків сьогодні. Джерело - template-сенсори в configuration.yaml, блок
+# «Насос свердловини: зв'язок і останній пуск».
+title: Свердловина
+views:
+- dense_section_placement: true
+  icon: mdi:water-pump
+  max_columns: 4
+  path: well
+  sections:
+  - cards:
+    - grid_options:
+        columns: full
+      heading: Розрахункова витрата води й калібрування
+      icon: mdi:water
+      type: heading
+    - type: tile
+      entity: input_boolean.sverdlovina_sekundomir
+      name: Секундомір насоса
+      icon: mdi:timer-outline
+      color: orange
+      features_position: bottom
+      features:
+      - type: toggle
+      grid_options:
+        columns: full
+        rows: 1
+    - type: markdown
+      grid_options:
+        columns: full
+      content: '{% set r = states(''input_text.sverdlovina_zamir_rezultat'') %}
+
+        **Ручний замір.** Увімкніть у мить, коли насос запустився, вимкніть коли стих. Система порівняє ваш час зі своїм і покаже, яку частку пуску вона взагалі бачить.
+
+
+        {% if r in [''unknown'',''unavailable'',''''] %}_Замірів ще не було._{% else %}**Останній замір:** {{ r }}{% endif %}'
+    - content: '{% set k = states(''input_number.sverdlovina_koefitsiient_vodi'') | float(0) %}
+
+        {% set w = states(''input_number.sverdlovina_rozrakhunkova_voda'') | float(0) %}
+
+        {% set cal = state_attr(''sensor.zhurnal_pokaznykiv_vody'', ''calibration'') or {} %}
+
+        {% set baseline = cal.get(''baseline_value'', 814.79) | float(814.79) %}
+
+        {% set estimated_meter = baseline + w %}
+
+        ### Поточне калібрування
+
+
+        | Розрахунок | Значення |
+
+        |---|---:|
+
+        | **1 кВт·год → вода** | **{{ ''{:,.0f}''.format(k * 1000).replace('','', '' '') }} л** |
+
+        | **1 м³ води → енергія** | **{{ ''%.3f'' | format(1 / k) if k > 0 else ''—'' }} кВт·год** |
+
+        | Контрольна точка | {{ ''%.2f'' | format(baseline) }} м³ |
+
+        | Вода від контрольної точки | {{ ''%.3f'' | format(w) }} м³ |
+
+        | Розрахунковий показник лічильника | **{{ ''%.3f'' | format(estimated_meter) }} м³** |
+
+
+        Коефіцієнт уточнюється після кожного нового фактичного показника механічного лічильника.
+
+
+        На графіку нижче поки показані **розрахункові** значення. Фактичну добову середню за механічним лічильником додамо після наступного контрольного зняття.'
+      grid_options:
+        columns: full
+      type: markdown
+    - color: cyan
+      entity: input_number.sverdlovina_rozrakhunkova_voda
+      grid_options:
+        columns: 6
+        rows: 1
+      hold_action:
+        action: none
+      icon: mdi:water
+      name: Вода від контрольної точки
+      tap_action:
+        action: none
+      type: tile
+    - entity: sensor.t34_smart_plug_total_energy
+      grid_options:
+        columns: 6
+        rows: 1
+      icon: mdi:counter
+      name: Штатний Tuya-лічильник (контроль)
+      type: tile
+    - coefficient_entity: input_number.sverdlovina_koefitsiient_vodi
+      color: '#ff9800'
+      energy_entity: sensor.t34_smart_plug_nasos_sverdlovini_spozhito
+      grid_options:
+        columns: full
+      title: Розрахункова витрата води по годинах · останні 24 години
+      type: custom:well-hourly-water-card
+      log_entity: sensor.zhurnal_pokaznykiv_vody
+    - aggregate_func: delta
+      entities:
+      - entity: input_number.sverdlovina_rozrakhunkova_voda
+        name: м³
+      grid_options:
+        columns: 6
+      group_by: date
+      hours_to_show: 168
+      icon: mdi:calendar-week
+      name: Вода · тиждень (по днях)
+      points_per_hour: 0.0416667
+      show:
+        fill: false
+        graph: bar
+      type: custom:mini-graph-card
+    - coefficient_entity: input_number.sverdlovina_koefitsiient_vodi
+      days: 30
+      energy_entity: sensor.t34_smart_plug_nasos_sverdlovini_spozhito
+      grid_options:
+        columns: full
+      time_zone: Europe/Kyiv
+      title: Розрахункова витрата води по днях · останні 30 днів
+      type: custom:well-daily-water-card
+      log_entity: sensor.zhurnal_pokaznykiv_vody
+    - aggregate_func: delta
+      entities:
+      - entity: input_number.sverdlovina_rozrakhunkova_voda
+        name: м³
+      grid_options:
+        columns: 6
+      group_by: interval
+      hours_to_show: 8760
+      icon: mdi:calendar
+      name: Вода · рік (приблизно по місяцях)
+      points_per_hour: 0.0013889
+      show:
+        fill: false
+        graph: bar
+      type: custom:mini-graph-card
+    column_span: 4
+    type: grid
+  - cards:
+    - grid_options:
+        columns: full
+      heading: Свердловина · стан і методика
+      icon: mdi:water-pump
+      type: heading
+    - content: '{% set running = is_state(''input_boolean.nasos_sverdlovini_pratsiuie'', ''on'') %}
+
+        {% set p = states(''sensor.t34_smart_plug_power'') | float(0) %}
+
+        {% set k = states(''input_number.sverdlovina_koefitsiient_vodi'') | float(0) %}
+
+        {% set w = states(''input_number.sverdlovina_rozrakhunkova_voda'') | float(0) %}
+
+        {% set cal = state_attr(''sensor.zhurnal_pokaznykiv_vody'', ''calibration'') or {} %}
+
+        {% set baseline = cal.get(''baseline_value'', 814.79) | float(814.79) %}
+
+        {% set base_iso = cal.get(''baseline_iso'', '''') %}
+
+        {% set offset = cal.get(''energy_offset_kwh'', 0.01748706) | float(0.01748706) %}
+
+        ## {% if running %}🟢 Насос качає — {{ p | round(0) }} Вт{% else %}⚪ Насос зараз не качає{% endif %}
+
+
+        Механічна база: **{{ ''%.2f'' | format(baseline) }} м³**{% if base_iso %} від {{ as_local(as_datetime(base_iso)).strftime(''%d.%m.%Y'') }}{% endif %}. Власний накопичувач рахує енергію насоса з поправкою **{{ ''%.5f'' | format(offset) }} кВт·год** на запуски після контрольного показника, але до його створення.
+
+
+        Коефіцієнт: {% if k > 0 %}**{{ k | round(3) }} м³/кВт·год** · розраховано води **{{ w | round(3) }} м³**{% else %}**очікує наступного механічного показника**. Після його збереження система автоматично визначить м³/кВт·год і почне будувати графіки води.{% endif %}
+
+
+        Формула: **вода = спожита енергія × коефіцієнт м³/кВт·год**. Кожен новий механічний показник уточнює коефіцієнт за всім накопиченим інтервалом.'
+      grid_options:
+        columns: full
+      type: markdown
+    - color: blue
+      entity: switch.t34_smart_plug_switch_1_2
+      grid_options:
+        columns: 6
+        rows: 1
+      icon: mdi:water-pump
+      name: Живлення насоса
+      type: tile
+    - color: green
+      entity: input_boolean.nasos_sverdlovini_pratsiuie
+      grid_options:
+        columns: 6
+        rows: 1
+      hold_action:
+        action: none
+      icon: mdi:pump
+      name: Насос працює (>20 Вт)
+      tap_action:
+        action: none
+      type: tile
+    - entity: sensor.t34_smart_plug_power
+      grid_options:
+        columns: 6
+        rows: 1
+      icon: mdi:flash
+      name: Моментальна потужність
+      type: tile
+    - entity: sensor.t34_smart_plug_nasos_sverdlovini_spozhito
+      grid_options:
+        columns: 6
+        rows: 1
+      icon: mdi:counter
+      name: Власний лічильник енергії
+      type: tile
+    column_span: 4
+    type: grid
+  - cards:
+    - grid_options:
+        columns: full
+      heading: Додати механічний показник
+      icon: mdi:counter
+      type: heading
+    - content: '{% set d = states(''input_datetime.data_ostannogo_pokaznika_vodi'') %}
+
+        {% set m = states(''input_number.lichilnik_vodi_sverdlovini'') | float(0) %}
+
+        {% set k = states(''input_number.sverdlovina_koefitsiient_vodi'') | float(0) %}
+
+        ### Останній збережений запис
+
+
+        | Дата і час | Механічний показник | Коефіцієнт |
+
+        |---|---:|---:|
+
+        | {{ as_timestamp(d) | timestamp_custom(''%d.%m.%Y %H:%M:%S'') if d not in [''unknown'',''unavailable'',''''] else ''—'' }} | **{{ ''%.3f'' | format(m) }} м³** | {{ (''%.3f'' | format(k)) ~ '' м³/кВт·год'' if k > 0 else ''очікує калібрування'' }} |'
+      grid_options:
+        columns: full
+      type: markdown
+    column_span: 2
+    type: grid
+  - cards:
+    - grid_options:
+        columns: full
+      heading: Таблиця та місячна динаміка води
+      icon: mdi:table-large
+      type: heading
+    - type: custom:well-readings-log-card
+      entity: sensor.zhurnal_pokaznykiv_vody
+      title: Показники механічного лічильника
+      limit: 10
+      grid_options:
+        columns: full
+    - coefficient_entity: input_number.sverdlovina_koefitsiient_vodi
+      estimated_entity: input_number.sverdlovina_rozrakhunkova_voda
+      grid_options:
+        columns: full
+      title: Середня добова витрата за календарними місяцями
+      type: custom:well-monthly-water-card
+      entity: sensor.zhurnal_pokaznykiv_vody
+    column_span: 4
+    type: grid
+  - cards:
+    - grid_options:
+        columns: full
+      heading: Електрика насоса
+      icon: mdi:chart-line
+      type: heading
+    - entities:
+      - entity: sensor.t34_smart_plug_power
+        name: Потужність, Вт
+      hours_to_show: 12
+      title: Потужність насоса · останні 12 годин (без усереднення)
+      type: history-graph
+    - aggregate_func: max
+      entities:
+      - entity: sensor.t34_smart_plug_power
+        name: Потужність
+      grid_options:
+        columns: full
+      hours_to_show: 24
+      icon: mdi:flash
+      line_width: 2
+      name: Пікова потужність у 5-хв інтервалах · 24 години
+      points_per_hour: 12
+      show:
+        average: true
+        extrema: true
+        fill: fade
+      type: custom:mini-graph-card
+    - chart_type: bar
+      days_to_show: 30
+      entities:
+      - entity: sensor.t34_smart_plug_nasos_sverdlovini_spozhito
+        name: кВт·год/день
+      grid_options:
+        columns: full
+      period: day
+      stat_types:
+      - change
+      title: Споживання енергії по днях
+      type: statistics-graph
+    column_span: 2
+    type: grid
+  - cards:
+    - grid_options:
+        columns: full
+      heading: Запуски насоса
+      icon: mdi:timeline-clock
+      type: heading
+    - color: '#00bcd4'
+      entity: input_boolean.nasos_sverdlovini_pratsiuie
+      grid_options:
+        columns: full
+      hours_to_show: 24
+      title: Робота насоса · 24 години
+      type: custom:well-pump-runs-card
+    - type: custom:well-pump-log-card
+      title: Пуски насоса · деталізація
+      entity: input_boolean.nasos_sverdlovini_pratsiuie
+      energy_entity: sensor.t34_smart_plug_nasos_sverdlovini_spozhito
+      coefficient_entity: input_number.sverdlovina_koefitsiient_vodi
+      hours_to_show: 24
+      limit: 20
+      grid_options:
+        columns: full
+    - color: '#00bcd4'
+      entity: input_boolean.nasos_sverdlovini_pratsiuie
+      grid_options:
+        columns: full
+      hours_to_show: 168
+      title: Робота насоса · 7 днів
+      type: custom:well-pump-runs-card
+    column_span: 2
+    type: grid
+  title: Облік води
+  type: sections
+  badges:
+  - type: entity
+    entity: binary_sensor.nasos_sverdlovini_zviazok
+    name: Зв'язок з розеткою
+    show_name: true
+    show_state: true
+  - type: entity
+    entity: switch.t34_smart_plug_switch_1_2
+    name: Живлення насоса
+    icon: mdi:power-plug
+    show_name: true
+    show_state: true
+  - type: entity
+    entity: input_boolean.nasos_sverdlovini_pratsiuie
+    name: Насос працює
+    icon: mdi:water-pump
+    show_name: true
+    show_state: true
+  - type: entity
+    entity: sensor.nasos_sverdlovini_ostannii_pusk
+    name: Останній пуск
+    show_name: true
+    show_state: true
+    state_content:
+    - state
+    - voda_txt
+    - tryvalist_txt
+    color: teal
+  - type: entity
+    entity: counter.nasos_sverdlovini_zapusky
+    name: Пусків сьогодні
+    show_name: true
+    show_state: true

@@ -543,6 +543,67 @@ template:
           {% set h = states('sensor.do_vidkliuchennia_hodyn') | float(99) %}
           {{ is_state_attr('sensor.do_vidkliuchennia_hodyn', 'typ', 'планове') and 0 <= h <= 3 }}
 
+  # --- Насос свердловини: зв'язок і останній пуск (02.09.2026, бейджі «Обліку води») ---
+  #
+  # Власник: «не зрозуміло, чи підключений зараз насос і в якому стані; показати
+  # останній запуск і скільки набрав». Зв'язок - чи віддає розетка T34 локальну
+  # потужність. Останній пуск - тригерний сенсор: на старті запам'ятовує час і
+  # показ інтегратора енергії, на зупинці рахує тривалість, енергію і воду за
+  # чинним коефіцієнтом (м³/кВт·год × 1000). Стан - час старту, решта в
+  # атрибутах; voda_txt і tryvalist_txt - готові рядки для бейджа.
+  # Інтегратор Riemann на короткому пуску дораховує частину енергії вже після
+  # зупинки, тому «набрав» за один пуск - оцінка знизу; добові суми точні.
+  - binary_sensor:
+      - name: Nasos sverdlovini zviazok
+        unique_id: well_pump_local_link
+        device_class: connectivity
+        icon: mdi:power-socket-eu
+        state: "{{ has_value('sensor.t34_smart_plug_power_2') }}"
+  - trigger:
+      - trigger: state
+        entity_id: input_boolean.nasos_sverdlovini_pratsiuie
+        from: 'off'
+        to: 'on'
+        id: start
+      - trigger: state
+        entity_id: input_boolean.nasos_sverdlovini_pratsiuie
+        from: 'on'
+        to: 'off'
+        id: stop
+    sensor:
+      - name: Nasos sverdlovini ostannii pusk
+        unique_id: well_pump_last_run
+        icon: mdi:water-pump
+        state: >-
+          {% if trigger.id == 'start' %}{{ now().strftime('%H:%M') }}
+          {% elif this is defined and this.state not in ['unknown', 'unavailable'] %}{{ this.state }}
+          {% else %}{{ now().strftime('%H:%M') }}{% endif %}
+        attributes:
+          pochatok: >-
+            {% if trigger.id == 'start' %}{{ now().isoformat() }}
+            {% else %}{{ this.attributes.pochatok if this is defined else now().isoformat() }}{% endif %}
+          enerhiia_start: >-
+            {% if trigger.id == 'start' %}{{ states('sensor.t34_smart_plug_nasos_sverdlovini_spozhito') | float(0) }}
+            {% else %}{{ this.attributes.enerhiia_start if this is defined else 0 }}{% endif %}
+          tryvaie: "{{ trigger.id == 'start' }}"
+          tryvalist_s: >-
+            {% if trigger.id == 'stop' and this is defined and this.attributes.pochatok %}
+              {{ (now().timestamp() - (this.attributes.pochatok | as_timestamp(0))) | round(0) | int }}
+            {% else %}{{ this.attributes.tryvalist_s if this is defined and this.attributes.tryvalist_s is defined else 0 }}{% endif %}
+          enerhiia_kvtg: >-
+            {% if trigger.id == 'stop' and this is defined %}
+              {{ [(states('sensor.t34_smart_plug_nasos_sverdlovini_spozhito') | float(0)) - (this.attributes.enerhiia_start | float(0)), 0] | max | round(4) }}
+            {% else %}{{ this.attributes.enerhiia_kvtg if this is defined and this.attributes.enerhiia_kvtg is defined else 0 }}{% endif %}
+          voda_l: >-
+            {% if trigger.id == 'stop' and this is defined %}
+              {{ (([(states('sensor.t34_smart_plug_nasos_sverdlovini_spozhito') | float(0)) - (this.attributes.enerhiia_start | float(0)), 0] | max) * (states('input_number.sverdlovina_koefitsiient_vodi') | float(0.802)) * 1000) | round(0) | int }}
+            {% else %}{{ this.attributes.voda_l if this is defined and this.attributes.voda_l is defined else 0 }}{% endif %}
+          voda_txt: >-
+            {% if trigger.id == 'start' %}качає…{% else %}{{ ((([(states('sensor.t34_smart_plug_nasos_sverdlovini_spozhito') | float(0)) - (this.attributes.enerhiia_start | float(0)), 0] | max) * (states('input_number.sverdlovina_koefitsiient_vodi') | float(0.802)) * 1000) | round(0) | int) if this is defined else 0 }} л{% endif %}
+          tryvalist_txt: >-
+            {% if trigger.id == 'stop' and this is defined and this.attributes.pochatok %}{{ (now().timestamp() - (this.attributes.pochatok | as_timestamp(0))) | round(0) | int }} с
+            {% else %}{{ (this.attributes.tryvalist_s if this is defined and this.attributes.tryvalist_s is defined else 0) }} с{% endif %}
+
   # --- Канали зв'язку: локально / хмара / інвертор (додано 02.09.2026) ---
   #
   # Відповідь на «не зрозуміло, який пристрій хмарний, а який локальний, і що
