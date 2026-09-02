@@ -16,13 +16,25 @@ Deye logger .179 (Solarman, TCP 8899)
   -> sensor.inverter_battery (%)
 ```
 
-Everything hangs on the logger. When it is unreachable (2026-09-02: no ping,
-port closed, 202 inverter entities `unavailable`), `svitlo_vidsutnie` reads
-`off` — "grid present" — purely because it has no data, `spozhyvannia_zaraz_kvt`
-reads 0, and none of the outage automations can fire. `binary_sensor.invertor_zviazok`
-(template, `has_value('sensor.inverter_battery')`) exists so that the Overview
-hero, the badges and `cli.py health` say this out loud instead of pretending the
-grid is fine.
+Until the evening of 2026-09-02 everything hung on the logger. When it was
+unreachable (that day 10:22–19:06: no ping, port closed, 202 inverter entities
+`unavailable`), `svitlo_vidsutnie` read `off` — "grid present" — purely because
+it had no data. `binary_sensor.invertor_zviazok` (template,
+`has_value('sensor.inverter_battery')`) exists so that the Overview hero, the
+badges and `cli.py health` say this out loud instead of pretending the grid is
+fine.
+
+**Second witness (owner's request, 2026-09-02).** The inlet meter at `.219`
+is polled locally and is powered by the grid, so a voltage on any phase proves
+the grid is there even while the inverter is silent. `svitlo_vidsutnie` now
+falls back to it: inverter data → inverter rule; else meter answering →
+`max(phase voltages) < 100 V`; else `false` (unknown). Helpers:
+`binary_sensor.lichylnyk_zviazok` (meter answers locally),
+`sensor.merezha_napruha_za_lichylnykom` (highest phase, V) and
+`sensor.merezha_dzherelo` (інвертор / лічильник / невідомо — who is testifying
+right now). The Blackout page shows all of them as interactive tiles under
+«Умови блекауту». Battery %, autonomy and load shedding still need the
+inverter; the meter only answers "is there grid".
 
 The inverter watchdog (`inverter_bez_zviazku`, 10 min of `unavailable`) pushes a
 warning that names exactly this consequence; `inverter_zviazok_vidnovleno` pairs

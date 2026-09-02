@@ -619,6 +619,14 @@ template:
   #
   # Півхвилини затримки в обидва боки - щоб коротке блимання не розсилало
   # людям пару повідомлень підряд.
+  #
+  # Другий свідок - лічильник вводу (додано 02.09.2026 на прохання власника).
+  # Того дня логер Deye мовчав з 10:22 до 19:06, і сенсор показував «світло є»
+  # лише тому, що не мав даних. Лічильник .219 живиться від мережі і опитується
+  # локально: якщо він віддає напругу на будь-якій фазі - світло є, хоч би що
+  # там з інвертором. Якщо мовчать обидва - стан невідомий, і сенсор лишається
+  # off, а hero «Блекауту» каже про це прямо. Хто саме свідчить зараз, видно в
+  # sensor.merezha_dzherelo нижче.
   - binary_sensor:
       - name: Svitlo vidsutnie
         unique_id: svitlo_vidsutnie
@@ -627,8 +635,45 @@ template:
         delay_on: "00:00:30"
         delay_off: "00:00:30"
         state: >-
-          {{ is_state('binary_sensor.inverter_grid', 'off')
-             and (states('sensor.inverter_grid_frequency') | float(50)) < 45 }}
+          {% if has_value('binary_sensor.inverter_grid') %}
+            {{ is_state('binary_sensor.inverter_grid', 'off')
+               and (states('sensor.inverter_grid_frequency') | float(50)) < 45 }}
+          {% elif is_state('binary_sensor.lichylnyk_zviazok', 'on') %}
+            {{ (states('sensor.merezha_napruha_za_lichylnykom') | float(0)) < 100 }}
+          {% else %}
+            false
+          {% endif %}
+      # Чи відповідає лічильник вводу локально (LocalTuya, .219). Саме цей
+      # прапорець робить лічильник другим свідком: без нього напруга «0» і
+      # напруга «невідомо» виглядали б однаково.
+      - name: Lichylnyk zviazok
+        unique_id: meter_local_link
+        device_class: connectivity
+        icon: mdi:meter-electric-outline
+        state: >-
+          {{ has_value('sensor.energy_meter_phase_a_voltage_2')
+             or has_value('sensor.energy_meter_phase_b_voltage_2')
+             or has_value('sensor.energy_meter_phase_c_voltage_2') }}
+  - sensor:
+      # Найвища з трьох фаз: для питання «чи є світло» досить однієї живої фази.
+      - name: Merezha napruha za lichylnykom
+        unique_id: grid_voltage_by_meter
+        unit_of_measurement: "V"
+        device_class: voltage
+        state_class: measurement
+        icon: mdi:sine-wave
+        state: >-
+          {{ [states('sensor.energy_meter_phase_a_voltage_2') | float(0),
+              states('sensor.energy_meter_phase_b_voltage_2') | float(0),
+              states('sensor.energy_meter_phase_c_voltage_2') | float(0)] | max | round(0) }}
+        availability: "{{ is_state('binary_sensor.lichylnyk_zviazok', 'on') }}"
+      # Хто зараз свідчить про мережу: інвертор (головний), лічильник (запасний)
+      # або ніхто. Плитка на «Блекауті» і умова в hero.
+      - name: Merezha dzherelo
+        unique_id: grid_truth_source
+        icon: mdi:source-branch
+        state: >-
+          {% if has_value('binary_sensor.inverter_grid') %}інвертор{% elif is_state('binary_sensor.lichylnyk_zviazok', 'on') %}лічильник{% else %}невідомо{% endif %}
   # Те саме навантаження, що й sensor.inverter_load_power, тільки в кіловатах:
   # поріг у налаштуваннях теж у кіловатах, а numeric_state порівнює числа як є,
   # без перерахунку одиниць.

@@ -4765,8 +4765,14 @@ views:
         {% set load = states('sensor.spozhyvannia_zaraz_kvt') %}
         {% set avt = states('sensor.avtonomiia_batarei') %}
         {% set since = states.binary_sensor.svitlo_vidsutnie.last_changed if states.binary_sensor.svitlo_vidsutnie else none %}
-        {% if not inv %}## ⚠️ Інвертор не відповідає — стан мережі невідомий
-        Логер Deye мовчить з {{ (states.sensor.inverter_battery.last_changed | as_local).strftime('%d.%m %H:%M') if states.sensor.inverter_battery else '—' }}. Поки так, сповіщення про світло, пороги батареї і автовимикання **не працюють**: «світло є» нижче означає лише «даних немає». Найчастіше допомагає перезапуск інвертора.
+        {% set src = states('sensor.merezha_dzherelo') %}
+        {% set inv_since = (states.sensor.inverter_battery.last_changed | as_local).strftime('%d.%m %H:%M') if states.sensor.inverter_battery else '—' %}
+        {% if not inv and src == 'лічильник' and not off %}## 🟢 Мережа є — за лічильником ({{ states('sensor.merezha_napruha_za_lichylnykom') }} В) · інвертор поза зв'язком
+        Логер Deye мовчить з {{ inv_since }}, тому батарея, автономія, пороги батареї і автовимикання **невідомі і не працюють**. Але сам факт світла підтверджує лічильник вводу, і сповіщення «світло зникло / з'явилось» далі спрацюють за ним.
+        {% elif not inv and src == 'лічильник' and off %}## 🔴 Світла немає — за лічильником · інвертор поза зв'язком
+        Лічильник вводу відповідає, але напруги на фазах немає. Батарея і автономія невідомі: логер Deye мовчить з {{ inv_since }}.
+        {% elif not inv %}## ⚠️ Інвертор і лічильник не відповідають — стан мережі невідомий
+        Логер Deye мовчить з {{ inv_since }}, лічильник вводу теж поза зв'язком. Поки так, сповіщення про світло, пороги батареї і автовимикання **не працюють**: «світло є» нижче означає лише «даних немає». Найчастіше допомагає перезапуск інвертора.
         {% elif off %}## 🔴 Світла немає з {{ (since | as_local).strftime('%H:%M') if since else '—' }} · батарея {{ soc }} % · вистачить ≈ {{ avt }} год
         Споживання {{ load }} кВт. Автономія рахується до критичного порогу {{ states('input_number.batareia_porih_krytychno') }} % при поточному навантаженні: вимкнете зайве — час зросте.
         {% else %}## 🟢 Мережа є · батарея {{ soc }} % · при відключенні вистачить ≈ {{ avt }} год
@@ -4985,6 +4991,95 @@ views:
         columns: full
       content: |-
         Перша — єдина, що діє сама. Нічні розклади бойлера бабусі і зарядки тут для довідки: під час відключення вони теж виконаються, якщо їх не вимкнути.
+  # --- Секція 5б · Умови блекауту: хто свідчить про мережу (02.09.2026) ---
+  # Кожна плитка інтерактивна: тап відкриває історію сутності. Два свідки:
+  # інвертор (головний: «бачить мережу» + частота) і лічильник вводу (запасний:
+  # відповідає локально і віддає напругу). Підсумок - binary_sensor.svitlo_vidsutnie.
+  - type: grid
+    column_span: 4
+    cards:
+    - type: heading
+      heading: Умови блекауту · хто свідчить про мережу
+      icon: mdi:source-branch
+      grid_options:
+        columns: full
+    - type: tile
+      entity: sensor.merezha_dzherelo
+      name: Джерело правди зараз
+      icon: mdi:source-branch
+      color: teal
+      grid_options:
+        columns: 24
+        rows: 1
+    - type: tile
+      entity: binary_sensor.svitlo_vidsutnie
+      name: Підсумок · мережа зникла
+      grid_options:
+        columns: 24
+        rows: 1
+    - type: tile
+      entity: binary_sensor.invertor_zviazok
+      name: 1 · Зв'язок з інвертором
+      grid_options:
+        columns: 12
+        rows: 1
+    - type: tile
+      entity: binary_sensor.inverter_grid
+      name: 1 · Інвертор бачить мережу
+      icon: mdi:transmission-tower
+      grid_options:
+        columns: 12
+        rows: 1
+    - type: tile
+      entity: sensor.inverter_grid_frequency
+      name: 1 · Частота мережі
+      icon: mdi:sine-wave
+      grid_options:
+        columns: 12
+        rows: 1
+    - type: tile
+      entity: sensor.inverter_device_relay
+      name: 1 · Реле інвертора
+      icon: mdi:electric-switch
+      grid_options:
+        columns: 12
+        rows: 1
+    - type: tile
+      entity: binary_sensor.lichylnyk_zviazok
+      name: 2 · Зв'язок з лічильником
+      grid_options:
+        columns: 12
+        rows: 1
+    - type: tile
+      entity: sensor.merezha_napruha_za_lichylnykom
+      name: 2 · Напруга за лічильником
+      grid_options:
+        columns: 12
+        rows: 1
+    - type: tile
+      entity: sensor.energy_meter_phase_a_voltage_2
+      name: 2 · Фаза A
+      grid_options:
+        columns: 8
+        rows: 1
+    - type: tile
+      entity: sensor.energy_meter_phase_b_voltage_2
+      name: 2 · Фаза B
+      grid_options:
+        columns: 8
+        rows: 1
+    - type: tile
+      entity: sensor.energy_meter_phase_c_voltage_2
+      name: 2 · Фаза C
+      grid_options:
+        columns: 8
+        rows: 1
+    - type: markdown
+      text_only: true
+      grid_options:
+        columns: full
+      content: |-
+        **Правило.** Світло вважається зниклим, коли інвертор на зв'язку, **не бачить мережу** і частота нижча за 45 Гц — 30 секунд поспіль. Якщо інвертор мовчить, слово має лічильник вводу: є напруга хоча б на одній фазі — світло є; лічильник відповідає, а напруги немає — світла немає. Мовчать обидва — стан **невідомий**, сенсор лишається «немає проблеми», а hero вгорі попереджає. Лічильник живиться від мережі, тому під час справжнього відключення він зазвичай теж зникає — саме тому він другий свідок, а не перший.
   # --- Секція 6 · Графік відключень (Yasno, налаштовано 02.09.2026 за групою 3.1) ---
   # Сутності інтеграції yasno_outages: sensor.yasno_kiiv_3_1_* і два календарі.
   # Другий запис «за адресою» додасться після уточнення адреси власником.
