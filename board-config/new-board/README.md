@@ -68,6 +68,21 @@ with readable names; on the board they are:
 Generate the correct name with `systemd-escape -p --suffix=mount <path>` rather
 than typing it.
 
+**Why `www/motion-clips` stays a bind mount, and what it costs.** The bind puts
+14 days of camera clips (7 GB on 2026-09-02) inside the config tree, and Home
+Assistant's nightly "settings-only" backup archives every byte of it: the
+archives on the NAS are 5.4–7.2 GB a night instead of ~50 MB, and take over an
+hour. The obvious fix — a symlink to `media/video/ha-motion` like the photo
+library — was tried and reverted the same day: `/local/…` is served by aiohttp
+with `follow_symlinks` off, so a symlink that resolves **outside** `www/`
+answers 404 (a symlink to a file inside `www/` answers 200, which is what made
+the first test look promising). `media/*` itself is not in the backup — the
+137 GB share mounted at `media/video` is proof — so the clips are the only
+heavy thing. Options left: shorter retention for the `www`-exposed copy
+(`prepare_motion_dir` prunes at 14 days), a second, smaller directory with
+hardlinks to the last two days bound at `www/motion-clips`, or a gallery that
+opens clips through the media browser instead of `/local`.
+
 If the board is ever switched back to mirror mode, these three paths must follow
 to `config-mirror`, in the units and in `nas-mounts.service` alike.
 

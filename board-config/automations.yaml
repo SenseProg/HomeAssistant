@@ -2767,14 +2767,21 @@
 - id: inverter_zviazok_vidnovleno
   initial_state: true
   alias: Інвертор - звʼязок відновлено
-  description: Парне повідомлення, щоб було видно, що моніторинг знову бачить дім.
+  description: >-
+    Парне повідомлення, щоб було видно, що моніторинг знову бачить дім.
+    Витримка три хвилини (додано 02.09.2026): того дня звʼязок з логером
+    хитався 13 разів, і пара «не відповідає / на звʼязку» дала 39 пушів на три
+    телефони. Тепер «відновлено» пишеться лише тоді, коли батарея тримає
+    значення три хвилини поспіль - коротке блимання не рахується.
   triggers:
   - trigger: state
     entity_id: sensor.inverter_battery
     from: unavailable
+    for: '00:03:00'
   - trigger: state
     entity_id: sensor.inverter_battery
     from: unknown
+    for: '00:03:00'
   conditions:
   - condition: template
     value_template: >-
