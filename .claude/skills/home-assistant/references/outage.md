@@ -49,6 +49,22 @@ The readiness guard lists automation ids by hand. Renaming an alias changes the
 entity id and silently breaks that check; a `label` on the automations with
 `label_entities()` would be more robust. Until then, keep the aliases.
 
+## The «Блекаут» page
+
+`Пристрої → Блекаут` (`/pristroi-dashboard/blackout`, added 2026-09-02)
+gathers everything above in one place, duplicating the toggles that also live
+on the Deye, Boiler and Washer tabs on purpose: hero (grid present / gone
+since / inverter silent, battery %, estimated autonomy, load), the load-shed
+list with its master switch, the four thresholds, the notifying automations,
+the acting ones, the Yasno schedule (shows setup instructions while the
+integration has no config entry), and a 72-hour history of the grid sensor,
+the inverter link and the battery.
+
+`sensor.avtonomiia_batarei` (hours) = usable SOC above the critical threshold
+× capacity ÷ current load. Capacity is `number.inverter_battery_capacity`
+(200 Ah) × 51.2 V ≈ 10.2 kWh — taken from the inverter's own setting rather
+than a second helper. It is `unavailable` whenever the logger is, on purpose.
+
 ## Thresholds live in helpers — and must not carry `initial:`
 
 `bez_svitla_porih_kvt`, `bez_svitla_zatrymka_hv`, `batareia_porih_uvaha`,

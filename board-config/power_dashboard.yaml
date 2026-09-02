@@ -1056,6 +1056,98 @@ views:
         Тут показані лише ті пристрої, які додані в налаштуваннях енергообліку
         (Налаштування → Панелі керування → Енергія). Гривневий розподіл по всіх
         наших лічильниках — на вкладці **«Витрати»**.
+  - type: grid
+    cards:
+    - type: heading
+      heading: Автоматизації
+      icon: mdi:robot
+      grid_options:
+        columns: full
+    - type: entities
+      grid_options:
+        columns: full
+      entities:
+      - entity: automation.tarif_peremknuti_lichilniki_den_nich
+        name: "Тариф - перемкнути лічильники день/ніч"
+      - entity: automation.oblik_onoviti_iakir_merezhi
+        name: "Облік - оновити якір мережі"
+      - entity: automation.oblik_pokhvilinnii_zriz
+        name: "Облік - похвилинний зріз"
+      - entity: automation.oblik_pribrati_stari_khvilinni_zrizi
+        name: "Облік - прибрати старі хвилинні зрізи"
+      - entity: automation.oblik_kopiia_statistiki_na_nas
+        name: "Облік - копія статистики на NAS"
+    - type: markdown
+      title: Що вони роблять
+      grid_options:
+        columns: full
+      content: |-
+        **Тариф - перемкнути лічильники день/ніч** — Тримає всі utility_meter у тому самому тарифі, що й sensor.tarif_elektroenergii_zaraz: день 07:00–22:59, ніч 23:00–06:59.
+
+        **Облік - оновити якір мережі** — Оновлює якір показу лічильника, поки хмарний показ живий, щоб локальний облік продовжив з тієї самої точки при втраті хмари.
+
+        **Облік - похвилинний зріз** — Раз на хвилину пише зріз потужності у власну базу minute_rollup.db — рівень «хвилина за 30 днів», якого в recorder немає.
+
+        **Облік - прибрати старі хвилинні зрізи** — Прибирає хвилинні зрізи старші за 30 днів.
+
+        **Облік - копія статистики на NAS** — Щоночі копіює довгострокову статистику на NAS: бекапи HA її не містять, і 18.08 корупція бази забрала три тижні.
+  # --- Сповіщення відокремлено від автоматизацій 02.09.2026 на прохання власника:
+  #     інформаційний засіб живе окремо, з власним перемикачем і часом останнього спрацювання. ---
+  - type: grid
+    cards:
+    - type: heading
+      heading: Сповіщення
+      icon: mdi:bell-ring-outline
+      grid_options:
+        columns: full
+    - type: entities
+      grid_options:
+        columns: full
+      entities:
+      - entity: automation.oblik_trifaznii_lichilnik_zamovk
+        name: "Облік - трифазний лічильник замовк"
+        secondary_info: last-triggered
+      - entity: automation.oblik_tizhneva_zvirka_lichilnika
+        name: "Облік - тижнева звірка лічильника"
+        secondary_info: last-triggered
+      - entity: automation.oblik_znikla_faza
+        name: "Облік - зникла фаза"
+        secondary_info: last-triggered
+      - entity: automation.oblik_napruga_poza_normoiu
+        name: "Облік - напруга поза нормою"
+        secondary_info: last-triggered
+      - entity: automation.oblik_vvidnii_avtomat_vimknuvsia
+        name: "Облік - ввідний автомат вимкнувся"
+        secondary_info: last-triggered
+      - entity: automation.oblik_trivoga_lichilnika
+        name: "Облік - тривога лічильника"
+        secondary_info: last-triggered
+      - entity: automation.oblik_perevantazhennia_fazi
+        name: "Облік - перевантаження фази"
+        secondary_info: last-triggered
+      - entity: automation.statistika_glibina_istorii_vpala
+        name: "Статистика - глибина історії впала"
+        secondary_info: last-triggered
+    - type: markdown
+      title: Що вони повідомляють
+      grid_options:
+        columns: full
+      content: |-
+        **Облік - трифазний лічильник замовк** — Лічильник вводу не оновлюється — облік усього вводу стоїть.
+
+        **Облік - тижнева звірка лічильника** — Раз на тиждень порівнює локальний показ із хмарним і повідомляє розбіжність.
+
+        **Облік - зникла фаза** — Напруга однієї з фаз впала до нуля при живих інших — втрата фази.
+
+        **Облік - напруга поза нормою** — Напруга фази вийшла за межі норми довше за витримку.
+
+        **Облік - ввідний автомат вимкнувся** — Лічильник повідомляє, що ввідний автомат розімкнений.
+
+        **Облік - тривога лічильника** — Бітова маска тривог лічильника (DP 9) ненульова — перевантаження, витік, перекіс — переклад у sensor.lichylnyk_tryvohy.
+
+        **Облік - перевантаження фази** — Струм фази вище порогу довше за витримку.
+
+        **Статистика - глибина історії впала** — Кількість днів у довгостроковій статистиці зменшилась — база втратила історію, як 18.08.
 - title: Сонце і батарея
   path: inverter
   icon: mdi:solar-power-variant

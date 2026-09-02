@@ -25,9 +25,9 @@
 кожен запис, ані звірки з тим, що людина справді відкрила.
 
 Підкоманди:
-    log --title T --message M [--service S] [--level L]
+    log --title T --message M [--service S] [--level L] [--key K]
     export [--limit N] [--since-days D]     JSON для command_line-сенсора
-    mark-read [--ts N]                      позначити прочитаним усе донині
+    mark-read [--ts N] | mark-read --key K  усе донині / лише один запис
     stats                                   що всередині
     purge --days N                          прибрати старіше за N діб
 """
@@ -67,6 +67,15 @@ def connect() -> sqlite3.Connection:
     )
     conn.execute("create index if not exists ix_notifications_ts on notifications(ts)")
     conn.execute("create table if not exists meta (key text primary key, value text)")
+    # 02.09.2026: ключ запису і прапорець «прочитано» на кожен рядок. Ключ - md5
+    # від заголовка і тексту, той самий, що стоїть у notification_id панелі HA
+    # (nl_<key>): закриття сповіщення в панелі позначає прочитаним саме цей
+    # запис, а не весь журнал. Мітка last_read_ts лишається для кнопки «усе».
+    cols = {row[1] for row in conn.execute("pragma table_info(notifications)")}
+    if "key" not in cols:
+        conn.execute("alter table notifications add column key text")
+    if "read" not in cols:
+        conn.execute("alter table notifications add column read integer not null default 0")
     return conn
 
 
@@ -81,8 +90,8 @@ def last_read(conn: sqlite3.Connection) -> int:
 def cmd_log(args: argparse.Namespace) -> None:
     conn = connect()
     conn.execute(
-        "insert into notifications (ts, service, level, title, message) values (?,?,?,?,?)",
-        (int(time.time()), args.service, args.level, args.title, args.message),
+        "insert into notifications (ts, service, level, title, message, key) values (?,?,?,?,?,?)",
+        (int(time.time()), args.service, args.level, args.title, args.message, args.key or None),
     )
     conn.commit()
     total = conn.execute("select count(*) from notifications").fetchone()[0]
@@ -103,7 +112,7 @@ def cmd_export(args: argparse.Namespace) -> None:
     conn = connect()
     since = int(time.time()) - args.since_days * 86400
     rows = conn.execute(
-        "select ts, service, level, title, message from notifications"
+        "select ts, service, level, title, message, key, read from notifications"
         " where ts >= ? order by ts desc limit ?",
         (since, args.limit),
     ).fetchall()
@@ -125,7 +134,7 @@ def cmd_export(args: argparse.Namespace) -> None:
             continue
         merged.append({"_ts": r[0], "_t": r[3], "_m": r[4] or "", "row": r, "kopii": 1})
     unread = conn.execute(
-        "select count(*) from notifications where ts > ?", (marker,)
+        "select count(*) from notifications where ts > ? and read = 0", (marker,)
     ).fetchone()[0]
     day_ago = int(time.time()) - 86400
     today = conn.execute(
@@ -147,7 +156,8 @@ def cmd_export(args: argparse.Namespace) -> None:
                 "items": [
                     {
                         "chas": time.strftime("%Y-%m-%d %H:%M", time.localtime(m["row"][0])),
-                        "nove": m["row"][0] > marker,
+                        "nove": m["row"][0] > marker and not m["row"][6],
+                        "key": m["row"][5],
                         "service": m["row"][1],
                         "level": m["row"][2],
                         "title": m["row"][3],
@@ -163,8 +173,17 @@ def cmd_export(args: argparse.Namespace) -> None:
 
 
 def cmd_mark_read(args: argparse.Namespace) -> None:
-    """Позначити прочитаним усе до вказаної миті (типово - до зараз)."""
+    """Позначити прочитаним усе до вказаної миті (типово - до зараз),
+    або лише записи з ключем --key (закриття одного сповіщення в панелі HA)."""
     conn = connect()
+    if args.key:
+        n = conn.execute(
+            "update notifications set read = 1 where key = ?", (args.key,)
+        ).rowcount
+        conn.commit()
+        conn.close()
+        print(json.dumps({"marked_key": args.key, "rows": n}))
+        return
     ts = args.ts if args.ts is not None else int(time.time())
     conn.execute(
         "insert into meta (key, value) values ('last_read_ts', ?)"
@@ -222,6 +241,7 @@ def main() -> None:
     sub = parser.add_subparsers(dest="command", required=True)
 
     p = sub.add_parser("log")
+    p.add_argument("--key", default="", help="md5 заголовка і тексту, як у notification_id панелі")
     p.add_argument("--title", default="")
     p.add_argument("--message", default="")
     p.add_argument("--service", default="")
@@ -235,6 +255,7 @@ def main() -> None:
 
     p = sub.add_parser("mark-read")
     p.add_argument("--ts", type=int)
+    p.add_argument("--key", default="", help="позначити прочитаними лише записи з цим ключем")
     p.set_defaults(func=cmd_mark_read)
 
     p = sub.add_parser("stats")

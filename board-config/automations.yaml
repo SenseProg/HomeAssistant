@@ -2164,19 +2164,46 @@
       domain: persistent_notification
       service: create
     id: panel
-  conditions: []
+  conditions:
+  # Записи, які створює сам журнал (дзеркало пуша в панель нижче і відновлення
+  # після старту), мають notification_id з префіксом nl_. Їх не ловимо -
+  # інакше кожен пуш породжував би другий рядок і петлю.
+  - condition: template
+    value_template: >-
+      {{ (trigger.event.data.service_data.notification_id | default('') | string)[:3] != 'nl_' }}
   actions:
   - variables:
       sluzhba: '{{ trigger.event.data.domain }}.{{ trigger.event.data.service }}'
       syryi_zagolovok: '{{ trigger.event.data.service_data.title | default('''') }}'
       syryi_tekst: '{{ trigger.event.data.service_data.message | default('''') }}'
-  - action: shell_command.notify_log
-    data:
-      sluzhba: '{{ sluzhba }}'
       zagolovok: '{{ syryi_zagolovok | replace("''", "") | replace(''"'', "")
         | replace("`", "") | replace("$", "") | truncate(120, true, "") }}'
       tekst: '{{ syryi_tekst | replace("''", "") | replace(''"'', "")
         | replace("`", "") | replace("$", "") | truncate(400, true, "") }}'
+      # Ключ запису = md5 від очищених заголовка і тексту. Той самий ключ стоїть
+      # у notification_id панелі (nl_<ключ>), тому закриття сповіщення в панелі
+      # позначає прочитаним саме цей запис журналу. Три телефони дають той
+      # самий ключ - у панелі це одне сповіщення, у журналі три рядки, які
+      # export згортає.
+      kliuch: '{{ (zagolovok ~ "|" ~ tekst) | md5 }}'
+  - action: shell_command.notify_log
+    data:
+      sluzhba: '{{ sluzhba }}'
+      zagolovok: '{{ zagolovok }}'
+      tekst: '{{ tekst }}'
+      kliuch: '{{ kliuch }}'
+  # Дзеркало пуша в панель сповіщень Home Assistant (додано 02.09.2026 на
+  # прохання власника: «сповіщення мають бути саме там»). Панель - оперативна
+  # памʼять, після рестарту її відновлює notify_log_restore_on_start.
+  - if:
+    - condition: trigger
+      id: push
+    then:
+    - action: persistent_notification.create
+      data:
+        notification_id: 'nl_{{ kliuch }}'
+        title: '{{ syryi_zagolovok }}'
+        message: '{{ syryi_tekst }}'
   mode: queued
   max: 25
 
@@ -2206,15 +2233,75 @@
       domain: persistent_notification
       service: dismiss
     id: prybrano
+  - trigger: event
+    event_type: call_service
+    event_data:
+      domain: persistent_notification
+      service: dismiss_all
+    id: prybrano_vse
   conditions:
   - condition: template
     value_template: '{{ trigger.id != ''knopka'' or trigger.from_state is not none }}'
+  # dismiss_all, який викликає ця сама автоматизація з кнопки, має батьківський
+  # контекст - його не обробляємо вдруге.
+  - condition: template
+    value_template: >-
+      {{ trigger.id != 'prybrano_vse' or trigger.event.context.parent_id is none }}
   actions:
-  - action: shell_command.notify_log_mark_read
+  - variables:
+      id_panel: >-
+        {{ (trigger.event.data.service_data.notification_id | default('') | string) if trigger.id == 'prybrano' else '' }}
+  - if:
+    # Закрили одне сповіщення журналу в панелі - прочитаний саме цей запис.
+    - condition: template
+      value_template: "{{ id_panel[:3] == 'nl_' }}"
+    then:
+    - action: shell_command.notify_log_mark_read_key
+      data:
+        kliuch: "{{ id_panel[3:] }}"
+    else:
+    - action: shell_command.notify_log_mark_read
+    - if:
+      - condition: trigger
+        id: knopka
+      then:
+      - action: persistent_notification.dismiss_all
   - delay: 00:00:02
   - action: homeassistant.update_entity
     target:
       entity_id: sensor.spovishchennia_zhurnal
+  mode: single
+- id: notify_log_restore_on_start
+  alias: Журнал - повернути непрочитані в панель після старту
+  description: 'Панель сповіщень Home Assistant живе в оперативній памʼяті і
+    після кожного рестарту порожня, а плата рестартує з кожним відключенням
+    світла. Журнал (notifications.db) памʼятає, що ще не прочитано, і тут
+    повертає це в панель під тими самими notification_id (nl_<ключ>), тож
+    закриття далі працює як прочитання. Дві хвилини витримки - щоб сенсор
+    журналу встиг піднятись; сповіщення без ключа (записи до 02.09.2026) не
+    відновлюються.'
+  triggers:
+  - trigger: homeassistant
+    event: start
+  conditions: []
+  actions:
+  - delay: 00:02:00
+  - action: homeassistant.update_entity
+    target:
+      entity_id: sensor.spovishchennia_zhurnal
+  - delay: 00:00:15
+  - repeat:
+      for_each: >-
+        {{ (state_attr('sensor.spovishchennia_zhurnal', 'items') or [])
+           | selectattr('nove') | selectattr('key', 'defined')
+           | rejectattr('key', 'none') | list }}
+      sequence:
+      - action: persistent_notification.create
+        data:
+          notification_id: 'nl_{{ repeat.item.key }}'
+          title: '{{ repeat.item.title }}'
+          message: >-
+            {{ repeat.item.message }}{{ ' (×' ~ repeat.item.kopii ~ ')' if (repeat.item.kopii | default(1) | int) > 1 else '' }}
   mode: single
 - id: boiler_babusi_heat_start
   alias: Бойлер бабусі - початок нагріву

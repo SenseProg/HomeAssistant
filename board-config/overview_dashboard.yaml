@@ -408,6 +408,14 @@ views:
       grid_options:
         columns: full
     - type: button
+      name: Блекаут
+      icon: mdi:transmission-tower-off
+      tap_action:
+        action: navigate
+        navigation_path: /pristroi-dashboard/blackout
+      grid_options:
+        columns: full
+    - type: button
       name: Стоп полив
       icon: mdi:stop-circle-outline
       tap_action:

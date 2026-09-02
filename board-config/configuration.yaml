@@ -479,6 +479,38 @@ irrigation_unlimited:
 
 # --- Total load across all three phases (added 2026-08-02) ---
 template:
+  # --- Автономія батареї, годин (02.09.2026, сторінка «Блекаут») ---
+  #
+  # Ємність береться з налаштування самого інвертора (number.inverter_battery_
+  # capacity, 200 А·год) помноженого на номінальні 51,2 В батареї 16S LiFePO4 -
+  # тобто ~10,2 кВт·год. Окремого помічника «ємність» немає навмисно: одне
+  # число - одне місце, і воно вже стоїть у Deye. Корисний запас рахується до
+  # порога «критично» (input_number.batareia_porih_krytychno), нижче якого
+  # інвертор і сам починає скидати навантаження.
+  #
+  # При навантаженні під 50 Вт (нічний мінімум) оцінка втрачає сенс і
+  # обрізається на 99 годинах. Коли логер Deye поза звʼязком - unavailable,
+  # а не застаріле число: hero «Блекауту» тоді каже «інвертор не відповідає».
+  - sensor:
+      - name: Avtonomiia batarei
+        unique_id: battery_autonomy_hours
+        unit_of_measurement: "год"
+        icon: mdi:battery-clock
+        state_class: measurement
+        state: >-
+          {% set soc = states('sensor.inverter_battery') | float(0) %}
+          {% set floor = states('input_number.batareia_porih_krytychno') | float(10) %}
+          {% set cap = states('number.inverter_battery_capacity') | float(200) * 51.2 / 1000 %}
+          {% set load = states('sensor.inverter_load_power') | float(0) / 1000 %}
+          {% set usable = [soc - floor, 0] | max / 100 * cap %}
+          {{ [usable / load, 99] | min | round(1) if load > 0.05 else 99 }}
+        availability: >-
+          {{ has_value('sensor.inverter_battery') and has_value('sensor.inverter_load_power')
+             and has_value('number.inverter_battery_capacity') }}
+        attributes:
+          iemnist_kvtg: >-
+            {{ (states('number.inverter_battery_capacity') | float(200) * 51.2 / 1000) | round(1) }}
+
   # --- Канали зв'язку: локально / хмара / інвертор (додано 02.09.2026) ---
   #
   # Відповідь на «не зрозуміло, який пристрій хмарний, а який локальний, і що
@@ -1205,6 +1237,7 @@ recorder:
       # Журнал сповіщень так само тримає всі записи в атрибутах (40 записів
       # перевищують 16 КБ - recorder попереджав 7 разів за дві доби).
       - sensor.spovishchennia_zhurnal
+      - sensor.prystroi_khytkist
       - sensor.tenda_ap_clients
       - sensor.tenda_ap_status
       - sensor.tenda_ap_security
@@ -1774,6 +1807,26 @@ command_line:
       scan_interval: 300
       command_timeout: 30
 
+  # --- Хто відвалюється: епізоди і час недоступності за 7 днів (02.09.2026) ---
+  # Рахує scripts/flaky_devices.py з історії recorder. Раз на шість годин:
+  # запит історії 22 сутностей за тиждень займає кілька секунд, частіше не
+  # треба - це тижнева картина, а не жива телеметрія. Стан - кількість
+  # пристроїв, недоступних понад 5 % часу; рядки таблиці в атрибуті rows.
+  - sensor:
+      name: Prystroi khytkist
+      unique_id: flaky_devices_7d
+      command: "/userdata/hass/venv/bin/python /userdata/hass/config/scripts/flaky_devices.py"
+      value_template: "{{ value_json.flaky }}"
+      json_attributes:
+        - generated
+        - days
+        - rows
+        - error
+      unit_of_measurement: "пристроїв"
+      icon: mdi:lan-disconnect
+      scan_interval: 21600
+      command_timeout: 120
+
 input_button:
   spovishchennia_prochytano:
     name: Сповіщення - позначити прочитаними
@@ -1811,7 +1864,11 @@ shell_command:
   notify_log: >-
     /userdata/hass/venv/bin/python /userdata/hass/config/scripts/notify_log.py log
     --service '{{ sluzhba }}' --title '{{ zagolovok }}' --message '{{ tekst }}'
+    --key '{{ kliuch | default('') }}'
   notify_log_mark_read: "/userdata/hass/venv/bin/python /userdata/hass/config/scripts/notify_log.py mark-read"
+  # Закрили одне сповіщення журналу в панелі HA - прочитаний саме цей запис.
+  # Ключ - md5 (лише [0-9a-f]), для оболонки безпечний.
+  notify_log_mark_read_key: "/userdata/hass/venv/bin/python /userdata/hass/config/scripts/notify_log.py mark-read --key '{{ kliuch }}'"
   # Додати, виправити, приховати або повернути показник лічильника свердловини.
   # Payload - це base64(JSON): Home Assistant рендерить команду в рядок і лише
   # потім ріже її shlex, тому ім'я автора з лапкою чи нотатка з крапкою з комою

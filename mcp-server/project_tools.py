@@ -68,6 +68,7 @@ SYNC_TARGETS: dict[str, str] = {
     "board-config/scripts/lts_depth.py": "/userdata/hass/config/scripts/lts_depth.py",
     "board-config/scripts/minute_rollup.py": "/userdata/hass/config/scripts/minute_rollup.py",
     "board-config/scripts/backup_statistics.py": "/userdata/hass/config/scripts/backup_statistics.py",
+    "board-config/scripts/flaky_devices.py": "/userdata/hass/config/scripts/flaky_devices.py",
     # systemd. Три NFS-маунти свідомо не тут: їхні імена містять
     # systemd-екранування зі зворотним слешем
     # (userdata-hass-config\x2dstandalone-backups.mount), а такий символ

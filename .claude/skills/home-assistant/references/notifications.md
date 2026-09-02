@@ -27,8 +27,27 @@ input_button.spovishchennia_prochytano  or  persistent_notification.dismiss
   -> automation notify_log_mark_read -> notify_log.py mark-read -> update_entity
 ```
 
-Reading model is a mailbox: one `last_read` timestamp for the whole journal,
-everything older counts as read. There is no per-item flag and no need for one.
+Reading model, since the evening of 2026-09-02: **the HA notification drawer
+is the primary place** (the owner: "сповіщення саме там мають бути"), and the
+journal is its persistent memory.
+
+- Every `notify.*` push is mirrored into the drawer by `notify_log_capture`
+  as `persistent_notification.create` with `notification_id: nl_<key>`,
+  where `key = md5(sanitised title | sanitised message)`. Three phones give the
+  same key, so the drawer shows one entry.
+- The same key is stored in the journal row (`--key`). Dismissing that entry
+  in the drawer fires `persistent_notification.dismiss` with the `nl_` id, and
+  `notify_log_mark_read` marks **that row** read (`mark-read --key`). The
+  "mark all read" button still sets the mailbox timestamp for everything and
+  calls `persistent_notification.dismiss_all`.
+- The drawer is RAM only. `notify_log_restore_on_start` re-creates every
+  unread journal item in the drawer two minutes after each start, under the
+  same ids, so a power cut no longer empties the list.
+- Notifications the journal itself creates (ids starting with `nl_`) are
+  excluded from capture; without that guard every push would be journaled
+  twice and the restore would loop.
+
+Rows written before 2026-09-02 have no key: they are read only via the button.
 
 ## Duplicates
 
@@ -40,8 +59,17 @@ which phone was actually reached.
 
 ## Where it shows
 
-- `Пристрої → Сповіщення` (`/pristroi-dashboard/alerts`): counts, the
-  mark-read button, the folded list with 🔵 for unread, 📱/🔔 for push/panel.
+- The HA notification drawer (sidebar «Сповіщення»): every push, live and
+  restored after restarts — see above.
+- Every device tab has its own «Сповіщення» section, separate from
+  «Автоматизації» (owner's rule of 2026-09-02: informing and acting are
+  different processes). It lists that device's notifying automations as
+  toggles with `secondary_info: last-triggered`; the acting ones stay under
+  «Автоматизації». New alert automation = one entry in the right section of
+  the right tab, plus its line in «Що вони повідомляють».
+- `Пристрої → Сповіщення` (`/pristroi-dashboard/alerts`): the history —
+  counts, the mark-read button, the folded list with 🔵 for unread, 📱/🔔
+  for push/panel.
 - Overview hero: a line "🔔 N нових сповіщень · журнал", and a badge over the
   page while N > 0.
 - `python mcp-server/cli.py notify-log` / MCP `ha_notify_log`: the same export
