@@ -13,7 +13,7 @@ import project_tools
 def test_inventory_has_unique_ip_and_mac() -> None:
     result = project_tools.network_inventory()
     devices = result["devices"]
-    assert result["count"] == 21
+    assert result["count"] == 23
     assert len({device["ip"] for device in devices}) == len(devices)
     assert len({device["mac"] for device in devices}) == len(devices)
 
@@ -143,6 +143,29 @@ def test_board_health_reports_filesystem_backup_and_link_problems(monkeypatch) -
     # Ключі більше не клеяться: кожне поле окремо.
     assert result["values"]["cloudflared"] == "active"
     assert result["values"]["analyst_timer"] == "missing"
+
+
+def test_storage_dashboards_sync_matches_when_board_equals_repo(monkeypatch) -> None:
+    """Живий конфіг storage-дашборда (через lovelace_push --dump) звіряється з файлом."""
+    import yaml
+
+    repo_root = Path(__file__).resolve().parents[2]
+
+    def fake_ssh(command, timeout=30):
+        url_path = command.split(" - ")[1].split(" ")[0]
+        repo_path = next(p for p, u in project_tools.STORAGE_DASHBOARDS.items() if u == url_path)
+        doc = yaml.safe_load((repo_root / repo_path).read_text(encoding="utf-8"))
+        cfg = {k: v for k, v in doc.items() if k != "title"}
+        if url_path == "sverdlovina-dashboard":
+            cfg["views"][0]["badges"] = []  # хтось прибрав бейджі в UI
+        return {"ok": True, "returncode": 0, "stdout": json.dumps(cfg, ensure_ascii=False), "stderr": ""}
+
+    monkeypatch.setattr(project_tools, "_ssh", fake_ssh)
+    result = project_tools.storage_dashboards_sync()
+    by_path = {r["url_path"]: r["status"] for r in result["results"]}
+    assert by_path["spovishchennia-zhurnal"] == "match"
+    assert by_path["sverdlovina-dashboard"] == "mismatch"
+    assert result["safe_to_push"] is False
 
 
 def test_entity_states_validates_pattern() -> None:

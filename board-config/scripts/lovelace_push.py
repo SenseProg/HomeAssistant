@@ -62,14 +62,20 @@ class WS:
 
 async def main() -> int:
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    p.add_argument("file")
+    p.add_argument("file", help="YAML-файл дашборда; для --dump ставиться '-'")
     p.add_argument("url_path")
     p.add_argument("--title")
     p.add_argument("--icon", default="mdi:view-dashboard")
     p.add_argument("--admin", action="store_true", help="require_admin")
+    p.add_argument("--dump", action="store_true", help="лише надрукувати живий конфіг дашборда як JSON (для звірки з файлом)")
     args = p.parse_args()
     if "-" not in args.url_path:
         raise SystemExit("url_path must contain a hyphen")
+    if args.dump:
+        async with WS() as ws:
+            cfg = await ws.call(type="lovelace/config", url_path=args.url_path, force=True)
+        print(json.dumps(cfg, ensure_ascii=False, sort_keys=True))
+        return 0
     doc = yaml.safe_load(open(args.file, encoding="utf-8"))
     title = args.title or doc.get("title") or args.url_path
     config = {k: v for k, v in doc.items() if k != "title"}

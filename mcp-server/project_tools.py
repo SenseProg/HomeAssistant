@@ -70,6 +70,7 @@ SYNC_TARGETS: dict[str, str] = {
     "board-config/scripts/backup_statistics.py": "/userdata/hass/config/scripts/backup_statistics.py",
     "board-config/scripts/flaky_devices.py": "/userdata/hass/config/scripts/flaky_devices.py",
     "board-config/scripts/lovelace_push.py": "/userdata/hass/config/scripts/lovelace_push.py",
+    "board-config/scripts/ha_admin.py": "/userdata/hass/config/scripts/ha_admin.py",
     # Storage-дашборд журналу сповіщень: джерело правди - файл, на плату він
     # їде через lovelace_push.py, а не через lovelace.dashboards (рестарт).
     "board-config/notifications_dashboard.yaml": "/userdata/hass/config/notifications_dashboard.yaml",
@@ -95,11 +96,20 @@ SYNC_TARGETS: dict[str, str] = {
 
 
 def _run(command: list[str], timeout: int = 30) -> dict[str, Any]:
-    """Run a fixed command and return structured, bounded output."""
+    """Run a fixed command and return structured, bounded output.
+
+    stdin=DEVNULL - не косметика. MCP-сервер спілкується з Claude Code через
+    власний stdin (JSON-RPC по stdio). Дочірній ssh успадковував цей stdin і
+    читав з нього, щоб переслати на плату, - тобто зʼїдав повідомлення,
+    адресовані серверу. Зовні це виглядало як «плата не відповідає»: 02.09.2026
+    усі інструменти впадали по таймауту, ha_git_status чекав 1800 с, а прямий
+    ssh з термінала (де stdin - консоль) відповідав за секунду.
+    """
     try:
         completed = subprocess.run(
             command,
             cwd=PROJECT_ROOT,
+            stdin=subprocess.DEVNULL,
             capture_output=True,
             text=True,
             encoding="utf-8",
@@ -128,6 +138,8 @@ def _ssh(remote_command: str, timeout: int = 90) -> dict[str, Any]:
     executable = "ssh.exe" if os.name == "nt" else "ssh"
     command = [
         executable,
+        # -n: не читати локальний stdin узагалі (див. _run про stdin MCP-сервера).
+        "-n",
         "-i",
         str(SSH_KEY),
         "-o",
@@ -835,6 +847,67 @@ print(json.dumps({{'matched': len(out), 'entities': out[:{limit}]}}, ensure_asci
     if data.get("_error"):
         return {"ok": False, "reason": data["_error"], "matched": 0, "entities": []}
     return {"ok": True, "matched": data["matched"], "entities": data["entities"]}
+
+
+STORAGE_DASHBOARDS: dict[str, str] = {
+    # Файл у репо -> url_path storage-дашборда на платі. Такі дашборди живуть у
+    # .storage, куди ми не дивимось; звірка йде через lovelace_push.py --dump
+    # (WebSocket lovelace/config). Правка в UI без правки файла = mismatch.
+    "board-config/notifications_dashboard.yaml": "spovishchennia-zhurnal",
+    "board-config/sverdlovina_dashboard.yaml": "sverdlovina-dashboard",
+}
+LOVELACE_PUSH_SCRIPT = f"{HA_CONFIG_ROOT}/scripts/lovelace_push.py"
+
+
+def _canonical_json(obj: Any) -> str:
+    return json.dumps(obj, sort_keys=True, ensure_ascii=False, separators=(",", ":"))
+
+
+def storage_dashboards_sync() -> dict[str, Any]:
+    """Compare repo YAML of storage dashboards with the live config on the board.
+
+    Доповнення до repo_board_sync для дашбордів, яких немає у файлах плати як
+    джерела: «Сповіщення» і «Свердловина» заливаються lovelace_push.py, а
+    власник може змінити їх в UI. Лише читання; нічого не заливає.
+    """
+    import yaml  # локальна залежність mcp-server (requirements.txt)
+
+    results: list[dict[str, Any]] = []
+    for repo_path, url_path in STORAGE_DASHBOARDS.items():
+        local_file = PROJECT_ROOT / repo_path
+        entry: dict[str, Any] = {"repo_path": repo_path, "url_path": url_path}
+        if not local_file.is_file():
+            entry["status"] = "local_missing"
+            results.append(entry)
+            continue
+        local_doc = yaml.safe_load(local_file.read_text(encoding="utf-8")) or {}
+        local_cfg = {k: v for k, v in local_doc.items() if k != "title"}
+        remote = _ssh(
+            f"{shlex.quote(HA_VENV)}/bin/python {shlex.quote(LOVELACE_PUSH_SCRIPT)} - {shlex.quote(url_path)} --dump",
+            timeout=60,
+        )
+        if not remote["ok"]:
+            entry["status"] = "remote_error"
+            entry["error"] = remote["stderr"][-300:]
+            results.append(entry)
+            continue
+        try:
+            remote_cfg = json.loads(remote["stdout"])
+        except json.JSONDecodeError:
+            entry["status"] = "remote_error"
+            entry["error"] = "invalid JSON from lovelace_push --dump"
+            results.append(entry)
+            continue
+        remote_cfg = {k: v for k, v in (remote_cfg or {}).items() if k != "title"}
+        entry["status"] = "match" if _canonical_json(local_cfg) == _canonical_json(remote_cfg) else "mismatch"
+        entry["local_views"] = [v.get("path") for v in local_cfg.get("views", [])]
+        entry["board_views"] = [v.get("path") for v in remote_cfg.get("views", [])]
+        results.append(entry)
+    return {
+        "safe_to_push": bool(results) and all(r["status"] == "match" for r in results),
+        "results": results,
+        "hint": "mismatch: pull the live config first (lovelace_push.py - <url_path> --dump), merge into the repo file, then push",
+    }
 
 
 NOTIFY_LOG_SCRIPT = f"{HA_CONFIG_ROOT}/scripts/notify_log.py"

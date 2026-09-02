@@ -17,6 +17,7 @@ from project_tools import (
     project_summary,
     recent_logs,
     repo_board_sync,
+    storage_dashboards_sync,
     validate_config,
     well_pump_health,
 )
@@ -48,6 +49,7 @@ def main() -> int:
     states_parser.add_argument("--limit", type=int, default=200)
     notify_parser = sub.add_parser("notify-log", help="журнал сповіщень з плати")
     notify_parser.add_argument("--limit", type=int, default=40)
+    sub.add_parser("dashboards", help="звірка storage-дашбордів (Сповіщення, Свердловина) з файлами репо")
     args = parser.parse_args()
 
     if args.command == "summary":
@@ -74,6 +76,8 @@ def main() -> int:
         result = entity_states(args.pattern, args.limit)
     elif args.command == "notify-log":
         result = notify_log(args.limit)
+    elif args.command == "dashboards":
+        result = storage_dashboards_sync()
     else:
         result = network_inventory(args.query)
 

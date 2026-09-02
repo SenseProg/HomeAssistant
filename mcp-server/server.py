@@ -19,6 +19,7 @@ from project_tools import (
     project_summary,
     recent_logs,
     repo_board_sync,
+    storage_dashboards_sync,
     validate_config,
     well_pump_health,
 )
@@ -68,6 +69,12 @@ async def ha_energy_flow_health() -> dict:
 async def ha_repo_board_sync(files: Optional[list[str]] = None) -> dict:
     """Compare allow-listed Git files with the board by SHA-256; never copy files."""
     return await asyncio.to_thread(repo_board_sync, files)
+
+
+@mcp.tool()
+async def ha_storage_dashboards() -> dict:
+    """Compare repo YAML of the storage dashboards (Сповіщення, Свердловина) with the live config on the board; never pushes."""
+    return await asyncio.to_thread(storage_dashboards_sync)
 
 
 @mcp.tool()

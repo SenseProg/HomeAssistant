@@ -178,25 +178,36 @@ GitHub (жорсткий ліміт 100 МБ на файл). Лежить на N
 - `.mcp.json` та `mcp-server/` — локальний read-only MCP-сервер
   `home-assistant-project`.
 
-MCP-сервер показує стан плати, Git, останні журнали HA, запускає офіційний
-`check_config`, читає інвентар фіксованих пристроїв, перевіряє LocalTuya-канали
-поливу та свердловинного насоса, баланс «мережа / Deye / поза інвертором» і
-порівнює SHA-256 файлів плати з
-`board-config/`. Він навмисно не вміє редагувати live-файли, `.storage`, БД
-recorder, локальні ключі, реквізити або токени.
+MCP-сервер показує стан плати (з переліком `problems`: файлова система,
+бекапи, Tailscale, інвертор, насос, привиди в реєстрі), Git, останні журнали
+HA, стани сутностей за регулярним виразом, журнал сповіщень, запускає
+офіційний `check_config`, читає інвентар фіксованих пристроїв, перевіряє
+LocalTuya-канали поливу та свердловинного насоса, баланс «мережа / Deye /
+поза інвертором», порівнює SHA-256 файлів плати з `board-config/` і живий
+конфіг storage-дашбордів із їхніми файлами. Він навмисно не вміє редагувати
+live-файли, `.storage`, БД recorder, локальні ключі, реквізити або токени.
 
 CLI-режим із кореня репозиторію:
 
 ```powershell
 python mcp-server/cli.py git
 python mcp-server/cli.py health
+python mcp-server/cli.py sync
+python mcp-server/cli.py dashboards
+python mcp-server/cli.py incidents
+python mcp-server/cli.py states "yasno|svitlo"
+python mcp-server/cli.py notify-log
 python mcp-server/cli.py irrigation-health
 python mcp-server/cli.py well-pump-health
 python mcp-server/cli.py energy-flow-health
-python mcp-server/cli.py sync
 python mcp-server/cli.py inventory Deye
 python mcp-server/cli.py validate
 ```
+
+Адміністрування через API Home Assistant (без `.storage`) робиться скриптами
+на платі: `scripts/ha_admin.py` (привиди в реєстрі, одиниці статистики,
+ресурси карток, панель сповіщень, Repairs) і `scripts/lovelace_push.py`
+(storage-дашборди з YAML-файлів репозиторію). Обидва в `board-config/scripts/`.
 
 Якщо Python MCP SDK ще відсутній:
 
