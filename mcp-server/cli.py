@@ -8,10 +8,12 @@ import json
 from project_tools import (
     board_health,
     energy_flow_health,
+    entity_states,
     git_status,
     incidents,
     irrigation_health,
     network_inventory,
+    notify_log,
     project_summary,
     recent_logs,
     repo_board_sync,
@@ -41,6 +43,11 @@ def main() -> int:
     incidents_parser.add_argument(
         "status", nargs="?", default="open", choices=["open", "resolved", "all"]
     )
+    states_parser = sub.add_parser("states", help="стани сутностей за регулярним виразом")
+    states_parser.add_argument("pattern")
+    states_parser.add_argument("--limit", type=int, default=200)
+    notify_parser = sub.add_parser("notify-log", help="журнал сповіщень з плати")
+    notify_parser.add_argument("--limit", type=int, default=40)
     args = parser.parse_args()
 
     if args.command == "summary":
@@ -63,6 +70,10 @@ def main() -> int:
         result = git_status()
     elif args.command == "incidents":
         result = incidents(args.status)
+    elif args.command == "states":
+        result = entity_states(args.pattern, args.limit)
+    elif args.command == "notify-log":
+        result = notify_log(args.limit)
     else:
         result = network_inventory(args.query)
 

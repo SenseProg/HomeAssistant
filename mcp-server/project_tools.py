@@ -8,6 +8,7 @@ import os
 import re
 import shlex
 import subprocess
+import time
 from pathlib import Path
 from typing import Any, Iterable
 
@@ -36,6 +37,12 @@ SYNC_TARGETS: dict[str, str] = {
     "board-config/configuration.yaml": "/userdata/hass/config/configuration.yaml",
     "board-config/devices_dashboard.yaml": "/userdata/hass/config/devices_dashboard.yaml",
     "board-config/power_dashboard.yaml": "/userdata/hass/config/power_dashboard.yaml",
+    # Головна сторінка і заставка ТВ. Аудит 22.08 казав, що overview додано;
+    # у main цього не було, і головна сторінка знову жила поза звіркою
+    # (виявлено 02.09.2026). Тест test_sync_targets_cover_registered_dashboards
+    # більше не дасть цьому повторитись.
+    "board-config/overview_dashboard.yaml": "/userdata/hass/config/overview_dashboard.yaml",
+    "board-config/tv_dashboard.yaml": "/userdata/hass/config/tv_dashboard.yaml",
     "board-config/automations.yaml": "/userdata/hass/config/automations.yaml",
     "board-config/scripts.yaml": "/userdata/hass/config/scripts.yaml",
     "board-config/scenes.yaml": "/userdata/hass/config/scenes.yaml",
@@ -51,6 +58,16 @@ SYNC_TARGETS: dict[str, str] = {
     "board-config/www/well-pump-runs-card.js": "/userdata/hass/config/www/well-pump-runs-card.js",
     "board-config/www/well-pump-log-card.js": "/userdata/hass/config/www/well-pump-log-card.js",
     "board-config/www/well-readings-log-card.js": "/userdata/hass/config/www/well-readings-log-card.js",
+    # Скрипти, на які configuration.yaml посилається з command_line і
+    # shell_command. До 02.09.2026 жили лише на платі: відбудова з Git дала б
+    # конфіг із посиланнями на неіснуючі файли, а sync мовчав би.
+    # Тест test_sync_targets_cover_config_scripts стежить за повнотою.
+    "board-config/scripts/notify_log.py": "/userdata/hass/config/scripts/notify_log.py",
+    "board-config/scripts/water_readings.py": "/userdata/hass/config/scripts/water_readings.py",
+    "board-config/scripts/tariffs.py": "/userdata/hass/config/scripts/tariffs.py",
+    "board-config/scripts/lts_depth.py": "/userdata/hass/config/scripts/lts_depth.py",
+    "board-config/scripts/minute_rollup.py": "/userdata/hass/config/scripts/minute_rollup.py",
+    "board-config/scripts/backup_statistics.py": "/userdata/hass/config/scripts/backup_statistics.py",
     # systemd. Три NFS-маунти свідомо не тут: їхні імена містять
     # systemd-екранування зі зворотним слешем
     # (userdata-hass-config\x2dstandalone-backups.mount), а такий символ
@@ -98,6 +115,10 @@ def _run(command: list[str], timeout: int = 30) -> dict[str, Any]:
 # перевищує півхвилини, і всі health-інструменти поверталися таймаутом замість
 # даних (спостережено 2026-08-10). Ліміт піднято до півтори хвилини.
 def _ssh(remote_command: str, timeout: int = 90) -> dict[str, Any]:
+    # Keepalive (аудит 22.08, зроблено 02.09): завислий канал без нього живе до
+    # повного таймауту інструмента, а три такі виклики поспіль виглядають як
+    # «плата недоступна» при живому SSH. Плюс elapsed_ms у відповіді - щоб
+    # повільну плату було видно як повільну, а не як мертву.
     executable = "ssh.exe" if os.name == "nt" else "ssh"
     command = [
         executable,
@@ -107,10 +128,17 @@ def _ssh(remote_command: str, timeout: int = 90) -> dict[str, Any]:
         "BatchMode=yes",
         "-o",
         "ConnectTimeout=5",
+        "-o",
+        "ServerAliveInterval=10",
+        "-o",
+        "ServerAliveCountMax=3",
         BOARD_HOST,
         remote_command,
     ]
-    return _run(command, timeout=timeout)
+    started = time.monotonic()
+    result = _run(command, timeout=timeout)
+    result["elapsed_ms"] = int((time.monotonic() - started) * 1000)
+    return result
 
 
 def _sha256(path: Path) -> str | None:
@@ -235,35 +263,134 @@ def repo_board_sync(files: Iterable[str] | None = None) -> dict[str, Any]:
     }
 
 
-def board_health() -> dict[str, Any]:
-    """Read the board, HA, storage, swap, journal cap, and timer health."""
-    command = f"""
-printf 'ha_version='; {shlex.quote(HA_VENV)}/bin/hass --version 2>/dev/null || true
-printf 'ha_service='; systemctl is-active home-assistant 2>/dev/null || true
-printf 'ha_http='; curl -s -o /dev/null -w '%{{http_code}}' --max-time 5 http://localhost:8123/ || true; printf '\n'
-printf 'uptime='; uptime -p 2>/dev/null || true
-printf 'journal_cap='; grep -E '^SystemMaxUse=' /etc/systemd/journald.conf 2>/dev/null | tail -n1 | cut -d= -f2
-printf 'root='; df -P / 2>/dev/null | tail -n1
-printf 'userdata='; df -P /userdata 2>/dev/null | tail -n1
-printf 'swap='; swapon --show --noheadings 2>/dev/null | tr '\n' ';'; printf '\n'
-printf 'nas_timer='; systemctl is-enabled homemate-nas-sync.timer 2>/dev/null || true
-printf 'ha_backup_timer='; systemctl is-enabled homemate-ha-backups-mount.timer 2>/dev/null || true
-printf 'ha_backup_mount='; systemctl is-active userdata-hass-config-backups.mount 2>/dev/null || true
-printf 'photo_mount='; systemctl is-active mnt-homemate_media-foto.mount 2>/dev/null || true
-printf 'analyst_timer='; systemctl is-enabled house-analyst.timer 2>/dev/null || true
+BOARD_HEALTH_COMMAND = f"""
+v=$({shlex.quote(HA_VENV)}/bin/hass --version 2>/dev/null || echo unknown); echo "ha_version=$v"
+v=$(systemctl is-active home-assistant 2>/dev/null || echo inactive); echo "ha_service=$v"
+v=$(curl -s -o /dev/null -w '%{{http_code}}' --max-time 5 http://localhost:8123/ || echo 000); echo "ha_http=$v"
+v=$(uptime -p 2>/dev/null || echo unknown); echo "uptime=$v"
+v=$(grep -E '^SystemMaxUse=' /etc/systemd/journald.conf 2>/dev/null | tail -n1 | cut -d= -f2); echo "journal_cap=$v"
+echo "root=$(df -P / 2>/dev/null | tail -n1)"
+echo "userdata=$(df -P /userdata 2>/dev/null | tail -n1)"
+echo "root_free_mb=$(df -Pm / 2>/dev/null | awk 'NR==2{{print $4}}')"
+echo "userdata_free_mb=$(df -Pm /userdata 2>/dev/null | awk 'NR==2{{print $4}}')"
+echo "mem_available_mb=$(free -m 2>/dev/null | awk '/^Mem:/{{print $7}}')"
+echo "swap_used_mb=$(free -m 2>/dev/null | awk '/^Swap:/{{print $3}}')"
+v=$(swapon --show --noheadings 2>/dev/null | tr '\\n' ';'); echo "swap=$v"
+v=$(sudo dumpe2fs -h /dev/mmcblk0p8 2>/dev/null | awk -F': *' '/^Filesystem state/{{print $2}}'); echo "fs_state=$v"
+v=$(sudo dumpe2fs -h /dev/mmcblk0p8 2>/dev/null | awk -F': *' '/^FS Error count/{{print $2}}'); echo "fs_error_count=${{v:-0}}"
+v=$(sudo dumpe2fs -h /dev/mmcblk0p8 2>/dev/null | grep -c has_journal); echo "fs_journal=$v"
+v=$(findmnt -n -o SOURCE -T /userdata/hass/config-standalone/backups 2>/dev/null | grep -c ':'); echo "backup_mount_nfs=$v"
+f=$(ls -t /userdata/hass/config/backups/*.tar 2>/dev/null | head -n1); echo "backup_newest=$f"
+if [ -n "$f" ]; then echo "backup_age_h=$(( ( $(date +%s) - $(stat -c %Y "$f") ) / 3600 ))"; echo "backup_size_mb=$(( $(stat -c %s "$f") / 1048576 ))"; else echo "backup_age_h="; echo "backup_size_mb="; fi
+v=$(systemctl is-active mnt-homemate_media-foto.mount 2>/dev/null || echo inactive); echo "photo_mount=$v"
+v=$(systemctl is-enabled nas-mounts.timer 2>/dev/null || echo missing); echo "nas_mounts_timer=$v"
+v=$(systemctl is-enabled house-analyst.timer 2>/dev/null || echo missing); echo "analyst_timer=$v"
+v=$(systemctl is-active cloudflared-ha 2>/dev/null || echo inactive); echo "cloudflared=$v"
+if sudo tailscale status 2>&1 | grep -qi 'logged out'; then echo "tailscale=logged_out"; else echo "tailscale=running"; fi
+if ping -c 1 -W 1 192.168.50.179 >/dev/null 2>&1; then echo "inverter_ping=ok"; else echo "inverter_ping=failed"; fi
+if ping -c 1 -W 1 {WELL_PUMP_IP} >/dev/null 2>&1; then echo "well_pump_ping=ok"; else echo "well_pump_ping=failed"; fi
+if [ -f {shlex.quote(HA_TOKEN_FILE)} ]; then
+  {shlex.quote(HA_VENV)}/bin/python - <<'PYEOF'
+import json, urllib.request
+token = open({HA_TOKEN_FILE!r}, encoding='utf-8').read().strip()
+req = urllib.request.Request('http://localhost:8123/api/states', headers={{'Authorization': 'Bearer ' + token}})
+try:
+    states = json.load(urllib.request.urlopen(req, timeout=15))
+except Exception as exc:
+    print('states_error=' + type(exc).__name__)
+else:
+    bad = [s for s in states if s['state'] in ('unavailable', 'unknown')]
+    print('entities_total=%d' % len(states))
+    print('entities_unavailable=%d' % len(bad))
+    print('inverter_unavailable=%d' % sum(1 for s in bad if s['entity_id'].split('.', 1)[1].startswith('inverter_')))
+    print('automations_orphaned=%d' % sum(1 for s in bad if s['entity_id'].startswith(('automation.', 'script.'))))
+PYEOF
+else
+  echo "states_error=token_missing"
+fi
 """.strip()
-    result = _ssh(command, timeout=120)
+
+
+def _parse_key_values(stdout: str) -> dict[str, str]:
     values: dict[str, str] = {}
-    for line in result["stdout"].splitlines():
+    for line in stdout.splitlines():
         if "=" in line:
             key, value = line.split("=", 1)
             values[key.strip()] = value.strip()
-    healthy = (
-        result["ok"]
-        and values.get("ha_service") == "active"
-        and values.get("ha_http") == "200"
-    )
-    return {"healthy": healthy, "values": values, "transport": result}
+    return values
+
+
+def _int_or_none(raw: str | None) -> int | None:
+    try:
+        return int(raw) if raw not in (None, "") else None
+    except ValueError:
+        return None
+
+
+def board_health() -> dict[str, Any]:
+    """Read board, HA, storage, filesystem, backup, remote-access and link health.
+
+    Переписано 02.09.2026. Стара версія казала healthy=true при файловій
+    системі з помилками, розлогіненому Tailscale і офлайн-інверторі, а три
+    ключі склеювала в один рядок, бо `systemctl is-enabled` неіснуючого юніта
+    не друкує переносу. Тепер кожна перевірка - окреме поле, `problems` - їх
+    людський перелік, а `healthy` істинне лише коли перелік порожній.
+    """
+    result = _ssh(BOARD_HEALTH_COMMAND, timeout=120)
+    values = _parse_key_values(result["stdout"])
+    problems: list[str] = []
+    if not result["ok"]:
+        problems.append("ssh transport failed")
+    if values.get("ha_service") != "active":
+        problems.append(f"home-assistant.service is {values.get('ha_service')}")
+    if values.get("ha_http") != "200":
+        problems.append(f"HTTP {values.get('ha_http')} on :8123")
+    fs_state = values.get("fs_state", "")
+    if "with errors" in fs_state:
+        problems.append(
+            f"/userdata filesystem has errors (state '{fs_state}', "
+            f"{values.get('fs_error_count', '?')} since last fsck)"
+        )
+    if values.get("fs_journal") == "0":
+        problems.append("/userdata ext4 has no journal: every power cut corrupts it")
+    userdata_free = _int_or_none(values.get("userdata_free_mb"))
+    if userdata_free is not None and userdata_free < 250:
+        problems.append(f"/userdata free {userdata_free} MB < 250")
+    root_free = _int_or_none(values.get("root_free_mb"))
+    if root_free is not None and root_free < 800:
+        problems.append(f"root free {root_free} MB < 800")
+    if values.get("backup_mount_nfs") == "0":
+        problems.append("NAS backup share is not mounted")
+    backup_age = _int_or_none(values.get("backup_age_h"))
+    if backup_age is None:
+        problems.append("no HA backup archive found on NAS")
+    elif backup_age > 48:
+        problems.append(f"newest HA backup is {backup_age} h old")
+    backup_size = _int_or_none(values.get("backup_size_mb"))
+    if backup_size is not None and backup_size > 1024:
+        problems.append(
+            f"newest HA backup is {backup_size} MB: it is dragging NAS media, "
+            "not settings only"
+        )
+    if values.get("tailscale") == "logged_out":
+        problems.append("tailscale is logged out (Cloudflare is the only remote path)")
+    if values.get("cloudflared") != "active":
+        problems.append("cloudflared-ha is not active")
+    if values.get("inverter_ping") != "ok":
+        problems.append("Deye logger 192.168.50.179 does not answer: outage automations are blind")
+    if values.get("well_pump_ping") != "ok":
+        problems.append(f"well pump plug {WELL_PUMP_IP} does not answer")
+    orphaned = _int_or_none(values.get("automations_orphaned"))
+    if orphaned:
+        problems.append(f"{orphaned} automation/script registry entries are orphaned (unavailable)")
+    if values.get("states_error"):
+        problems.append(f"could not read /api/states: {values['states_error']}")
+    return {
+        "healthy": not problems,
+        "problems": problems,
+        "values": values,
+        "transport": result,
+    }
 
 
 def irrigation_health() -> dict[str, Any]:
@@ -370,8 +497,8 @@ printf 'well_pump_errors_10m='; sudo journalctl -u home-assistant --since '-10 m
     return {
         "well_pump_ready": ready,
         "control_path": (
-            "LocalTuya 3.5 relay over LAN TCP/6668; cloud power telemetry "
-            "fallback while LocalTuya power_2 remains zero"
+            "LocalTuya 3.5 relay over LAN TCP/6668 with a 1-second scan; the "
+            "local power entity is the monitoring source since 2026-08-22"
         ),
         "expected_scan_interval_seconds": WELL_PUMP_SCAN_INTERVAL_SECONDS,
         "values": values,
@@ -391,10 +518,9 @@ printf 'well_pump_errors_10m='; sudo journalctl -u home-assistant --since '-10 m
                 "established, and no matching errors for 10 minutes"
             ),
             "cadence": (
-                "LocalTuya is configured for a 1-second scan, but power_2 is "
-                "currently diagnostic-only because it has not produced a "
-                "non-zero sample. Operational dashboards use cloud power until "
-                "a natural run proves local telemetry"
+                "LocalTuya scan_interval is 1 s (set 2026-08-22; without it the "
+                "plug reported 0-28 % of a run). A missing session here means "
+                "the plug is off the LAN, not that local telemetry is broken"
             ),
             "physical_proof": (
                 "Observe the next natural pump run unless the owner explicitly "
@@ -658,6 +784,76 @@ def network_inventory(query: str | None = None) -> dict[str, Any]:
             .replace("-", ":")
         ]
     return {"count": len(devices), "devices": devices}
+
+
+def entity_states(pattern: str, limit: int = 200) -> dict[str, Any]:
+    """Read matching entity states through HA's own REST API on the board.
+
+    Повертає лише entity_id, стан, одиницю, friendly_name і час зміни - жодних
+    атрибутів, у яких можуть жити координати, ключі чи URL. Токен читається на
+    платі і ніколи не повертається. До 02.09.2026 агент збирав це curl-конвеєром
+    вручну в кожній сесії.
+    """
+    if not pattern or len(pattern) > 200:
+        raise ValueError("pattern is required and limited to 200 characters")
+    re.compile(pattern)  # validate locally before sending
+    limit = max(1, min(int(limit), 500))
+    remote_script = f"""
+import json, os, re, urllib.request
+token_path = {HA_TOKEN_FILE!r}
+if not os.path.isfile(token_path):
+    print(json.dumps({{'_error': 'token_missing'}})); raise SystemExit(0)
+token = open(token_path, encoding='utf-8').read().strip()
+req = urllib.request.Request('http://localhost:8123/api/states', headers={{'Authorization': 'Bearer ' + token}})
+states = json.load(urllib.request.urlopen(req, timeout=15))
+rx = re.compile({pattern!r}, re.I)
+out = []
+for s in sorted(states, key=lambda s: s['entity_id']):
+    if rx.search(s['entity_id']) or rx.search(str(s['attributes'].get('friendly_name', ''))):
+        out.append({{'entity_id': s['entity_id'], 'state': s['state'],
+                    'unit': s['attributes'].get('unit_of_measurement'),
+                    'name': s['attributes'].get('friendly_name'),
+                    'last_changed': s['last_changed']}})
+print(json.dumps({{'matched': len(out), 'entities': out[:{limit}]}}, ensure_ascii=False))
+""".strip()
+    transport = _ssh(
+        f"{shlex.quote(HA_VENV)}/bin/python -c " + shlex.quote(remote_script),
+        timeout=60,
+    )
+    if not transport["ok"]:
+        return {"ok": False, "matched": 0, "entities": [], "transport": transport}
+    try:
+        data = json.loads(transport["stdout"])
+    except json.JSONDecodeError:
+        return {"ok": False, "matched": 0, "entities": [], "transport": transport}
+    if data.get("_error"):
+        return {"ok": False, "reason": data["_error"], "matched": 0, "entities": []}
+    return {"ok": True, "matched": data["matched"], "entities": data["entities"]}
+
+
+NOTIFY_LOG_SCRIPT = f"{HA_CONFIG_ROOT}/scripts/notify_log.py"
+
+
+def notify_log(limit: int = 40) -> dict[str, Any]:
+    """Read the board's notification journal (notifications.db) via its own script.
+
+    Це той самий журнал, що показує вкладка «Пристрої → Сповіщення»: кожен
+    виклик notify.* і persistent_notification.create, з позначкою «нове» і
+    згорнутими дублями на три телефони. Лише читання.
+    """
+    limit = max(1, min(int(limit), 200))
+    transport = _ssh(
+        f"{shlex.quote(HA_VENV)}/bin/python {shlex.quote(NOTIFY_LOG_SCRIPT)} export --limit {limit}",
+        timeout=60,
+    )
+    if not transport["ok"]:
+        return {"ok": False, "transport": transport}
+    try:
+        data = json.loads(transport["stdout"])
+    except json.JSONDecodeError:
+        return {"ok": False, "transport": transport}
+    data["ok"] = True
+    return data
 
 
 def project_summary() -> dict[str, Any]:
