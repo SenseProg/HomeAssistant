@@ -26,3 +26,8 @@ deps/
 desktop.ini
 secrets.yaml
 tts/
+
+# Session/tool noise of the Windows working copy
+.claude/settings.local.json
+.codex-tmp-*/
+appmap.log

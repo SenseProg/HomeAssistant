@@ -2,9 +2,23 @@
 
 ## Remote access
 
-Remote access is Tailscale. Set up on the board that runs the house on
-2026-08-14; the ZeroTier plan this section used to describe was never carried
-out, and ZeroTier is not installed on that board at all.
+There are two paths in, and they are not equivalent (details in
+`board-config/new-board/README.md`):
+
+- **Cloudflare named tunnel** — the public one and the one the companion app
+  uses. `cloudflared-ha.service` on the board serves `https://ha.sonyachny.pp.ua`
+  (domain at NIC.UA, delegated to Cloudflare on 2026-08-17); `external_url` in
+  `configuration.yaml` points there. No port is opened on the router. Health:
+  `systemctl is-active cloudflared-ha` and an HTTPS request to the hostname.
+- **Tailscale** — the private one, described below. On 2026-09-02 the node was
+  found logged out again (`invalid key: API key does not exist`); the owner
+  chose to leave it for now, so until it is logged back in the tunnel is the only
+  remote path. `cli.py health` reports `tailscale=logged_out` for exactly this
+  situation.
+
+Tailscale was set up on the board that runs the house on 2026-08-14; the
+ZeroTier plan this section used to describe was never carried out, and ZeroTier
+is not installed on that board at all.
 
 | node | tailscale IP | what it is |
 | --- | --- | --- |
@@ -191,16 +205,18 @@ automation starts Irrigation Unlimited, which owns the safe valve/pump
 sequence. Zone 3 remains manual and is not part of weather-driven calculation.
 
 The duration formula is `abs(water deficit in mm) / precipitation rate × 3600`,
-where precipitation rate is `throughput × 60 / area`. At the commissioned
-250 m² and 40 L/min this is 9.6 mm/h: a 4 mm deficit produces 1500 seconds
-(25 minutes), while a freshly collected 0.05 mm deficit produces only about
-19 seconds. Module `1: Static` is kept as an optional fixed-reference module
+where precipitation rate is `throughput × 60 / area`. At the current 200 m² and
+40 L/min (zones 1 and 2) this is 12 mm/h: a 4 mm deficit produces 1200 seconds
+(20 minutes), while a freshly collected 0.05 mm deficit produces only about
+15 seconds. Zone 5 at 100 m² and 20 L/min has the same 12 mm/h rate. (An
+earlier version of this paragraph used 250 m²; the dashboard and Smart
+Irrigation carry 200 and 100.) Module `1: Static` is kept as an optional fixed-reference module
 with delta `-4 mm`; the production zones remain on PyETO so weather and rain
 affect the result.
 
 Practical Smart Irrigation field settings for this installation:
 
-- `Size` is the actual irrigated area (250 m² per commissioned zone), while
+- `Size` is the actual irrigated area (200 m² for zones 1 and 2, 100 m² for zone 5), while
   `Throughput` is the combined flow of that zone's sprinklers (currently
   40 L/min), not the pump's nameplate capacity.
 - `Bucket` is the accumulated soil-water balance: negative means a deficit and

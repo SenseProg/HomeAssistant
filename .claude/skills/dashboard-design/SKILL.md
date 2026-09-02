@@ -101,9 +101,11 @@ description: >-
 ## Метод верифікації (жоден крок не пропускається)
 
 1. YAML парситься; кількість views відповідає задуму.
-2. `scratchpad/extract_dashboard_refs.py <файл> <path>` → усі `custom:` типи
-   дозволені, всі entity існують у `hass.states` (перевіряй через браузер або
-   REST, не з пам'яті).
+2. `python tools/extract_dashboard_refs.py <файл> <path>` → усі `custom:` типи
+   дозволені, всі entity існують у `hass.states` (перевіряй через
+   `python mcp-server/cli.py states '<regex>'` або браузер, не з пам'яті).
+   Інструмент живе в `tools/`, а не в scratchpad: scratchpad сесійний і зникає
+   разом із сесією (так 02.09.2026 зник попередній екземпляр).
 3. Після деплою — рекурсивний обхід DOM разом із shadowRoot:
    `hui-error-card` = 0 **і** загальна кількість `hui-*-card` > очікуваного
    мінімуму. Нуль помилок при нулі карток = вью не відрендерилось.

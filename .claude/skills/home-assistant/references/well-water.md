@@ -33,30 +33,34 @@ The check is transport-only and never actuates the pump.
 The unsuffixed switch, power, current, voltage, and total-energy entities are
 the Tuya cloud copies. Keep them as fallback/control unless the owner requests
 their removal. The `_2` LocalTuya relay remains the preferred control entity.
-As of 2026-08-21, however, LocalTuya `power_2` has only `0 W` and brief
-`unavailable` states while cloud `power` has 148 daily records and peaks up to
-`1225.1 W`. Until local telemetry is repaired, dashboards and running-state
-logic must use the unsuffixed operational power sensor.
+
+**History, resolved 2026-08-22.** Until that evening LocalTuya `power_2` showed
+only `0 W` and this file told everyone to use the cloud `power` sensor. The
+cause was a missing `scan_interval` in the LocalTuya device entry, not the
+hardware: with a 1-second scan the plug reports 94 % of a run instead of
+0–28 %, and local and cloud energy agree (0.0553 vs 0.0555 kWh per day). Do not
+"repair" LocalTuya for this again, and do not move the running-state logic or
+the integrator back to the cloud entity.
 
 Do not replace the own integrated-energy helper with the LocalTuya
-`sensor.t34_smart_plug_electricity` merely because both are in kWh. At cutover
-the local DP did not match the cloud cumulative total. The own helper currently
-integrates the operational cloud power sensor with the left Riemann sum and is
-the calibration source; its value is `0.1113 kWh`. Do not switch its source to
-`power_2` while that entity remains permanently zero.
+`sensor.t34_smart_plug_electricity` merely because both are in kWh: DP 20 is a
+per-report increment, not a cumulative total — the trigger sensor
+`nasos_sverdlovini_enerhiia_prystroiu` in `configuration.yaml` sums it for
+reference. The own helper stays the calibration source.
 
-Automation `well_pump_running_state` triggers from the operational cloud power
-fallback and considers the pump active above 20 W. The water-estimation automation consumes the own
-integrated-energy helper rather than either native Tuya total.
+Automation `well_pump_running_state` considers the pump active above 20 W. The
+water-estimation automation consumes the own integrated-energy helper rather
+than either native Tuya total. If **every** T34 entity is `unavailable`, the
+plug is off the LAN (ARP `FAILED`, as on 2026-09-02 after a power cut) — check
+power at the socket before touching Home Assistant; `cli.py health` reports
+`well_pump_ping`.
 
 ## One-second scanning versus recorded history
 
-The LocalTuya device scan interval is configured as one second, but current
-`power_2` telemetry is not functioning. That does not imply one Recorder row
-per second: Home Assistant normally stores state changes, so a steady 0 W or
-unchanged running value can keep the same `last_updated` time. Validate cadence
-during a real run from raw local state changes, and retain the cloud fallback
-until a natural run produces non-zero LocalTuya power.
+The LocalTuya device scan interval is one second. That does not imply one
+Recorder row per second: Home Assistant stores state changes, so a steady 0 W
+or unchanged running value keeps the same `last_updated` time. Validate cadence
+during a real run from raw local state changes.
 
 The dashboard's `points_per_hour` is display aggregation, not device polling.
 The previous `12` points/hour produced five-minute buckets even though start and

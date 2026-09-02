@@ -9,15 +9,25 @@ description: Safely inspect, operate, diagnose, and update the production Home A
 
 Use the project-local `home-assistant-project` MCP server when it is available.
 Prefer its read-only tools for health, irrigation and well-pump LocalTuya
-readiness, Git status, router inventory, logs, config validation, and
-board/repository hash comparison. It intentionally has no tool that edits
-`.storage`, the recorder database, or live configuration.
+readiness, Git status, router inventory, logs, config validation, entity
+states (`ha_entity_states`, a regex over entity ids and names), the
+notification journal (`ha_notify_log`), and board/repository hash comparison.
+It intentionally has no tool that edits `.storage`, the recorder database, or
+live configuration.
 
 If the MCP server is not registered, run the same checks with
-`python mcp-server/cli.py health`, `sync`, `git`, `inventory`, `logs`, or
-`validate`, `irrigation-health`, `well-pump-health`, or `energy-flow-health`
-from the repository root. Use `energy-flow-health` before changing the Deye
-power-flow card or treating the inverter grid sensor as whole-site demand.
+`python mcp-server/cli.py health`, `sync`, `git`, `inventory`, `logs`,
+`states '<regex>'`, `notify-log`, `validate`, `irrigation-health`,
+`well-pump-health`, or `energy-flow-health` from the repository root. Use
+`energy-flow-health` before changing the Deye power-flow card or treating the
+inverter grid sensor as whole-site demand.
+
+**An MCP timeout is not proof that the board is down.** On 2026-09-02 every MCP
+tool timed out for half an hour while a direct `ssh.exe … uptime` answered in a
+second: the tools were synchronous and blocked the server's event loop, so
+parallel calls queued and summed each other's timeouts. They are async now, but
+the rule stays: after a timeout, run one direct SSH command before concluding
+anything about the board.
 
 ## Read the relevant reference
 
@@ -36,6 +46,13 @@ power-flow card or treating the inverter grid sensor as whole-site demand.
   what a Tuya account or subscription outage would break, or touching the
   `tuya`/`localtuya` config entries. It carries the cloud-vs-local inventory:
   which devices have a local twin and which seven are cloud-only.
+- Read `references/outage.md` before touching anything that reacts to a power
+  cut: the grid sensor, the battery thresholds, the load-shedding automation,
+  the inverter watchdog, or the readiness guard. It also explains what the
+  board itself does when the power goes (it goes down too).
+- Read `references/notifications.md` before adding a push, a persistent
+  notification, or any card that shows alerts: every notification is journaled
+  on the board, and the journal has rules about duplicates and reading.
 
 ## Non-negotiable safety rules
 
@@ -70,11 +87,16 @@ power-flow card or treating the inverter grid sensor as whole-site demand.
     The cloud copy belongs on a dashboard as a manual fallback, or as the last
     retry inside an automation — never as the only path. Ignoring this has
     already cost ten days of grid statistics and a day of hot water.
-11. The owner identifies the current physical replacement as RK3588, while its
+12. The owner identifies the current physical replacement as RK3588, while its
     migrated Linux image currently reports `Forlinx OK3568-C` and
     `rockchip,rk3568`. Treat `.141` as the production target, but record both
     facts and do not infer that a different host is production from the stale
     hostname or Device Tree label alone.
+13. Never put `initial:` on an `input_number`, `input_boolean` or
+    `input_select` that the dashboard is meant to own. It resets the value on
+    every restart, and the board restarts with every power cut: the outage
+    thresholds silently went back to their defaults for weeks before 2026-09-02.
+    `counter` keeps `initial` because its daily reset relies on it.
 
 ## Connection and canonical paths
 
@@ -109,6 +131,16 @@ the conversation agent sees in its `<known_incidents>` block. Read it before
 diagnosing anything: a symptom that is already recorded does not need
 rediscovering, and a record marked `watching` is waiting for exactly the kind of
 confirmation a new session can give. See `docs/incident-register.md`.
+
+`health` returns `problems`: a plain-language list of everything that failed —
+filesystem errors or a missing ext4 journal on `/userdata`, a backup older than
+48 h or larger than 1 GB (it is dragging NAS media), a logged-out Tailscale,
+an inactive Cloudflare tunnel, an unreachable Deye logger or well-pump plug,
+orphaned automation entities. `healthy` is true only when that list is empty.
+Until 2026-09-02 it said `healthy: true` beside a corrupted filesystem; do not
+trust any older memory that says otherwise. If the list is not empty, also run
+`python mcp-server/cli.py notify-log` — the board has usually been telling the
+owner about it for days.
 
 Treat any `mismatch` result as a stop condition for deployment. `match_eol_only`
 is not one: the text is identical and only the line endings differ, which is

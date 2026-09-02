@@ -4,8 +4,11 @@
 
 - Start: open the selected valve, confirm it is on, then start the pump.
 - Stop: stop the pump first, wait for pressure to fall, then close the valve.
-- Maximum continuous pump runtime: three hours. This is the only hard limit that
-  applies in every mode.
+- There is **no** runtime limit on the pump. The automation
+  `irrigation_pump_max_runtime_3h` keeps `max_runtime_hours: 0` on purpose:
+  hose watering through the garden hydrants takes as long as it takes. The name
+  is historical; do not "restore" three hours (README, this file and the
+  assistant prompt all said three hours until 2026-09-02 — that text was wrong).
 - Every Stop/emergency action must stop the pump and all physical valves.
 
 ## The pump may always be started, with or without a valve
@@ -34,9 +37,10 @@ dashboard row. An intermediate attempt added a "Без клапана (шлан�
 it; the owner rejected that as needless ceremony, and it was removed. Do not
 bring back a mode selector for this.
 
-What remains as protection: `irrigation_pump_max_runtime_3h` (three hours of
-continuous running) and `irrigation_close_valves_when_pump_idle` (clears a valve
-left open after the pump has been off for five minutes).
+What remains as protection: `irrigation_close_valves_when_pump_idle` (clears a
+valve left open after the pump has been off for five minutes) and the
+`irrigation_watchdog_master_without_valve` guard for scheduled runs.
+`irrigation_pump_max_runtime_3h` exists but is set to 0 = no limit.
 
 Do not reintroduce any dry-run interlock, any "pump on with no valve" fault, or
 any condition gating manual pump start. `sensor.poliv_stan_sistemi` has no

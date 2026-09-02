@@ -6,7 +6,9 @@
   RK3588. The migrated Linux image still reports `Forlinx OK3568-C Board` and
   `rockchip,rk3568`; preserve this discrepancy as an observed fact rather than
   choosing another deployment target from the stale label.
-- OS: Ubuntu 20.04.6 LTS, kernel 4.19.206, aarch64, 4 cores, 3.8 GiB RAM.
+- OS: Ubuntu 20.04.6 LTS, kernel 4.19.206, aarch64, 4 cores, **1.93 GiB RAM**
+  (MemTotal 2 019 024 kB, measured 2026-08-22; the 3.8 GiB in older documents
+  was wrong, and the board runs close to swap when a voice model is preloaded).
 - Host/IP: legacy hostname `ok3568`, `192.168.50.141` on `eth0`; `.168` is a
   secondary address on the same interface.
 - Home Assistant: Core 2026.7.4 in `/userdata/hass/venv` (a symlink to
@@ -21,6 +23,16 @@
 
 - The root filesystem contains the venv and Node/Claude tooling.
 - `/userdata` contains HA config and recorder data.
+- **`/userdata` is ext4 without a journal** (`tune2fs -l /dev/mmcblk0p8` lists
+  no `has_journal`), mounted `errors=continue`, `pass 0` in fstab. The board is
+  not on protected power and goes down with every outage, so each power cut
+  leaves the superblock "not clean with errors": fixed by fsck on 2026-08-22,
+  broken again on 2026-08-30, nine errors by 2026-09-02, with `ls` returning
+  "Structure needs cleaning" on two files. `cli.py health` reports
+  `fs_state`/`fs_error_count`/`fs_journal`. Repair is
+  `bash /home/forlinx/fsck-userdata.sh` (stops HA for minutes; irrigation must
+  be idle); the durable fix is protected power plus `tune2fs -O has_journal`
+  on the unmounted partition, which the script can do in the same stop.
 - Active swap is `/dev/zram0`, 1 GiB compressed RAM swap. The old 4 GiB eMMC
   swapfile was removed.
 - Use `du -x` on `/userdata`. The photo library is mounted outside the HA
