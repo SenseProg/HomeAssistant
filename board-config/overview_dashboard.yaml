@@ -6,6 +6,48 @@ views:
   icon: mdi:home-variant
   type: sections
   max_columns: 4
+  # Бейджі над сторінкою (додано 02.09.2026): канали зв'язку і нові сповіщення.
+  # Це «скромна іконка вгорі» - відповідь на питання, що хмарне, а що локальне,
+  # без правки жодної плитки. Тап веде на «Пристрої → Зв'язок» / «Сповіщення».
+  badges:
+  - type: entity
+    entity: binary_sensor.localtuya
+    name: Локально
+    show_name: true
+    show_state: true
+    tap_action:
+      action: navigate
+      navigation_path: /pristroi-dashboard/links
+  - type: entity
+    entity: binary_sensor.tuya_khmara
+    name: Хмара
+    show_name: true
+    show_state: true
+    tap_action:
+      action: navigate
+      navigation_path: /pristroi-dashboard/links
+  - type: entity
+    entity: binary_sensor.invertor_zviazok
+    name: Інвертор
+    show_name: true
+    show_state: true
+    tap_action:
+      action: navigate
+      navigation_path: /pristroi-dashboard/links
+  - type: entity
+    entity: sensor.spovishchennia_zhurnal
+    name: Нові сповіщення
+    icon: mdi:bell-badge-outline
+    show_name: true
+    show_state: true
+    color: amber
+    visibility:
+    - condition: numeric_state
+      entity: sensor.spovishchennia_zhurnal
+      above: 0
+    tap_action:
+      action: navigate
+      navigation_path: /pristroi-dashboard/alerts
   sections:
   # --- Секція 1 · Hero: привітання, погода, полив, тариф, NAS ---
   - type: grid
@@ -40,9 +82,25 @@ views:
         {%- if is_state('binary_sensor.cloudmate_nas_online','off') -%}
           {%- set ns.bad = ns.bad + ['NAS недоступний'] -%}
         {%- endif -%}
+        {# Канали зв'язку (02.09.2026): без логера Deye сповіщення про світло
+           не працюють, а локальні розетки після знеструмлення повертаються не
+           всі - саме про це hero мовчав, коли інвертор і насос свердловини
+           випали одночасно. #}
+        {%- if is_state('binary_sensor.invertor_zviazok','off') -%}
+          {%- set ns.bad = ns.bad + ['інвертор поза звʼязком, сповіщення про світло не працюють'] -%}
+        {%- endif -%}
+        {%- set poza = state_attr('binary_sensor.localtuya','poza_zviazkom') or '' -%}
+        {%- if poza -%}
+          {%- set ns.bad = ns.bad + ['поза звʼязком: ' ~ poza] -%}
+        {%- endif -%}
+        {%- if is_state('binary_sensor.tuya_khmara','off') -%}
+          {%- set ns.bad = ns.bad + ['хмара Tuya мовчить'] -%}
+        {%- endif -%}
         {# Явний перенос: усі теги вище стоять із мінусом і з'їдають власні рядки,
            інакше статус прилипає до рядка про полив. #}
-        {{ '\n' }}{% if ns.bad %}⚠️ {{ ns.bad | length }} {{ 'проблема' if ns.bad | length == 1 else 'проблеми' }}: {{ ns.bad | join(', ') }}{% else %}✅ Система: все гаразд{% endif %}
+        {{ '\n' }}{% if ns.bad %}⚠️ {{ ns.bad | length }} {{ 'проблема' if ns.bad | length == 1 else 'проблеми' }}: {{ ns.bad | join('; ') }}{% else %}✅ Система: все гаразд{% endif %}
+        {%- set novykh = states('sensor.spovishchennia_zhurnal') | int(0) -%}
+        {{ '\n' }}{% if novykh > 0 %}🔔 {{ novykh }} {{ 'нове сповіщення' if novykh == 1 else 'нових сповіщень' }} · [журнал](/pristroi-dashboard/alerts){% else %}🔕 Нових сповіщень немає · [журнал](/pristroi-dashboard/alerts){% endif %}
     - type: tile
       entity: switch.mini_switch_k601_2_switch_1_2
       name: Насос поливу · ручне керування

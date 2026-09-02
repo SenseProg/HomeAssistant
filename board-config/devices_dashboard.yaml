@@ -4515,3 +4515,191 @@ views:
         **Пральна машина - прання завершено** — Тригер саме на перехід run -> stop, а не на job_state finish: finish буває коротким і його легко проґавити, а перехід стану машини надійний і не повторюється після перезавантаження Home Assistant.
 
         **Без світла - пральна машина працює** — Окрема автоматизація, а не рядок у переліку важких споживачів: пральну машину не можна просто вимкнути, як бойлер. Обірваний цикл означає воду в баку і мокру білизну, тому тут лише попередження - рішення за людиною.
+- title: Сповіщення
+  path: alerts
+  icon: mdi:bell-outline
+  type: sections
+  max_columns: 4
+  dense_section_placement: true
+  sections:
+  # --- Секція 1 · Hero: скільки нових, і одна кнопка ---
+  # Джерело - власний журнал сповіщень (config/scripts/notify_log.py,
+  # notifications.db). Він ловить КОЖЕН виклик notify.* і
+  # persistent_notification.create, тому тут є і те, що прийшло на телефон,
+  # і те, що показала панель, і те, що зникло при рестарті.
+  - type: grid
+    column_span: 4
+    cards:
+    - type: markdown
+      grid_options:
+        columns: full
+      content: |-
+        {% set n = states('sensor.spovishchennia_zhurnal') | int(0) %}
+        {% set sohodni = state_attr('sensor.spovishchennia_zhurnal', 'today') | int(0) %}
+        {% set usoho = state_attr('sensor.spovishchennia_zhurnal', 'total') | int(0) %}
+        ## {{ '🔵 ' ~ n ~ ' нових' if n > 0 else '✅ Нових немає' }} · {{ sohodni }} за добу · {{ usoho }} у журналі
+        Прочитано до {{ state_attr('sensor.spovishchennia_zhurnal', 'last_read') }}. Записи лишаються назавжди: старі відповідають на «коли це почалося» і «чи було таке раніше».
+    - type: button
+      name: Позначити прочитаними
+      icon: mdi:email-open-outline
+      entity: input_button.spovishchennia_prochytano
+      show_state: false
+      tap_action:
+        action: perform-action
+        perform_action: input_button.press
+        target:
+          entity_id: input_button.spovishchennia_prochytano
+      grid_options:
+        columns: 12
+        rows: 1
+    - type: tile
+      entity: sensor.spovishchennia_zhurnal
+      name: Нових
+      icon: mdi:bell-badge-outline
+      grid_options:
+        columns: 12
+        rows: 1
+  # --- Секція 2 · Журнал ---
+  # Один запис на подію: script.spovistyty_vsikh шле той самий текст на три
+  # телефони, тому notify_log.py згортає сусідні дублі і віддає kopii.
+  # Кожен рядок списку - в один рядок Jinja: перенос усередині {% if %} у циклі
+  # ламає розмітку (пастка з dashboard-design).
+  - type: grid
+    column_span: 4
+    cards:
+    - type: heading
+      heading: Журнал
+      icon: mdi:history
+      grid_options:
+        columns: full
+    - type: markdown
+      grid_options:
+        columns: full
+      content: |-
+        {% set items = state_attr('sensor.spovishchennia_zhurnal', 'items') or [] %}
+        {% if items | count == 0 %}Журнал порожній або сенсор ще не оновився.{% endif %}
+        {% for it in items %}
+        - {{ '🔵' if it.nove else '▫️' }} **{{ it.chas[5:] }}** {{ '📱' if 'mobile_app' in (it.service or '') else '🔔' }} **{{ it.title }}**{{ ' ×' ~ it.kopii if (it.kopii | default(1) | int) > 1 else '' }} — {{ it.message }}
+        {% endfor %}
+    - type: markdown
+      text_only: true
+      grid_options:
+        columns: full
+      content: |-
+        <details><summary>Як читати</summary>
+
+        🔵 — нове, ще не позначене прочитаним. 📱 — пішло на телефони, 🔔 — показане на панелі Home Assistant. «×3» — той самий текст на три телефони, згорнуто в один рядок.
+        Кнопка «Позначити прочитаними» ставить одну мітку на весь журнал (поштова модель). Закриття сповіщення на панелі HA робить те саме автоматично.
+        Сенсор оновлюється раз на п'ять хвилин і одразу після натискання кнопки.
+        </details>
+- title: Зв'язок
+  path: links
+  icon: mdi:lan-connect
+  type: sections
+  max_columns: 4
+  dense_section_placement: true
+  sections:
+  # --- Секція 1 · Hero: три канали одним рядком ---
+  - type: grid
+    column_span: 4
+    cards:
+    - type: markdown
+      grid_options:
+        columns: full
+      content: |-
+        {% set lt_ok = is_state('binary_sensor.localtuya', 'on') %}
+        {% set cl_ok = is_state('binary_sensor.tuya_khmara', 'on') %}
+        {% set inv_ok = is_state('binary_sensor.invertor_zviazok', 'on') %}
+        {% set poza = state_attr('binary_sensor.localtuya', 'poza_zviazkom') or '' %}
+        ## {{ '🟢' if lt_ok and cl_ok and inv_ok else '🟠' }} Локально {{ '✅' if lt_ok else '❌' }} · Хмара Tuya {{ '✅' if cl_ok else '❌' }} · Інвертор {{ '✅' if inv_ok else '❌' }}
+        {{ 'Поза звʼязком: ' ~ poza ~ '.' if poza else 'Усі опорні локальні пристрої на звʼязку.' }} LocalTuya: {{ state_attr('binary_sensor.localtuya', 'nedostupno') }} із {{ state_attr('binary_sensor.localtuya', 'usoho') }} сутностей недоступні · хмара Tuya: {{ state_attr('binary_sensor.tuya_khmara', 'nedostupno') }} із {{ state_attr('binary_sensor.tuya_khmara', 'usoho') }}.
+    - type: tile
+      entity: binary_sensor.localtuya
+      name: Локально (LocalTuya)
+      grid_options:
+        columns: 16
+        rows: 1
+    - type: tile
+      entity: binary_sensor.tuya_khmara
+      name: Хмара Tuya
+      grid_options:
+        columns: 16
+        rows: 1
+    - type: tile
+      entity: binary_sensor.invertor_zviazok
+      name: Інвертор Deye
+      grid_options:
+        columns: 16
+        rows: 1
+  # --- Секція 2 · Таблиця каналів по пристроях ---
+  # Довідник пар «локальна сутність / хмарна сутність» - з
+  # .claude/skills/home-assistant/references/tuya.md. Новий пристрій Tuya =
+  # один рядок у списку d нижче, більше нічого правити не треба.
+  - type: grid
+    column_span: 4
+    cards:
+    - type: heading
+      heading: 'Пристрої Tuya: яким каналом працюють'
+      icon: mdi:swap-horizontal
+      grid_options:
+        columns: full
+    - type: markdown
+      grid_options:
+        columns: full
+      content: |-
+        {% set bad = ['unavailable', 'unknown'] %}
+        {% set d = [
+          ['Контролер поливу', '.221', 'switch.avtopoliv_kontroler_avtopoliv_klapan_1', 'switch.avtopoliv_kontroler_switch_1'],
+          ['Насос поливу K601', '.91', 'switch.mini_switch_k601_2_switch_1_2', 'switch.mini_switch_k601_2_switch_1'],
+          ['Лічильник вводу', '.219', 'sensor.energy_meter_phase_a_power_2', 'sensor.energy_meter_total_energy'],
+          ['Зарядка авто', '.36', 'sensor.zariadka_7_5kvt_device_kw', 'switch.zariadka_7_5kvt_switch'],
+          ['Насос свердловини T34', '.26', 'switch.t34_smart_plug_switch_1_2', 'switch.t34_smart_plug_switch_1'],
+          ['Бойлер бабусі', '', 'switch.boiler_babusi_socket', 'switch.smart_plug_socket_1'],
+          ['Мала пралка', '.82', 'switch.mala_pralna_mashina_socket', 'switch.mala_pralka_socket_cloud'],
+          ['Сушарка', '', 'switch.sushka_socket', 'switch.sushka_socket_cloud'],
+          ['Дім бабусі, температура', '', none, 'sensor.2i_poverkh_t_h_temperature'],
+          ['Надворі, температура', '', none, 'sensor.na_dvori_t_h_temperature'],
+          ['Велика пралка', '', none, 'switch.velika_pralka_socket_1']] %}
+        | Пристрій | IP | Локально | Хмара | Керує |
+        |---|---|---|---|---|
+        {% for n, ip, l, c in d %}| {{ n }} | {{ ip }} | {{ '—' if l is none else ('✅' if states(l) not in bad else '❌') }} | {{ '—' if c is none else ('✅' if states(c) not in bad else '❌') }} | {{ 'лише хмара' if l is none else ('локально' if states(l) not in bad else ('хмара (резерв)' if c is not none and states(c) not in bad else 'ніхто')) }} |
+        {% endfor %}
+    - type: markdown
+      text_only: true
+      grid_options:
+        columns: full
+      content: |-
+        <details><summary>Що означають канали</summary>
+
+        **Локально (LocalTuya)** — Home Assistant тримає TCP-сесію з пристроєм у своїй мережі; працює без інтернету і без акаунта Tuya. Це виконавчий шлях поливу, насосів, лічильника і зарядки.
+        **Хмара Tuya** — пристрій → сервери Tuya → HA; залежить від інтернету і токена акаунта (протухав 09.08 на десять днів). Хмарна копія лишається як ручний резерв на дашборді і як останній повтор в автоматизаціях.
+        **Лише хмара** — датчики температури на батарейках; локального шляху немає без Zigbee-шлюзу.
+        Правило проєкту: автоматизація, лічильник чи джерело Energy ніколи не прив'язується до хмарної сутності, якщо є локальний двійник.
+        </details>
+  # --- Секція 3 · Решта інтеграцій ---
+  - type: grid
+    column_span: 4
+    cards:
+    - type: heading
+      heading: Інші інтеграції
+      icon: mdi:lan
+      grid_options:
+        columns: full
+    - type: markdown
+      grid_options:
+        columns: full
+      content: |-
+        {% set bad = ['unavailable', 'unknown'] %}
+        {% set ns = namespace(sonoff=0, solar=0, siku=0, terneo=0) %}
+        {% for e in integration_entities('sonoff') if states(e) in bad %}{% set ns.sonoff = ns.sonoff + 1 %}{% endfor %}
+        {% for e in integration_entities('solarman') if states(e) in bad %}{% set ns.solar = ns.solar + 1 %}{% endfor %}
+        {% for e in integration_entities('siku') if states(e) in bad %}{% set ns.siku = ns.siku + 1 %}{% endfor %}
+        {% for e in integration_entities('terneo') if states(e) in bad %}{% set ns.terneo = ns.terneo + 1 %}{% endfor %}
+        | Інтеграція | Шлях | Недоступно / усього |
+        |---|---|---|
+        | Sonoff / eWeLink (Zigbee-датчики, реле) | хмара eWeLink + LAN | {{ ns.sonoff }} / {{ integration_entities('sonoff') | count }} |
+        | Deye через Solarman | локально, TCP 8899 | {{ ns.solar }} / {{ integration_entities('solarman') | count }} |
+        | Blauberg / Siku | локально, UDP 4000 | {{ ns.siku }} / {{ integration_entities('siku') | count }} |
+        | Terneo (тепла підлога) | локально, HTTP | {{ ns.terneo }} / {{ integration_entities('terneo') | count }} |
+        | Камера Hikvision | локально | {{ 'на звʼязку' if is_state('binary_sensor.hikvision_camera_online', 'on') else 'офлайн' }} |
+        | NAS CloudMate | локально, NFS | {{ 'на звʼязку' if is_state('binary_sensor.cloudmate_nas_online', 'on') else 'офлайн' }} |

@@ -58,12 +58,17 @@ input_number:
   # Винесені в налаштування навмисне: правильне число залежить від сезону і від
   # того, скільки лишилось у батареї, а лізти в YAML заради 1.4 замість 1.5 кВт
   # не має сенсу.
+  #
+  # Без initial: (знято 02.09.2026). З initial: Home Assistant повертав значення
+  # з YAML при КОЖНОМУ рестарті - тобто все, що виставили на дашборді, зникало
+  # разом зі світлом (плата гасне при відключеннях). Без initial: HA відновлює
+  # останнє значення з restore_state; типові числа (1.5 кВт, 3 хв, 25 %, 10 %)
+  # діють лише при першому створенні помічника.
   bez_svitla_porih_kvt:
     name: Без світла - поріг споживання
     min: 0.2
     max: 6
     step: 0.1
-    initial: 1.5
     unit_of_measurement: кВт
     icon: mdi:flash-alert
   bez_svitla_zatrymka_hv:
@@ -71,7 +76,6 @@ input_number:
     min: 1
     max: 30
     step: 1
-    initial: 3
     unit_of_measurement: хв
     icon: mdi:timer-sand
   batareia_porih_uvaha:
@@ -79,7 +83,6 @@ input_number:
     min: 5
     max: 90
     step: 5
-    initial: 25
     unit_of_measurement: "%"
     icon: mdi:battery-alert
   batareia_porih_krytychno:
@@ -87,7 +90,6 @@ input_number:
     min: 2
     max: 50
     step: 1
-    initial: 10
     unit_of_measurement: "%"
     icon: mdi:battery-alert-variant-outline
   poliv_zona_1_hvylyn:
@@ -253,7 +255,6 @@ input_boolean:
   bez_svitla_vymykaty:
     name: Без світла - вимикати важкі споживачі
     icon: mdi:power-plug-off
-    initial: true
   # Вимикач самого розкладу. Off - бойлер лишається під ручним керуванням,
   # автоматика його не чіпає. Автоматизації перевіряють саме цей прапорець.
   boiler_babusi_rozklad:
@@ -478,6 +479,72 @@ irrigation_unlimited:
 
 # --- Total load across all three phases (added 2026-08-02) ---
 template:
+  # --- Канали зв'язку: локально / хмара / інвертор (додано 02.09.2026) ---
+  #
+  # Відповідь на «не зрозуміло, який пристрій хмарний, а який локальний, і що
+  # злетіло». Три бінарні сенсори стоять бейджами вгорі «Огляду» і «Пристроїв»
+  # і живлять агрегат проблем у hero; повна таблиця каналів - на вкладці
+  # «Пристрої → Зв'язок». Стан - не частка доступних сутностей (половина
+  # хмарних Tuya мертва давно і законно), а живі опорні сутності каналу.
+  - binary_sensor:
+      - name: LocalTuya
+        unique_id: link_localtuya
+        device_class: connectivity
+        icon: mdi:lan-connect
+        state: >-
+          {% set bad = ['unavailable', 'unknown'] %}
+          {{ states('switch.avtopoliv_kontroler_avtopoliv_klapan_1') not in bad
+             and states('switch.mini_switch_k601_2_switch_1_2') not in bad
+             and states('sensor.energy_meter_phase_a_power_2') not in bad }}
+        attributes:
+          # Локальні пристрої, яких зараз не видно. Насос свердловини і розетки
+          # сюди входять, бо їх хочеться бачити в hero; телевізор - ні, він
+          # вимкнений більшу частину доби і це норма.
+          poza_zviazkom: >-
+            {% set bad = ['unavailable', 'unknown'] %}
+            {% set d = [
+              ['контролер поливу', 'switch.avtopoliv_kontroler_avtopoliv_klapan_1'],
+              ['насос поливу', 'switch.mini_switch_k601_2_switch_1_2'],
+              ['лічильник вводу', 'sensor.energy_meter_phase_a_power_2'],
+              ['зарядка авто', 'sensor.zariadka_7_5kvt_device_kw'],
+              ['насос свердловини', 'switch.t34_smart_plug_switch_1_2'],
+              ['бойлер бабусі', 'switch.boiler_babusi_socket'],
+              ['мала пралка', 'switch.mala_pralna_mashina_socket'],
+              ['сушарка', 'switch.sushka_socket']] %}
+            {% set ns = namespace(l=[]) %}
+            {% for n, e in d if states(e) in bad %}{% set ns.l = ns.l + [n] %}{% endfor %}
+            {{ ns.l | join(', ') }}
+          nedostupno: >-
+            {% set bad = ['unavailable', 'unknown'] %}
+            {% set ns = namespace(n=0) %}
+            {% for e in integration_entities('localtuya') if states(e) in bad %}{% set ns.n = ns.n + 1 %}{% endfor %}
+            {{ ns.n }}
+          usoho: "{{ integration_entities('localtuya') | count }}"
+      - name: Tuya khmara
+        unique_id: link_tuya_cloud
+        device_class: connectivity
+        icon: mdi:cloud-outline
+        # Два хмарні сенсори, які живі за нормальних умов: показ лічильника з
+        # хмари і датчик у домі бабусі. Обидва мовчать - значить, мовчить хмара
+        # (токен протух або немає інтернету), а не один датчик сів.
+        state: >-
+          {% set bad = ['unavailable', 'unknown'] %}
+          {{ states('sensor.energy_meter_total_energy') not in bad
+             or states('sensor.2i_poverkh_t_h_temperature') not in bad }}
+        attributes:
+          nedostupno: >-
+            {% set bad = ['unavailable', 'unknown'] %}
+            {% set ns = namespace(n=0) %}
+            {% for e in integration_entities('tuya') if states(e) in bad %}{% set ns.n = ns.n + 1 %}{% endfor %}
+            {{ ns.n }}
+          usoho: "{{ integration_entities('tuya') | count }}"
+      - name: Invertor zviazok
+        unique_id: link_inverter
+        device_class: connectivity
+        icon: mdi:solar-power-variant
+        # Батарея - перший сенсор, який зникає разом із логером. Поки він
+        # unavailable, сповіщення про світло і пороги батареї не працюють.
+        state: "{{ has_value('sensor.inverter_battery') }}"
   # --- Чи є світло в мережі ---
   # Питаємо інвертор, а не лічильник: лічильник живиться від тієї самої
   # мережі і при відключенні просто стає unavailable, а unavailable буває і
@@ -1135,6 +1202,9 @@ recorder:
       # Журнал показників тримає всі рядки в атрибутах; писати цей блок у
       # SQLite при кожному опитуванні немає сенсу - файл сам собі історія.
       - sensor.zhurnal_pokaznykiv_vody
+      # Журнал сповіщень так само тримає всі записи в атрибутах (40 записів
+      # перевищують 16 КБ - recorder попереджав 7 разів за дві доби).
+      - sensor.spovishchennia_zhurnal
       - sensor.tenda_ap_clients
       - sensor.tenda_ap_status
       - sensor.tenda_ap_security
@@ -1815,4 +1885,3 @@ input_select:
       - 2007
       - 2006
       - 1980-2004
-    initial: Усі роки

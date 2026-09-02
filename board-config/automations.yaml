@@ -1235,18 +1235,23 @@
   mode: restart
 - id: well_pump_running_state
   alias: Свердловина — стан роботи насоса
-  description: Вважає насос активним, коли робочий сенсор потужності перевищує 20
-    Вт. Тимчасово використовується cloud-сенсор, бо LocalTuya power_2 не віддає ненульових
-    значень.
+  description: 'Вважає насос активним, коли потужність перевищує 20 Вт. Джерело -
+    локальний LocalTuya power_2 (опитування 1 с, полагоджено 22.08.2026); хмарний
+    power лишається резервом лише на той час, коли локальний unavailable. До 02.09
+    тригером був тільки хмарний сенсор, і стан насоса відставав на хвилини.'
   triggers:
   - trigger: state
-    entity_id: sensor.t34_smart_plug_power
+    entity_id:
+    - sensor.t34_smart_plug_power_2
+    - sensor.t34_smart_plug_power
   conditions: []
   actions:
   - if:
     - condition: template
-      value_template: '{{ states(''sensor.t34_smart_plug_power'') | float(0) > 20
-        }}'
+      value_template: >-
+        {% set l = states('sensor.t34_smart_plug_power_2') | float(-1) %}
+        {% set c = states('sensor.t34_smart_plug_power') | float(-1) %}
+        {{ (l if l >= 0 else c) > 20 }}
     then:
     - action: input_boolean.turn_on
       target:
@@ -1502,41 +1507,6 @@
             або на зворотний клапан, що не тримає.'
   mode: queued
   max: 4
-- id: well_pump_trace_samples
-  alias: Свердловина — трасування семплів насоса
-  description: 'Пише у .private/pump-trace.log кожну зміну електричних сутностей насоса
-    з міткою часу до мікросекунди. Питання, заради якого це заведено: чи справді
-    розетка віддає один семпл на пуск, чи їх більше, а губить їх Home Assistant.
-    Фізика бака каже, що пуск триває близько 26 секунд при подачі 80 л/хв і що
-    система бачить менш ніж половину пусків — трасування має це підтвердити або
-    спростувати. Це тимчасова діагностика: коли питання закриється, автоматизацію
-    і платформу notify.pump_trace слід прибрати.'
-  triggers:
-  - trigger: state
-    entity_id:
-    - sensor.t34_smart_plug_power_2
-    - sensor.t34_smart_plug_power
-    - sensor.t34_smart_plug_current_2
-    - sensor.t34_smart_plug_electricity
-    - input_boolean.nasos_sverdlovini_pratsiuie
-  conditions: []
-  actions:
-  # system_log.write замість notify.file: YAML-платформа `file` у цій версії HA
-  # більше не реєструє сервіс (перевірено 22.08 - вісім помилок «Action
-  # notify.pump_trace not found» під час першого ж заміру), а цей сервіс
-  # вбудований, пише в journal і застосовується звичайним automation.reload.
-  - action: system_log.write
-    data:
-      level: warning
-      logger: pump_trace
-      message: '{{ now().isoformat(timespec=''microseconds'') }} {{ trigger.entity_id
-        | replace(''sensor.t34_smart_plug_'', '''') | replace(''input_boolean.'', '''')
-        }} {{ trigger.from_state.state | default(''?'', true) }} -> {{ trigger.to_state.state
-        | default(''?'', true) }} (dt={{ (as_timestamp(trigger.to_state.last_changed)
-        - as_timestamp(trigger.from_state.last_changed)) | round(2) if trigger.from_state
-        else ''-'' }}s)'
-  mode: queued
-  max: 40
 - id: well_pump_manual_timing_start
   alias: Свердловина — початок ручного заміру
   description: Знімає показання трьох лічильників у момент, коли людина біля насоса
