@@ -32,6 +32,10 @@ power-flow card or treating the inverter grid sensor as whole-site demand.
 - Read `references/well-water.md` before changing the well-pump plug, its
   LocalTuya entities, one-second scan, energy integrator, water calibration,
   mechanical readings, or the `sverdlovina-dashboard` storage dashboard.
+- Read `references/tuya.md` before binding anything to a Tuya entity, judging
+  what a Tuya account or subscription outage would break, or touching the
+  `tuya`/`localtuya` config entries. It carries the cloud-vs-local inventory:
+  which devices have a local twin and which seven are cloud-only.
 
 ## Non-negotiable safety rules
 
@@ -60,6 +64,12 @@ power-flow card or treating the inverter grid sensor as whole-site demand.
 9. Do not add `-b 192.168.50.111` to SSH. That bridge no longer exists.
 10. Do not reconfigure or flash the board to obtain Docker. The vendor kernel
     lacks overlayfs, veth, and required cgroups.
+11. Never bind an automation, a `utility_meter`, or an Energy dashboard source
+    to a cloud Tuya entity when a LocalTuya twin exists; see
+    `references/tuya.md` for the twin table and the two deliberate exceptions.
+    The cloud copy belongs on a dashboard as a manual fallback, or as the last
+    retry inside an automation — never as the only path. Ignoring this has
+    already cost ten days of grid statistics and a day of hot water.
 11. The owner identifies the current physical replacement as RK3588, while its
     migrated Linux image currently reports `Forlinx OK3568-C` and
     `rockchip,rk3568`. Treat `.141` as the production target, but record both
