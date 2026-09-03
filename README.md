@@ -96,7 +96,7 @@ Open-Meteo, опадами та evapotranspiration. Фізичний автоз�
 | `board-config/custom-integrations/` | інтеграція `claude_code_conversation` і патчі Smart Irrigation |
 | `mcp-server/` | локальний read-only MCP-сервер `home-assistant-project` і його тести |
 | `tools/` | допоміжні скрипти для робочої станції (статистика, перевірка посилань дашборда) |
-| `docs/`, `handoff/` | проєктні документи, реєстр інцидентів, передачі сесій |
+| `docs/`, `handoff/` | проєктні документи, `worklog.md` — журнал робіт (знахідки, рішення власника, коміти), реєстр інцидентів, передачі сесій |
 | `.claude/skills/` | скіли `home-assistant`, `dashboard-design`, `mb35x8-bench` з довідниками |
 | `nas-materials/` | матеріали з NAS: схема MB35x8 v1.1, BOM, Gerber, документація Rockchip |
 | `mb35x8-software/` | аналіз резервної копії ПЗ плати |

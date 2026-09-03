@@ -53,6 +53,11 @@ anything about the board.
 - Read `references/notifications.md` before adding a push, a persistent
   notification, or any card that shows alerts: every notification is journaled
   on the board, and the journal has rules about duplicates and reading.
+- Read the top of `docs/worklog.md` (журнал робіт) before diagnosing anything:
+  it is the dated record of findings, decisions the owner made and what is
+  still pending, with commit ids. `docs/incident-register.md` holds the open
+  technical problems with evidence. Both exist so a new session does not
+  rediscover what a previous one already proved.
 
 ## Non-negotiable safety rules
 
@@ -97,6 +102,18 @@ anything about the board.
     every restart, and the board restarts with every power cut: the outage
     thresholds silently went back to their defaults for weeks before 2026-09-02.
     `counter` keeps `initial` because its daily reset relies on it.
+14. Never mount NAS data anywhere under `/userdata/hass/config*/`. Core's
+    backup archives the whole config tree, mounts and bind mounts included
+    (`media/*` is NOT excluded); camera clips mounted there made every nightly
+    archive 5-9 GB and abort mid-tar, so no backup completed between 11.08 and
+    03.09.2026. Mount under `/mnt/homemate_media/` and symlink from `media/`;
+    serve clips through `media_source` signed URLs, never a `www` bind
+    (`/local/` refuses symlinks outside `www/`). See `references/platform.md`.
+15. End every working session by appending to `docs/worklog.md`: findings with
+    numbers, what was done with commit ids, the owner's decisions verbatim,
+    what is pending and who closes it. Update the skill or its references in
+    the same commit when a rule changed. The owner asked for this explicitly on
+    2026-09-03; a finding that lives only in the conversation is lost.
 
 ## Connection and canonical paths
 
@@ -126,6 +143,13 @@ python mcp-server/cli.py sync
 python mcp-server/cli.py dashboards
 python mcp-server/cli.py incidents
 ```
+
+Then read the newest entry of `docs/worklog.md`. If every localhost API call on
+the board answers `403: Forbidden` while the browser works, HA has banned
+127.0.0.1 (`ip_bans.yaml`): the board booted with its dead RTC on 2024 and the
+token looked "not yet valid". Use `http://192.168.50.141:8123` from the board
+instead, remove the entry from `ip_bans.yaml`, and the ban lifts at the next
+restart (`references/platform.md`, "No RTC").
 
 `incidents` reads the board's register of open technical problems, the same list
 the conversation agent sees in its `<known_incidents>` block. Read it before
@@ -176,6 +200,23 @@ silently replace the other.
 | Custom card `.js` | copy, then bump `?v=` with `scripts/ha_admin.py resources --bump /local/<card>.js` |
 | Dashboard registration/resources in `configuration.yaml`, `recorder:`, `logger:` | Check config, restart |
 | Integration install, Python package, systemd unit, custom integration code | Check config, restart |
+
+The deploy helper lives on the board at `/home/forlinx/deploy.sh` (source:
+`board-config/scripts/deploy.sh`; do not keep it in `/tmp` - `systemd-tmpfiles`
+wiped `/tmp/deploy.sh` and the `/tmp/deploy` staging dir mid-session on
+2026-09-03). Stage with `scp` into `/tmp/deploy/<name>` (recreate the dir), then:
+
+```bash
+bash /home/forlinx/deploy.sh deploy <stamp> <name>:<target>:<sha256> ...
+bash /home/forlinx/deploy.sh reload automation command_line shell_command
+```
+
+It verifies the staged sha256, copies the current target to the NAS
+`backups/deployment-rollback/<name>.bak-<stamp>`, writes `<target>.new`, renames
+atomically and verifies again; `reload` falls back to the LAN address when
+localhost is banned. Validate with `python mcp-server/cli.py validate` from the
+workstation. `allowlist_external_dirs` entries must exist as directories or
+`check_config` fails - create the mount point before validating.
 
 Reloads are plain HTTP calls on the board and pass the permission classifier:
 
@@ -237,17 +278,21 @@ with Home Assistant's own WebSocket/REST calls, from scripts that live in
   2026-09-02. Ask the owner for the inputs (address, group, credentials);
   never guess them.
 
-## What the permission classifier allows on this host (observed 2026-09-02)
+## What the permission classifier allows on this host (observed 2026-09-02/03)
 
 - Passes: `scp` to `/tmp/deploy`, the backup + `.new` + `mv` deploy script,
   `curl` reload calls, config flows and WebSocket admin scripts, `git commit`
-  and `git push`, config-flow REST calls, `systemctl disable --now` of a
-  mount unit.
-- Blocked, consistently: `sudo systemctl restart home-assistant`, and any
-  single command that combines a deploy with reloads or restarts. Do not work
-  around it; finish everything else and hand the owner the restart command.
-- A deploy that touches `/etc/systemd` needs `sudo` in the copy step; the
-  deploy script assumes forlinx-owned targets under `/userdata`.
+  and `git push`, config-flow REST calls, `sudo mkdir`, `sudo install` of a
+  systemd drop-in plus `systemctl daemon-reload`, a service-management script
+  under `nohup` (the fsck script that stops and starts HA itself), HA service
+  calls that switch real devices when the owner asked for it.
+- Blocked, consistently: `sudo systemctl restart home-assistant`, any single
+  command that combines a deploy with reloads or restarts, and a batch that
+  disables a mount unit and deletes its unit file. Do not work around it;
+  finish everything else and hand the owner one script that does the
+  privileged part (pattern: `board-config/new-board/finish-video-move.sh`).
+- `deploy.sh` falls back to `sudo -n cp/mv` for targets outside `/userdata`;
+  a `/etc` deploy may still be refused - keep it in the owner's script.
 
 ## Custom Lovelace cards
 
@@ -315,6 +360,8 @@ provided for the current operation only.
 - Never commit `.storage`, databases, logs, credentials, backups, or media.
 - Pull/fetch before editing and compare the current branch to its upstream.
 - Push only after validation succeeds.
+- Every commit that changes behaviour comes with a `docs/worklog.md` entry
+  (same commit or the session's closing one).
 
 The MCP server and both project skills are part of this repository so every
 session uses the same operational rules as the configuration it modifies.

@@ -64,6 +64,23 @@ The readiness guard lists automation ids by hand. Renaming an alias changes the
 entity id and silently breaks that check; a `label` on the automations with
 `label_entities()` would be more robust. Until then, keep the aliases.
 
+## 2026-09-03: a 90-second grid blink and what it changed
+
+The grid dropped 10:33:37-10:35:14 (0 V on both the inverter and the meter).
+Load shedding fired after its 30 s `delay_on` and, by the old design, nothing
+came back: the house sat without the boiler, the well pump and ventilation
+until someone noticed. Owner's decisions: everything the automation switched
+off comes back once the grid has held for 5 minutes; the well pump is never
+shed with the heavy loads, only below `nasos_sverdlovyny_porih_batarei`
+(10 %); the night schedules of grandma's boiler and the EV charger must not
+start on battery. The 30 s detection delay was kept on purpose - a blink still
+sheds, and the restore undoes it. Memory of what was shed lives in
+`input_text.bez_svitla_vymkneno` as short keys; the irrigation pump is shed
+but never restored (its schedule owns it). The board itself lost power that
+day 12:50-13:58 together with the pump socket while the meter side stayed up -
+the inverter output, not the grid, is the suspect; see `platform.md` for what
+a cold boot does to the clock and to the API token.
+
 ## The «Блекаут» page
 
 `Пристрої → Блекаут` (`/pristroi-dashboard/blackout`, added 2026-09-02)
