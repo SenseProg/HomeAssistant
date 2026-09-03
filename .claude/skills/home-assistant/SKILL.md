@@ -218,6 +218,30 @@ localhost is banned. Validate with `python mcp-server/cli.py validate` from the
 workstation. `allowlist_external_dirs` entries must exist as directories or
 `check_config` fails - create the mount point before validating.
 
+Three traps confirmed by the revision of 2026-09-03:
+
+- **CRLF.** The Windows working copy keeps 66 tracked files with CRLF
+  (`core.autocrlf=true`; `.gitattributes` covers only four files): every unit
+  in `new-board/systemd/`, `timesync-retry.*`, `tv-photo-*.sh`,
+  `homemate-nas-sync.sh`, `scripts.yaml`, `project_tools.py`. The board copies
+  are LF, which is what `sync` reports as `match_eol_only`. Never `scp` such a
+  file to the board as it is: strip CR on the staged copy
+  (`sed -i 's/\r$//'`) or fix it at the root with `board-config/** text eol=lf`
+  and `mcp-server/** text eol=lf` in `.gitattributes` plus
+  `git add --renormalize .`.
+- **systemd `$`.** systemd substitutes `$VAR` in `ExecStart*=` lines before
+  the shell sees them, quotes or not; write `$$i` for a shell variable, and
+  prefix the executable with `+` when the command needs root under
+  `User=forlinx`. `wait-for-clock.conf` carries both mistakes: the wait loop
+  works, the `systemctl restart systemd-timesyncd` inside it never runs.
+- **`www/` is public.** Home Assistant serves `www/` as `/local/` without
+  authentication and the Cloudflare tunnel forwards it to the internet
+  (checked from outside on 2026-09-03: camera frames in `www/motion/`,
+  `clips.json`, the TV photo and `www/analyst/latest.json` answered 200).
+  Never put camera frames, family photos, analyst output or anything with a
+  token under `www/`; use `media/` with signed URLs, and put Cloudflare Access
+  in front of the hostname.
+
 Reloads are plain HTTP calls on the board and pass the permission classifier:
 
 ```bash
