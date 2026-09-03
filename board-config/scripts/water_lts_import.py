@@ -106,22 +106,31 @@ async def cmd_adjust() -> None:
     """Вирівняти живу суму сенсора з імпортованою: після першої живої години
     sum сенсора починається з нуля, а імпорт закінчується на X м³ - додаємо X."""
     async with WS() as ws:
-        start = (dt.datetime.now(dt.timezone.utc) - dt.timedelta(days=60)).isoformat()
-        rows = (await ws.call(type="recorder/statistics_during_period", start_time=start,
-                              statistic_ids=[DST], period="hour", types=["state", "sum"])).get(DST, [])
-        if len(rows) < 2:
-            raise SystemExit("not enough rows to adjust")
-        for i in range(1, len(rows)):
-            a, b = rows[i - 1], rows[i]
-            if a.get("sum") is not None and b.get("sum") is not None and b["sum"] < a["sum"] - 0.05:
-                delta = round(a["sum"] - b["sum"], 3)
-                when = dt.datetime.fromtimestamp(b["start"] / 1000, dt.timezone.utc).isoformat()
-                print(f"gap at {when[:16]}: {a['sum']} -> {b['sum']}, adjusting by +{delta}")
-                await ws.call(type="recorder/adjust_sum_statistics", statistic_id=DST, start_time=when,
-                              adjustment=delta, adjustment_unit_of_measurement="m³")
-                print("adjusted")
-                return
-        print("no gap found; nothing to adjust")
+        now = dt.datetime.now(dt.timezone.utc)
+        hourly = (await ws.call(type="recorder/statistics_during_period", start_time=(now - dt.timedelta(days=60)).isoformat(),
+                                statistic_ids=[DST], period="hour", types=["sum"])).get(DST, [])
+        short = (await ws.call(type="recorder/statistics_during_period", start_time=(now - dt.timedelta(hours=6)).isoformat(),
+                               statistic_ids=[DST], period="5minute", types=["sum"])).get(DST, [])
+        # Імпорт пише лише погодинну таблицю; живий сенсор починає з 5-хвилинної,
+        # і його перша сума - нуль. Розрив = остання імпортована сума мінус перша
+        # жива; adjust_sum_statistics додає його всім рядкам від тієї миті в
+        # обох таблицях, тож погодинний рядок, який скомпілюється пізніше,
+        # успадкує вже вирівняну суму.
+        imported = [r for r in hourly if r.get("sum") is not None]
+        live = [r for r in short if r.get("sum") is not None]
+        if not imported or not live:
+            raise SystemExit(f"nothing to compare: hourly={len(imported)} short-term={len(live)}")
+        last_imported = imported[-1]["sum"]
+        first_live = live[0]
+        if first_live["sum"] < last_imported - 0.05:
+            delta = round(last_imported - first_live["sum"], 3)
+            when = dt.datetime.fromtimestamp(first_live["start"] / 1000, dt.timezone.utc).isoformat()
+            print(f"gap at {when[:16]}: imported {last_imported} -> live {first_live['sum']}, adjusting by +{delta}")
+            await ws.call(type="recorder/adjust_sum_statistics", statistic_id=DST, start_time=when,
+                          adjustment=delta, adjustment_unit_of_measurement="m³")
+            print("adjusted")
+            return
+        print(f"no gap: imported {last_imported}, first live {first_live['sum']}")
 
 
 def main() -> int:
