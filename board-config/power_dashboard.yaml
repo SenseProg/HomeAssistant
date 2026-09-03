@@ -209,7 +209,7 @@ views:
       name: Потужність за останню годину
       hours_to_show: 1
       points_per_hour: 60
-      update_interval: 10
+      update_interval: 30
       line_width: 3
       animate: true
       show:
@@ -224,7 +224,7 @@ views:
       name: Потужність за 3 години
       hours_to_show: 3
       points_per_hour: 20
-      update_interval: 10
+      update_interval: 30
       line_width: 3
       animate: true
       show:
@@ -235,6 +235,27 @@ views:
       entities:
       - entity: sensor.zagalne_navantazhennia
         name: Разом
+    - type: custom:mini-graph-card
+      name: Весь ввід, гілка інвертора і повз інвертор · 3 години (тестування)
+      hours_to_show: 3
+      points_per_hour: 20
+      update_interval: 30
+      line_width: 2
+      show:
+        labels: true
+        points: false
+      grid_options:
+        columns: 24
+      entities:
+      - entity: sensor.merezha_potuzhnist_usogo_vvodu
+        name: Весь ввід, Вт
+        color: '#1e88e5'
+      - entity: sensor.inverter_grid_power
+        name: Гілка Deye, Вт
+        color: '#43a047'
+      - entity: sensor.spozhivannia_poza_invertorom
+        name: Повз інвертор, Вт
+        color: '#fb8c00'
     - type: markdown
       grid_options:
         columns: full
@@ -407,7 +428,9 @@ views:
       grid_options:
         columns: full
     - type: statistics-graph
-      period: hour
+      # 03.09.2026: hour + вибір періоду давав 720-8760 точок і порожні картки;
+      # добова статистика тримає будь-який період, погодинна - у фіксованому графіку нижче.
+      period: day
       energy_date_selection: true
       stat_types:
       - mean
@@ -428,7 +451,9 @@ views:
       grid_options:
         columns: full
     - type: statistics-graph
-      period: hour
+      # 03.09.2026: hour + вибір періоду давав 720-8760 точок і порожні картки;
+      # добова статистика тримає будь-який період, погодинна - у фіксованому графіку нижче.
+      period: day
       energy_date_selection: true
       stat_types:
       - mean
@@ -452,7 +477,9 @@ views:
       grid_options:
         columns: full
     - type: statistics-graph
-      period: hour
+      # 03.09.2026: hour + вибір періоду давав 720-8760 точок і порожні картки;
+      # добова статистика тримає будь-який період, погодинна - у фіксованому графіку нижче.
+      period: day
       energy_date_selection: true
       stat_types:
       - mean
@@ -479,7 +506,9 @@ views:
       grid_options:
         columns: full
     - type: statistics-graph
-      period: hour
+      # 03.09.2026: hour + вибір періоду давав 720-8760 точок і порожні картки;
+      # добова статистика тримає будь-який період, погодинна - у фіксованому графіку нижче.
+      period: day
       energy_date_selection: true
       stat_types:
       - min
@@ -502,6 +531,41 @@ views:
         Допустимий діапазон — **207…253 В** (230 В ±10 %). Напруга найважливіша з
         трьох величин: саме її просідання псує техніку. Причина просідання зазвичай
         локальна — перекіс навантаження між фазами, а не аварія в мережі.
+  - type: grid
+    column_span: 4
+    cards:
+    - type: heading
+      heading: По годинах за фіксований тиждень (тестування)
+      icon: mdi:chart-timeline-variant
+      grid_options:
+        columns: full
+    - type: statistics-graph
+      title: Загальна потужність по годинах · 7 днів
+      period: hour
+      days_to_show: 7
+      stat_types:
+      - mean
+      - max
+      chart_type: line
+      grid_options:
+        columns: full
+      entities:
+      - entity: sensor.zagalne_navantazhennia
+        name: Разом, кВт
+    - type: statistics-graph
+      title: День і ніч по добах у вибраному періоді (локальний лічильник)
+      period: day
+      energy_date_selection: true
+      stat_types:
+      - change
+      chart_type: bar
+      grid_options:
+        columns: full
+      entities:
+      - entity: sensor.lichylnyk_za_tarifom_den
+        name: День, кВт·год
+      - entity: sensor.lichylnyk_za_tarifom_nich
+        name: Ніч, кВт·год
 - title: Витрати
   path: cost
   icon: mdi:cash-multiple
@@ -574,6 +638,15 @@ views:
       period:
         calendar:
           period: year
+      grid_options:
+        columns: 12
+    - type: statistic
+      entity: sensor.vitrati_na_merezhu_razom
+      stat_type: change
+      name: Цей тиждень (тестування)
+      period:
+        calendar:
+          period: week
       grid_options:
         columns: 12
     - type: statistic
@@ -830,8 +903,8 @@ views:
     # Перевірено після ребейзу: падінь немає, крім трьох сотих кВт-год у
     # насосній телеметрії старої плати - вони в самому джерелі, не тут.
     - type: statistics-graph
-      title: Гривні за добу по пристроях
-      days_to_show: 40
+      title: Гривні за добу по пристроях · 14 днів
+      days_to_show: 14
       period: day
       stat_types:
       - change
@@ -882,7 +955,9 @@ views:
         columns: full
       entities:
       - entity: sensor.energy_meter_total_energy
-        name: З мережі (лічильник)
+        name: З мережі (лічильник, хмара)
+      - entity: sensor.merezha_spozhyto
+        name: З мережі (локально, з 23.08) (тестування)
     - type: statistics-graph
       title: Гривні · день проти ночі
       days_to_show: 366
@@ -1156,6 +1231,7 @@ views:
   dense_section_placement: true
   sections:
   - type: grid
+    column_span: 2
     cards:
     - type: custom:sunsynk-power-flow-card
       cardstyle: full
@@ -1218,6 +1294,7 @@ views:
       grid_options:
         columns: full
   - type: grid
+    column_span: 2
     cards:
     - type: entities
       title: Батарея
@@ -1257,3 +1334,43 @@ views:
         name: Спожито з мережі сьогодні
       - entity: sensor.inverter_today_load_consumption
         name: Навантаження сьогодні
+  - type: grid
+    column_span: 4
+    cards:
+    - type: heading
+      heading: Батарея за добу (тестування)
+      icon: mdi:battery-charging-60
+      grid_options:
+        columns: full
+    - type: custom:mini-graph-card
+      name: Заряд і потужність батареї · 24 години
+      hours_to_show: 24
+      points_per_hour: 4
+      line_width: 2
+      show:
+        labels: true
+        points: false
+      grid_options:
+        columns: 24
+      entities:
+      - entity: sensor.inverter_battery
+        name: SOC, %
+        color: '#43a047'
+      - entity: sensor.inverter_battery_power
+        name: Потужність, Вт
+        color: '#fb8c00'
+        y_axis: secondary
+    - type: statistics-graph
+      title: Заряд і розряд батареї по днях · 14 днів
+      chart_type: bar
+      period: day
+      days_to_show: 14
+      stat_types:
+      - change
+      grid_options:
+        columns: 24
+      entities:
+      - entity: sensor.inverter_total_battery_charge
+        name: Заряджено, кВт·год
+      - entity: sensor.inverter_total_battery_discharge
+        name: Віддано, кВт·год

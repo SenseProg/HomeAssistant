@@ -727,6 +727,23 @@ views:
         **Інвертор - звʼязок відновлено** — Парне «на звʼязку» з витримкою три хвилини, щоб хитання логера не давало десятки пушів.
 
         **Сторож - готовність до відключення** — Кожні шість годин і після старту перевіряє, чи ввімкнені всі автоматизації блекауту і чи на звʼязку прилади, які вони мають гасити.
+  - type: grid
+    column_span: 2
+    cards:
+    - type: heading
+      heading: Клієнти і сигнал за добу (тестування)
+      icon: mdi:wifi
+      grid_options:
+        columns: full
+    - type: history-graph
+      hours_to_show: 24
+      grid_options:
+        columns: full
+      entities:
+      - entity: sensor.spalnia_batkiv_192_168_50_1_devices_connected
+        name: Клієнтів на ASUS
+      - entity: sensor.tenda_repeater_signal
+        name: Сигнал A9, dBm
 - title: Клімат
   path: climate
   icon: mdi:home-thermometer-outline
@@ -1290,6 +1307,29 @@ views:
         columns: full
       content: |-
         **Без світла - вимкнути важкі споживачі** — Знімає з батареї все, що гріє і крутиться: підлогу, рекуператори, насоси, пральню. Велику пральну машину при цьому не вимикає, а ставить на паузу, щоб не лишити воду в баку.
+  - type: grid
+    column_span: 2
+    cards:
+    - type: heading
+      heading: Тепла підлога проти уставки · 24 години (тестування)
+      icon: mdi:heating-coil
+      grid_options:
+        columns: full
+    - type: custom:mini-graph-card
+      hours_to_show: 24
+      points_per_hour: 4
+      line_width: 2
+      show:
+        labels: true
+        points: false
+      grid_options:
+        columns: full
+      entities:
+      - entity: sensor.terneo_2_floor_temperature
+        name: Підлога, контур 2
+      - entity: sensor.terneo_2_target_temperature
+        name: Уставка
+        color: '#b388ff'
 - title: Інвертор Deye
   path: deye-inverter
   icon: mdi:solar-power-variant
@@ -1431,11 +1471,13 @@ views:
         name: Віддано з акумулятора
       - entity: sensor.inverter_today_losses
         name: Втрати системи
+    # 03.09.2026: тут були добові лічильники inverter_today_* - пилка, що росте
+    # до опівночі і падає в нуль, а не «потоки». Потоки - це потужності у ватах.
     - type: custom:mini-graph-card
-      name: Потоки енергії за 24 години
+      name: Потоки потужності · 24 години
       hours_to_show: 24
       points_per_hour: 4
-      line_width: 3
+      line_width: 2
       animate: true
       show:
         labels: true
@@ -1443,14 +1485,15 @@ views:
       grid_options:
         columns: full
       entities:
-      - entity: sensor.inverter_today_load_consumption
-        name: Навантаження
-      - entity: sensor.inverter_today_energy_import
-        name: Імпорт
-      - entity: sensor.inverter_today_battery_charge
-        name: Заряд акумулятора
-      - entity: sensor.inverter_today_battery_discharge
-        name: Розряд акумулятора
+      - entity: sensor.inverter_load_power
+        name: Навантаження, Вт
+        color: '#fb8c00'
+      - entity: sensor.inverter_grid_power
+        name: З мережі, Вт
+        color: '#1e88e5'
+      - entity: sensor.inverter_battery_power
+        name: Батарея, Вт
+        color: '#43a047'
   - type: grid
     cards:
     - type: heading
@@ -1579,25 +1622,6 @@ views:
         **Інвертор - немає звʼязку** — Десять хвилин витримки навмисне: коротка втрата пакета трапляється щодня і сама минає, а ось десять хвилин мовчання - це вже справжня втрата звʼязку.
 
         **Інвертор - звʼязок відновлено** — Парне повідомлення, щоб було видно, що моніторинг знову бачить дім.
-  - type: grid
-    cards:
-    - type: heading
-      heading: Автоматизації
-      icon: mdi:robot
-      grid_options:
-        columns: full
-    - type: entities
-      grid_options:
-        columns: full
-      entities:
-      - entity: automation.bez_svitla_vimknuti_vazhki_spozhivachi
-        name: "Без світла - вимкнути важкі споживачі"
-    - type: markdown
-      title: Що вони роблять
-      grid_options:
-        columns: full
-      content: |-
-        **Без світла - вимкнути важкі споживачі** — Гасить бойлер, теплу підлогу, сушарку, PRANA і рекуператори, щойно дім переходить на батарею — і знову, якщо хтось увімкнув їх посеред відключення. Вимикач нижче.
   # --- Сповіщення відокремлено від автоматизацій 02.09.2026 на прохання власника:
   #     інформаційний засіб живе окремо, з власним перемикачем і часом останнього спрацювання. ---
   - type: grid
@@ -1655,6 +1679,39 @@ views:
         **Інвертор - звʼязок відновлено** — Парне «на звʼязку» з витримкою три хвилини, щоб хитання логера не давало десятки пушів.
 
         **Сторож - готовність до відключення** — Кожні шість годин і після старту перевіряє, чи ввімкнені всі автоматизації блекауту і чи на звʼязку прилади, які вони мають гасити.
+  - type: grid
+    column_span: 2
+    cards:
+    - type: heading
+      heading: Батарея за тиждень (тестування)
+      icon: mdi:battery-charging-60
+      grid_options:
+        columns: full
+    - type: statistics-graph
+      title: Заряд батареї · мінімум і максимум по годинах, 7 днів
+      period: hour
+      days_to_show: 7
+      stat_types:
+      - min
+      - max
+      chart_type: line
+      grid_options:
+        columns: full
+      entities:
+      - entity: sensor.inverter_battery
+        name: SOC, %
+    - type: statistics-graph
+      title: Імпорт через інвертор по днях · 14 днів
+      chart_type: bar
+      period: day
+      days_to_show: 14
+      stat_types:
+      - change
+      grid_options:
+        columns: full
+      entities:
+      - entity: sensor.inverter_total_energy_import
+        name: кВт·год
 - title: Бойлер
   path: midea
   icon: mdi:water-boiler
@@ -1879,14 +1936,30 @@ views:
       grid_options:
         columns: 6
         rows: 1
+    # 03.09.2026: був хмарний sensor.smart_plug_power під назвою «споживання»;
+    # локальна потужність розетки є поруч, а споживання - у гривнях нижче.
     - type: history-graph
-      title: Споживання за 24 години
+      title: Потужність бойлера бабусі за 24 години (локально)
       hours_to_show: 24
       grid_options:
         columns: full
       entities:
-      - entity: sensor.smart_plug_power
-        name: Потужність
+      - entity: sensor.boiler_babusi_power
+        name: Потужність, Вт
+    - type: statistics-graph
+      title: Бойлер бабусі · день і ніч, кВт·год за добу, 14 днів (тестування)
+      chart_type: bar
+      period: day
+      days_to_show: 14
+      stat_types:
+      - change
+      grid_options:
+        columns: full
+      entities:
+      - entity: sensor.boiler_babusi_za_tarifom_den
+        name: День
+      - entity: sensor.boiler_babusi_za_tarifom_nich
+        name: Ніч
   - type: grid
     cards:
     - type: heading
@@ -1902,8 +1975,10 @@ views:
         name: "Бойлер бабусі - початок нагріву"
       - entity: automation.boiler_babusi_kinets_nagrivu
         name: "Бойлер бабусі - кінець нагріву"
-      - entity: automation.svitlo_nagadati_pro_boiler
-        name: "Світло - нагадати про бойлер"
+      - entity: automation.boiler_vidklasti_dezinfektsiiu_do_23_00
+        name: "Бойлер - відкласти дезінфекцію до 23:00"
+      - entity: automation.boiler_zapustiti_vidkladenu_dezinfektsiiu_o_23_00
+        name: "Бойлер - запустити відкладену дезінфекцію о 23:00"
     - type: markdown
       title: Що вони роблять
       grid_options:
@@ -1913,38 +1988,9 @@ views:
 
         **Бойлер бабусі - кінець нагріву** — Вимикає розетку о часі з input_datetime.boiler_babusi_kinets. Вимикає безумовно, навіть якщо розклад був вимкнений посеред нагріву - інакше бойлер лишився б гріти на денному тарифі. Керування таке саме локальне, як і на вмиканні: switch.boiler_babusi_socket, а хмарний switch.smart_plug_socket_1 лишився шостою, запасною спробою. Тут повтори важать більше, ніж на вмиканні. Провалене вмикання коштує однієї холодної доби; провалене вимикання лишає бойлер грітися по 5 грн за кВт·год доти, доки хтось не помітить. Тому пауза між спробами коротша - хвилина, а не дві, і сповіщення написане як тривога, а не як зауваження. Успіх зараховується, якщо off підтвердив БУДЬ-ЯКИЙ із двох каналів. Вимагати згоди обох означало б бити на сполох щоразу, коли один із них недоступний, хоча розетка вже розімкнена.
 
-        **Світло - нагадати про бойлер** — Назад бойлер сам не вмикається - рішення, коли гріти воду, лишається за людьми, а не за автоматикою. Тому лише нагадування.
-  - type: grid
-    cards:
-    - type: heading
-      heading: Автоматизації
-      icon: mdi:robot
-      grid_options:
-        columns: full
-    - type: entities
-      grid_options:
-        columns: full
-      entities:
-      - entity: automation.boiler_vidklasti_dezinfektsiiu_do_23_00
-        name: "Бойлер - відкласти дезінфекцію до 23:00"
-      - entity: automation.boiler_zapustiti_vidkladenu_dezinfektsiiu_o_23_00
-        name: "Бойлер - запустити відкладену дезінфекцію о 23:00"
-      - entity: automation.boiler_babusi_pochatok_nagrivu
-        name: "Бойлер бабусі - початок нагріву"
-      - entity: automation.boiler_babusi_kinets_nagrivu
-        name: "Бойлер бабусі - кінець нагріву"
-    - type: markdown
-      title: Що вони роблять
-      grid_options:
-        columns: full
-      content: |-
         **Бойлер - відкласти дезінфекцію до 23:00** — Якщо Midea сам починає дезінфекцію вдень за денним тарифом — зупиняє її і відкладає на 23:00.
 
         **Бойлер - запустити відкладену дезінфекцію о 23:00** — О 23:00, уже в нічному тарифі, запускає відкладену дезінфекцію.
-
-        **Бойлер бабусі - початок нагріву** — Вмикає розетку бойлера бабусі о часі початку вікна (типово 04:00), якщо ввімкнено «нагрів за розкладом».
-
-        **Бойлер бабусі - кінець нагріву** — Вимикає розетку о часі кінця вікна (типово 06:59 — останні хвилини нічного тарифу).
   # --- Сповіщення відокремлено від автоматизацій 02.09.2026 на прохання власника:
   #     інформаційний засіб живе окремо, з власним перемикачем і часом останнього спрацювання. ---
   - type: grid
@@ -1967,6 +2013,44 @@ views:
         columns: full
       content: |-
         **Світло - нагадати про бойлер** — Коли світло повертається — нагадує увімкнути бойлер, якщо його вимкнула автоматика блекауту.
+  - type: grid
+    column_span: 2
+    cards:
+    - type: heading
+      heading: Скільки коштує бойлер (тестування)
+      icon: mdi:cash
+      grid_options:
+        columns: full
+    - type: statistic
+      entity: sensor.vitrati_boiler
+      stat_type: change
+      name: Цей тиждень
+      period:
+        calendar:
+          period: week
+      grid_options:
+        columns: 6
+    - type: statistic
+      entity: sensor.vitrati_boiler
+      stat_type: change
+      name: Цей місяць
+      period:
+        calendar:
+          period: month
+      grid_options:
+        columns: 6
+    - type: statistics-graph
+      title: Гривні за добу · 14 днів
+      chart_type: bar
+      period: day
+      days_to_show: 14
+      stat_types:
+      - change
+      grid_options:
+        columns: full
+      entities:
+      - entity: sensor.vitrati_boiler
+        name: Бойлер Midea, грн
 - title: Тепла підлога
   path: floor
   icon: mdi:heating-coil
@@ -2248,7 +2332,7 @@ views:
       severity:
         green: 0
         yellow: -4
-        red: -12
+        red: -16
       grid_options:
         columns: full
     - type: tile
@@ -2341,7 +2425,7 @@ views:
       severity:
         green: 0
         yellow: -4
-        red: -12
+        red: -16
       grid_options:
         columns: full
     - type: tile
@@ -2434,7 +2518,7 @@ views:
       severity:
         green: 0
         yellow: -4
-        red: -12
+        red: -16
       grid_options:
         columns: full
     - type: tile
@@ -2873,6 +2957,39 @@ views:
         **Полив - вечірнє питання про дощ** — О 21:00 дивиться погодинний прогноз на завтрашній ранок (03:00-09:00 - вікно, у яке потрапляє старт за 1:15 до сходу) і, якщо очікується дощ, питає, чи поливати. Відповідь запам'ятовується у input_boolean.poliv_propustyty_zavtra, і ранковий розклад просто її виконує. Питати о 04:30, як було раніше, не мало сенсу: о пів на п'яту ніхто не бачить сповіщення, 30 хвилин минають, і день пропускається за замовчуванням. Тепер питання ставиться, коли на нього реально можуть відповісти. Мовчання = пропустити, як і просили. Але прапорець скидається на початку перевірки, тож якщо дощу не прогнозують, ранок поллється без жодних питань.
 
         **Звʼязок - контролер поливу недоступний** — Контролер клапанів .221 недоступний понад 10 хвилин — пуш. Це про звʼязок, а не про режим насоса: насос без відкритого клапана — норма.
+  - type: grid
+    column_span: 2
+    cards:
+    - type: heading
+      heading: Коли поливали · 5 днів (тестування)
+      icon: mdi:timeline-clock
+      grid_options:
+        columns: full
+    - type: history-graph
+      hours_to_show: 120
+      grid_options:
+        columns: full
+      entities:
+      - entity: switch.mini_switch_k601_2_switch_1_2
+        name: Насос
+      - entity: switch.avtopoliv_kontroler_avtopoliv_klapan_1
+        name: Зона 1
+      - entity: switch.avtopoliv_kontroler_avtopoliv_klapan_2
+        name: Зона 2
+      - entity: switch.avtopoliv_kontroler_avtopoliv_klapan_5
+        name: Зона 5
+    - type: statistics-graph
+      title: Насос поливу · гривні за добу, 14 днів
+      chart_type: bar
+      period: day
+      days_to_show: 14
+      stat_types:
+      - change
+      grid_options:
+        columns: full
+      entities:
+      - entity: sensor.vitrati_nasos_polivu
+        name: грн
 - title: Свердловина
   path: well
   icon: mdi:water-pump
@@ -3024,6 +3141,40 @@ views:
         **Свердловина — насос не зупиняється** — Насос працює довше за нормальний пуск — реле тиску залипло або є витік. Пуш і запис у панель.
 
         **Свердловина — аномальна кількість запусків** — Пусків за добу або вночі більше за поріг — ознака витоку чи гідроакумулятора без тиску.
+  - type: grid
+    column_span: 2
+    cards:
+    - type: heading
+      heading: Насос за добу (тестування)
+      icon: mdi:chart-bar
+      grid_options:
+        columns: full
+    - type: custom:mini-graph-card
+      name: Потужність насоса · 24 години (локально, пік за 5 хв)
+      hours_to_show: 24
+      points_per_hour: 12
+      aggregate_func: max
+      line_width: 2
+      show:
+        fill: fade
+        extrema: true
+      grid_options:
+        columns: full
+      entities:
+      - entity: sensor.t34_smart_plug_power_2
+        name: Вт
+    - type: statistics-graph
+      title: Вода по днях · 14 днів (м³, розрахунок)
+      chart_type: bar
+      period: day
+      days_to_show: 14
+      stat_types:
+      - change
+      grid_options:
+        columns: full
+      entities:
+      - entity: sensor.sverdlovina_voda_m3
+        name: м³
 - title: Заряджання авто
   path: ev-charging
   icon: mdi:ev-station
@@ -3641,6 +3792,7 @@ views:
 
         </details>
   - type: grid
+    column_span: 2
     cards:
     - type: heading
       heading: Автоматизації
@@ -3671,6 +3823,40 @@ views:
         **Заряджання - кінець вікна розкладу** — О часі кінця вікна зупиняє заряджання. Зупиняє саме командою Close charging - перемикач switch.zariadka_7_5kvt на сесію не впливає, це перевірено 2026-08-09.
 
         **Заряджання - авто підключили всередині вікна** — Якщо машину під'єднали посеред дозволеного вікна, заряджання має початися одразу, а не чекати наступної ночі. Спрацьовує на виході станції зі стану no_connet.
+  - type: grid
+    column_span: 2
+    cards:
+    - type: heading
+      heading: За місяць (тестування)
+      icon: mdi:calendar-month
+      grid_options:
+        columns: full
+    - type: statistic
+      entity: sensor.zariadka_avto_spozhito
+      stat_type: change
+      name: Спожито цього місяця
+      period:
+        calendar:
+          period: month
+      grid_options:
+        columns: 6
+    - type: statistic
+      entity: sensor.vitrati_zariadka_avto
+      stat_type: change
+      name: Гривень цього місяця
+      period:
+        calendar:
+          period: month
+      grid_options:
+        columns: 6
+    - type: history-graph
+      title: Сесії заряджання · 5 днів
+      hours_to_show: 120
+      grid_options:
+        columns: full
+      entities:
+      - entity: sensor.zariadka_7_5kvt_device_state
+        name: Стан станції
 - title: Вентиляція
   path: ventilation
   icon: mdi:hvac
@@ -4140,6 +4326,30 @@ views:
         columns: full
       content: |-
         **Без світла - вимкнути важкі споживачі** — Вимикає обидва рекуператори Blauberg і припливний вентилятор PRANA разом з догрівачем, щойно будинок переходить на батарею. Вентиляція повертається до роботи вручну.
+  - type: grid
+    column_span: 2
+    cards:
+    - type: heading
+      heading: Вологість у дитячих · 24 години (тестування)
+      icon: mdi:water-percent
+      grid_options:
+        columns: full
+    - type: custom:mini-graph-card
+      hours_to_show: 24
+      points_per_hour: 4
+      line_width: 2
+      show:
+        labels: true
+        points: false
+      grid_options:
+        columns: full
+      entities:
+      - entity: sensor.siku_blauberg_fan_192_168_50_27_humidity
+        name: Хлопці
+      - entity: sensor.siku_blauberg_fan_192_168_50_123_humidity
+        name: Олеся
+      - entity: sensor.2_floor_humidity
+        name: Спальня батьків
 - title: Присутність
   path: presence
   icon: mdi:map-marker-account
@@ -4148,6 +4358,7 @@ views:
   dense_section_placement: true
   sections:
   - type: grid
+    column_span: 2
     cards:
     - type: heading
       heading: Хто зараз удома
@@ -4179,6 +4390,7 @@ views:
       - entity: person.babusia_sima
         name: Бабуся Сіма
   - type: grid
+    column_span: 2
     cards:
     - type: heading
       heading: Телефони в мережі
@@ -4219,6 +4431,27 @@ views:
         телефон незалежно від конкретної точки Wi-Fi.
 
         '
+  - type: grid
+    column_span: 4
+    cards:
+    - type: heading
+      heading: Хто коли був удома · 2 доби (тестування)
+      icon: mdi:home-clock
+      grid_options:
+        columns: full
+    - type: history-graph
+      hours_to_show: 48
+      grid_options:
+        columns: full
+      entities:
+      - entity: person.dim_kovtuni
+        name: Дмитро
+      - entity: person.katerina
+        name: Катерина
+      - entity: person.olesia
+        name: Олеся
+      - entity: person.babusia_sima
+        name: Бабуся Сіма
 - title: Медіа
   path: media
   icon: mdi:television-play
@@ -4404,7 +4637,9 @@ views:
       target:
         entity_id:
         - binary_sensor.tcl_tv_online
-        - script.tv_idle_slideshow
+        # script.* виключено з recorder - рядок заставки тут ніколи не з'являвся
+        # (03.09.2026). Стан плеєра записується і показує idle/playing.
+        - media_player.televizor_tcl
   - type: grid
     cards:
     - type: heading
@@ -4436,6 +4671,7 @@ views:
   dense_section_placement: true
   sections:
   - type: grid
+    column_span: 2
     cards:
     - type: heading
       heading: Що зараз робить
@@ -4516,6 +4752,7 @@ views:
       - entity: switch.pralnia_pralna_mashina_bubble_soak
         name: Bubble Soak
   - type: grid
+    column_span: 2
     cards:
     - type: heading
       heading: Спожита електроенергія і вода
@@ -4740,6 +4977,34 @@ views:
         **Пральна машина - прання завершено** — Тригер саме на перехід run -> stop, а не на job_state finish: finish буває коротким і його легко проґавити, а перехід стану машини надійний і не повторюється після перезавантаження Home Assistant.
 
         **Без світла - пральна машина працює** — Окрема автоматизація, а не рядок у переліку важких споживачів: пральну машину не можна просто вимкнути, як бойлер. Обірваний цикл означає воду в баку і мокру білизну, тому тут лише попередження - рішення за людиною.
+  - type: grid
+    column_span: 2
+    cards:
+    - type: heading
+      heading: Прання за тиждень (тестування)
+      icon: mdi:washing-machine
+      grid_options:
+        columns: full
+    - type: history-graph
+      title: Стан машини · 5 днів
+      hours_to_show: 120
+      grid_options:
+        columns: full
+      entities:
+      - entity: sensor.pralnia_pralna_mashina_machine_state
+        name: Машина
+    - type: statistics-graph
+      title: Вода на прання по днях · 14 днів (л)
+      chart_type: bar
+      period: day
+      days_to_show: 14
+      stat_types:
+      - change
+      grid_options:
+        columns: full
+      entities:
+      - entity: sensor.pralnia_pralna_mashina_water_consumption
+        name: л
 - title: Блекаут
   path: blackout
   icon: mdi:transmission-tower-off
@@ -5159,6 +5424,38 @@ views:
       icon: mdi:history
       grid_options:
         columns: full
+    - type: tile
+      entity: sensor.bez_svitla_sohodni_hodyn
+      name: Без світла сьогодні
+      icon: mdi:timer-sand
+      grid_options:
+        columns: 12
+        rows: 1
+    - type: tile
+      entity: sensor.vidkliuchen_sohodni
+      name: Відключень сьогодні
+      icon: mdi:counter
+      grid_options:
+        columns: 12
+        rows: 1
+    - type: custom:mini-graph-card
+      name: Автономія і споживання · 24 години (тестування)
+      hours_to_show: 24
+      points_per_hour: 4
+      line_width: 2
+      show:
+        labels: true
+        points: false
+      grid_options:
+        columns: 24
+      entities:
+      - entity: sensor.avtonomiia_batarei
+        name: Автономія, год
+        color: '#43a047'
+      - entity: sensor.spozhyvannia_zaraz_kvt
+        name: Споживання, кВт
+        color: '#fb8c00'
+        y_axis: secondary
     - type: history-graph
       hours_to_show: 72
       grid_options:
@@ -5175,6 +5472,27 @@ views:
       entities:
       - entity: sensor.inverter_battery
         name: Батарея, %
+  - type: grid
+    column_span: 4
+    cards:
+    - type: heading
+      heading: Батарея за тиждень (тестування)
+      icon: mdi:battery-charging-60
+      grid_options:
+        columns: full
+    - type: statistics-graph
+      title: Заряд батареї · мінімум і максимум по годинах, 7 днів
+      period: hour
+      days_to_show: 7
+      stat_types:
+      - min
+      - max
+      chart_type: line
+      grid_options:
+        columns: full
+      entities:
+      - entity: sensor.inverter_battery
+        name: SOC, %
 - title: Зв'язок
   path: links
   icon: mdi:lan-connect
@@ -5398,3 +5716,40 @@ views:
         **Інвертор - звʼязок відновлено** — Парне «на звʼязку» з витримкою три хвилини, щоб хитання логера не давало десятки пушів.
 
         **Сторож - готовність до відключення** — Кожні шість годин і після старту перевіряє, чи ввімкнені всі автоматизації блекауту і чи на звʼязку прилади, які вони мають гасити.
+  - type: grid
+    column_span: 4
+    cards:
+    - type: heading
+      heading: Коли який канал падав · 3 доби (тестування)
+      icon: mdi:lan-disconnect
+      grid_options:
+        columns: full
+    - type: history-graph
+      hours_to_show: 72
+      grid_options:
+        columns: full
+      entities:
+      - entity: binary_sensor.localtuya
+        name: Локально (LocalTuya)
+      - entity: binary_sensor.tuya_khmara
+        name: Хмара Tuya
+      - entity: binary_sensor.invertor_zviazok
+        name: Інвертор
+      - entity: binary_sensor.lichylnyk_zviazok
+        name: Лічильник
+      - entity: binary_sensor.nasos_sverdlovini_zviazok
+        name: Насос свердловини
+      - entity: binary_sensor.cloudmate_nas_online
+        name: NAS
+      - entity: binary_sensor.hikvision_camera_online
+        name: Камера
+    - type: custom:mini-graph-card
+      name: Глибина довгострокової статистики · 7 днів (сторож після 18.08)
+      hours_to_show: 168
+      points_per_hour: 0.25
+      line_width: 2
+      grid_options:
+        columns: full
+      entities:
+      - entity: sensor.hlybyna_statystyky
+        name: днів

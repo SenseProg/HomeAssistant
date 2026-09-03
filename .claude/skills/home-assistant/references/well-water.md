@@ -148,9 +148,39 @@ Any drop was treated as a counter reset, so the **entire accumulated integral**
 was added to the current bucket. That rule is right for a device total that
 really restarts at zero, and wrong for
 `sensor.t34_smart_plug_nasos_sverdlovini_spozhito`, which is a Riemann
-integrator: it never resets, but on every HA start it restores from Recorder and
-comes back slightly **lower** than it actually was, because `commit_interval: 30`
-did not persist the last increments.
+integrator: it never resets, but after an unclean HA stop it comes back slightly
+**lower** than it actually was. (Corrected 2026-09-03: the value is restored
+from `.storage/core.restore_state`, dumped every 15 minutes and on clean
+shutdown — not from the recorder, whose rows are exactly why the cards *do*
+see the higher value. A shorter `commit_interval` would not help; a clean stop
+before a power cut would. Each unclean restart therefore leaves the absolute
+integrator a few hundredths of a kWh below the sum of its own history, and the
+"розрахунковий показник" drifts a little below the cards' sums.)
+
+**Since 2026-09-03 the daily and monthly numbers come from long-term
+statistics**, not raw history. The recorder keeps 7 days (`purge_keep_days`),
+so the daily card's "за 30 днів" used to mean "за 7" and the Overview's "цього
+місяця" went stale after the 8th. `well-daily-water-card` and
+`well-water-overview-card` now call `recorder/statistics_during_period`
+(period `day`, `change`) for past days and read raw history only for today;
+the hourly card is unchanged (24 h fits the recorder) but reloads only when the
+pump stops, the coefficient changes or a minute passes. `sensor.sverdlovina_voda_m3`
+(template, `total_increasing`, `device_class: water`, m³ since the control
+point) feeds the monthly `statistics-graph` and can be a water source in the
+Energy dashboard; `scripts/water_lts_import.py import` seeded its statistics
+from the integrator's own LTS × coefficient, `adjust` aligns the live sum after
+the first compiled hour.
+
+**Coefficient at the time of the reading (2026-09-03).** The calibration
+automation used to divide the water since the control point by the integrator
+value *at the moment the automation ran*, and it ran on every journal change
+and every HA start — a reading entered two hours late, or a note edited a week
+later, quietly lowered the coefficient. The readings-log card now stores
+`energy_kwh` (integrator state at the reading's `iso`, from raw history or LTS)
+with every add/edit, `water_readings.py` keeps it, and
+`well_water_coefficient_from_log` uses it, firing only when the last live row
+actually changes. Rows from before 2026-09-03 have no `energy_kwh` and fall
+back to the old behaviour.
 
 The restart at 20:33:23 on 2026-08-30 dropped it 5.6321 → 5.5940 — 0.038 kWh —
 and the daily card added 5.594 kWh whole. With the day's real 0.771 kWh that is

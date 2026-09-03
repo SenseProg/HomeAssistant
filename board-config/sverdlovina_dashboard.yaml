@@ -71,7 +71,7 @@ views:
         Коефіцієнт уточнюється після кожного нового фактичного показника механічного лічильника.
 
 
-        На графіку нижче поки показані **розрахункові** значення. Фактичну добову середню за механічним лічильником додамо після наступного контрольного зняття.'
+        На графіках нижче - **розрахункові** значення; фактична добова середня за механічним лічильником - у картці «Середня добова витрата за календарними місяцями».'
       grid_options:
         columns: full
       type: markdown
@@ -102,45 +102,30 @@ views:
       title: Розрахункова витрата води по годинах · останні 24 години
       type: custom:well-hourly-water-card
       log_entity: sensor.zhurnal_pokaznykiv_vody
-    - aggregate_func: delta
-      entities:
-      - entity: input_number.sverdlovina_rozrakhunkova_voda
-        name: м³
-      grid_options:
-        columns: 6
-      group_by: date
-      hours_to_show: 168
-      icon: mdi:calendar-week
-      name: Вода · тиждень (по днях)
-      points_per_hour: 0.0416667
-      show:
-        fill: false
-        graph: bar
-      type: custom:mini-graph-card
     - coefficient_entity: input_number.sverdlovina_koefitsiient_vodi
       days: 30
       energy_entity: sensor.t34_smart_plug_nasos_sverdlovini_spozhito
       grid_options:
         columns: full
       time_zone: Europe/Kyiv
-      title: Розрахункова витрата води по днях · останні 30 днів
+      title: Розрахункова витрата води по днях · 30 днів зі статистики
       type: custom:well-daily-water-card
       log_entity: sensor.zhurnal_pokaznykiv_vody
-    - aggregate_func: delta
-      entities:
-      - entity: input_number.sverdlovina_rozrakhunkova_voda
-        name: м³
+    # 03.09.2026: замість двох mini-graph по input_number (сира історія, 7 діб,
+    # фантомні стовпчики при перекалібруванні) - статистика нового лічильника
+    # води sensor.sverdlovina_voda_m3 (total_increasing, м³): місяці живуть роками.
+    - type: statistics-graph
+      title: Вода по місяцях · рік (м³)
+      chart_type: bar
+      period: month
+      days_to_show: 366
+      stat_types:
+      - change
       grid_options:
-        columns: 6
-      group_by: interval
-      hours_to_show: 8760
-      icon: mdi:calendar
-      name: Вода · рік (приблизно по місяцях)
-      points_per_hour: 0.0013889
-      show:
-        fill: false
-        graph: bar
-      type: custom:mini-graph-card
+        columns: full
+      entities:
+      - entity: sensor.sverdlovina_voda_m3
+        name: м³ за місяць
     column_span: 4
     type: grid
   - cards:
@@ -151,7 +136,7 @@ views:
       type: heading
     - content: '{% set running = is_state(''input_boolean.nasos_sverdlovini_pratsiuie'', ''on'') %}
 
-        {% set p = states(''sensor.t34_smart_plug_power'') | float(0) %}
+        {% set p = states(''sensor.t34_smart_plug_power_2'') | float(0) %}
 
         {% set k = states(''input_number.sverdlovina_koefitsiient_vodi'') | float(0) %}
 
@@ -198,12 +183,12 @@ views:
       tap_action:
         action: none
       type: tile
-    - entity: sensor.t34_smart_plug_power
+    - entity: sensor.t34_smart_plug_power_2
       grid_options:
         columns: 6
         rows: 1
       icon: mdi:flash
-      name: Моментальна потужність
+      name: Моментальна потужність (локально)
       type: tile
     - entity: sensor.t34_smart_plug_nasos_sverdlovini_spozhito
       grid_options:
@@ -220,24 +205,27 @@ views:
       heading: Додати механічний показник
       icon: mdi:counter
       type: heading
-    - content: '{% set d = states(''input_datetime.data_ostannogo_pokaznika_vodi'') %}
+    - content: '{% set rows = state_attr(''sensor.zhurnal_pokaznykiv_vody'', ''readings'') | default([], true) | rejectattr(''deleted'') | list %}
 
-        {% set m = states(''input_number.lichilnik_vodi_sverdlovini'') | float(0) %}
+        {% set last = rows | last if rows | count else none %}
 
         {% set k = states(''input_number.sverdlovina_koefitsiient_vodi'') | float(0) %}
 
         ### Останній збережений запис
 
 
-        | Дата і час | Механічний показник | Коефіцієнт |
+        | Дата і час | Механічний показник | Енергія на момент зняття | Коефіцієнт |
 
-        |---|---:|---:|
+        |---|---:|---:|---:|
 
-        | {{ as_timestamp(d) | timestamp_custom(''%d.%m.%Y %H:%M:%S'') if d not in [''unknown'',''unavailable'',''''] else ''—'' }} | **{{ ''%.3f'' | format(m) }} м³** | {{ (''%.3f'' | format(k)) ~ '' м³/кВт·год'' if k > 0 else ''очікує калібрування'' }} |'
+        | {{ (last.iso | as_datetime | as_local).strftime(''%d.%m.%Y %H:%M'') if last else ''—'' }} | **{{ ''%.3f'' | format(last.value | float(0)) if last else ''—'' }} м³** | {{ (''%.3f'' | format(last.energy_kwh | float)) ~ '' кВт·год'' if last and last.energy_kwh is not none else ''не зафіксована (запис до 03.09)'' }} | {{ (''%.3f'' | format(k)) ~ '' м³/кВт·год'' if k > 0 else ''очікує калібрування'' }} |
+
+
+        Новий показник додається кнопкою «+ Додати показник» у таблиці нижче; форма сама запам''ятовує енергію насоса на момент зняття, і саме з неї рахується коефіцієнт.'
       grid_options:
         columns: full
       type: markdown
-    column_span: 2
+    column_span: 4
     type: grid
   - cards:
     - grid_options:
@@ -267,14 +255,14 @@ views:
       icon: mdi:chart-line
       type: heading
     - entities:
-      - entity: sensor.t34_smart_plug_power
-        name: Потужність, Вт
+      - entity: sensor.t34_smart_plug_power_2
+        name: Потужність, Вт (локально, 1 с)
       hours_to_show: 12
       title: Потужність насоса · останні 12 годин (без усереднення)
       type: history-graph
     - aggregate_func: max
       entities:
-      - entity: sensor.t34_smart_plug_power
+      - entity: sensor.t34_smart_plug_power_2
         name: Потужність
       grid_options:
         columns: full
@@ -289,7 +277,7 @@ views:
         fill: fade
       type: custom:mini-graph-card
     - chart_type: bar
-      days_to_show: 30
+      days_to_show: 14
       entities:
       - entity: sensor.t34_smart_plug_nasos_sverdlovini_spozhito
         name: кВт·год/день
@@ -298,7 +286,7 @@ views:
       period: day
       stat_types:
       - change
-      title: Споживання енергії по днях
+      title: Споживання енергії насоса по днях · 14 днів
       type: statistics-graph
     column_span: 2
     type: grid

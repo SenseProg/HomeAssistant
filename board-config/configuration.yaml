@@ -543,6 +543,38 @@ template:
           {% set h = states('sensor.do_vidkliuchennia_hodyn') | float(99) %}
           {{ is_state_attr('sensor.do_vidkliuchennia_hodyn', 'typ', 'планове') and 0 <= h <= 3 }}
 
+  # --- Вода свердловини як лічильник (03.09.2026) ---
+  #
+  # Картки «по днях · 30 днів» і «рік по місяцях» на сторінці свердловини читали
+  # сиру історію, а recorder тримає 7 днів - тому 23 з 30 стовпчиків завжди
+  # порожні. Довгострокова статистика (LTS) живе роками, але лише для сенсорів
+  # зі state_class. Цей сенсор - розрахункова вода в м³ від контрольної точки
+  # як total_increasing з device_class water: HA сам веде добові й місячні суми,
+  # statistics-graph малює 30 днів і 12 місяців, а панель «Енергія» може
+  # показати воду як джерело. Історію до створення сенсора імпортує
+  # scripts/water_lts_import.py з LTS інтегратора × коефіцієнт.
+  #
+  # Чесно про коефіцієнт: він уточнюється після кожного механічного показника,
+  # і тоді ВЕСЬ ряд перераховується в картках, а в LTS лишається старий. Різниця
+  # - кілька відсотків; для «скільки води за місяць» це прийнятно, для
+  # калібрування джерелом лишається журнал показників.
+  - sensor:
+      - name: Sverdlovina voda m3
+        unique_id: well_water_total_m3
+        unit_of_measurement: "m³"
+        device_class: water
+        state_class: total_increasing
+        icon: mdi:water-pump
+        state: >-
+          {% set e = states('sensor.t34_smart_plug_nasos_sverdlovini_spozhito') | float(0) %}
+          {% set cal = state_attr('sensor.zhurnal_pokaznykiv_vody', 'calibration') or {} %}
+          {% set off = cal.get('energy_offset_kwh', 0) | float(0) %}
+          {% set k = states('input_number.sverdlovina_koefitsiient_vodi') | float(0.802) %}
+          {{ ([e + off, 0] | max * k) | round(3) }}
+        availability: >-
+          {{ has_value('sensor.t34_smart_plug_nasos_sverdlovini_spozhito')
+             and has_value('input_number.sverdlovina_koefitsiient_vodi') }}
+
   # --- Насос свердловини: зв'язок і останній пуск (02.09.2026, бейджі «Обліку води») ---
   #
   # Власник: «не зрозуміло, чи підключений зараз насос і в якому стані; показати
@@ -601,8 +633,9 @@ template:
           voda_txt: >-
             {% if trigger.id == 'start' %}качає…{% else %}{{ ((([(states('sensor.t34_smart_plug_nasos_sverdlovini_spozhito') | float(0)) - (this.attributes.enerhiia_start | float(0)), 0] | max) * (states('input_number.sverdlovina_koefitsiient_vodi') | float(0.802)) * 1000) | round(0) | int) if this is defined else 0 }} л{% endif %}
           tryvalist_txt: >-
-            {% if trigger.id == 'stop' and this is defined and this.attributes.pochatok %}{{ (now().timestamp() - (this.attributes.pochatok | as_timestamp(0))) | round(0) | int }} с
-            {% else %}{{ (this.attributes.tryvalist_s if this is defined and this.attributes.tryvalist_s is defined else 0) }} с{% endif %}
+            {% if trigger.id == 'start' %}триває
+            {% elif this is defined and this.attributes.pochatok %}{{ (now().timestamp() - (this.attributes.pochatok | as_timestamp(0))) | round(0) | int }} с
+            {% else %}0 с{% endif %}
 
   # --- Канали зв'язку: локально / хмара / інвертор (додано 02.09.2026) ---
   #
@@ -1506,6 +1539,26 @@ sensor:
   # пуску відомі приблизно, і добова сума занижена рівно настільки ж, як енергія.
   # Секундної точності тут немає й не буде без окремого вимірювача; цифра
   # корисна для порівняння днів між собою, а не як абсолютна величина.
+  # --- Блекаут: скільки сьогодні не було світла і скільки разів (03.09.2026) ---
+  # Для сторінки «Блекаут»: відповідь на «як довго дім був без світла» одним
+  # числом, а не читанням графіка. Обидва - з template binary_sensor
+  # svitlo_vidsutnie, тобто з інвертора (або лічильника як другого свідка).
+  - platform: history_stats
+    name: "Bez svitla sohodni hodyn"
+    unique_id: outage_today_hours
+    entity_id: binary_sensor.svitlo_vidsutnie
+    state: "on"
+    type: time
+    start: "{{ today_at('00:00') }}"
+    end: "{{ now() }}"
+  - platform: history_stats
+    name: "Vidkliuchen sohodni"
+    unique_id: outage_today_count
+    entity_id: binary_sensor.svitlo_vidsutnie
+    state: "on"
+    type: count
+    start: "{{ today_at('00:00') }}"
+    end: "{{ now() }}"
   - platform: history_stats
     name: "Насос свердловини - робота сьогодні"
     unique_id: well_pump_runtime_today

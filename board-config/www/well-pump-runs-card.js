@@ -1,3 +1,9 @@
+// 2026-09-03: стан на початку вікна більше не «домальовується» першою зміною.
+// Історія за 7 днів щоранку після purge починалась не зі стану, а з першої
+// події - майже завжди «on», і картка вважала насос увімкненим від початку
+// вікна до першого пуску: фантомний пуск на 1-3 години, «Робота за 7 днів»
+// подвоювалась. Тепер без стану на початку вікна припускаємо ПРОТИЛЕЖНИЙ до
+// першої події стан, а пуск рахуємо лише якщо перехід стався всередині вікна.
 (function(){const tag='well-pump-runs-card';if(customElements.get(tag))return;class WellPumpRunsCard extends HTMLElement{
  setConfig(config){this.config=config;if(!config.entity)throw new Error('Потрібна entity');this._renderLoading();}
  set hass(hass){this._hass=hass;const marker=[hass.states[this.config.entity]?.state||'',hass.states[this.config.entity]?.last_updated||''].join('|');if(marker!==this._marker){this._marker=marker;this._load();}}
@@ -10,14 +16,17 @@
  async _load(){
   if(!this._hass)return;
   const hours=Number(this.config.hours_to_show||24),end=new Date(),start=new Date(end.getTime()-hours*3600000);
-  const path='history/period/'+encodeURIComponent(start.toISOString())+'?filter_entity_id='+encodeURIComponent(this.config.entity)+'&end_time='+encodeURIComponent(end.toISOString())+'&minimal_response';
+  const path='history/period/'+encodeURIComponent(start.toISOString())+'?filter_entity_id='+encodeURIComponent(this.config.entity)+'&end_time='+encodeURIComponent(end.toISOString())+'&minimal_response&no_attributes';
   try{
    const data=await this._hass.callApi('GET',path),raw=(data&&data[0])||[];
    const pts=raw.map(s=>({state:s.state,time:Date.parse(s.last_changed||s.last_updated||'')})).filter(p=>['on','off'].includes(p.state)&&Number.isFinite(p.time)).sort((a,b)=>a.time-b.time);
    if(!pts.length){const current=this._hass.states[this.config.entity]?.state||'off';pts.push({state:current,time:start.getTime()});}
-   if(pts[0].time>start.getTime())pts.unshift({state:pts[0].state,time:start.getTime()});
+   // Стан на початку вікна невідомий (purge зʼїв його): перша подія - це
+   // перехід, отже до неї стан був протилежний. Раніше тут копіювали стан
+   // першої події і малювали фантомний пуск на години.
+   if(pts[0].time>start.getTime())pts.unshift({state:pts[0].state==='on'?'off':'on',time:start.getTime()});
    const intervals=[];let launches=0,total=0,prevState='off';
-   for(let i=0;i<pts.length;i++){const p=pts[i],a=Math.max(start.getTime(),p.time),b=Math.min(end.getTime(),i+1<pts.length?pts[i+1].time:end.getTime());if(p.state==='on'&&b>a){intervals.push([a,b]);total+=b-a;if(prevState!=='on'&&p.time>=start.getTime())launches++;}prevState=p.state;}
+   for(let i=0;i<pts.length;i++){const p=pts[i],a=Math.max(start.getTime(),p.time),b=Math.min(end.getTime(),i+1<pts.length?pts[i+1].time:end.getTime());if(p.state==='on'&&b>a){intervals.push([a,b]);total+=b-a;if(prevState!=='on'&&p.time>start.getTime())launches++;}prevState=p.state;}
    this._render(start,end,intervals,launches,total,hours);
   }catch(e){this.innerHTML=`<ha-card><div class="wrap"><h2>${this._esc(this.config.title||'Запуски насоса')}</h2><p class="err">Не вдалося завантажити історію</p></div></ha-card><style>.wrap{padding:16px}.err{color:var(--error-color)}</style>`;}
  }

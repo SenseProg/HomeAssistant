@@ -240,7 +240,36 @@ if (!customElements.get(tag)) {
       return undefined;
     }
 
-    _onSubmit(event) {
+    /* Енергія інтегратора насоса на момент показника (03.09.2026). Без неї
+     * автоматизація калібрування брала енергію на момент введення, і показник,
+     * записаний через годину-дві після зняття (або відредагований через тиждень),
+     * тихо занижував коефіцієнт. Спершу сира історія (recorder, 7 діб), потім
+     * довгострокова статистика (стан на кінець тієї години), інакше null - тоді
+     * автоматизація візьме поточне значення, як раніше. */
+    async _energyAt(iso) {
+      const entity = this.config.energy_entity || 'sensor.t34_smart_plug_nasos_sverdlovini_spozhito';
+      const at = new Date(iso);
+      if (!Number.isFinite(at.getTime())) return null;
+      try {
+        const end = new Date(at.getTime() + 1000);
+        const data = await this._hass.callApi('GET', 'history/period/' + encodeURIComponent(at.toISOString())
+          + '?filter_entity_id=' + encodeURIComponent(entity) + '&end_time=' + encodeURIComponent(end.toISOString())
+          + '&minimal_response&no_attributes');
+        const v = Number(data?.[0]?.[0]?.state);
+        if (Number.isFinite(v)) return v;
+      } catch (e) { /* далі - статистика */ }
+      try {
+        const start = new Date(at.getTime() - 3600000);
+        const lts = await this._hass.callWS({ type: 'recorder/statistics_during_period', start_time: start.toISOString(),
+          end_time: at.toISOString(), statistic_ids: [entity], period: 'hour', types: ['state'] });
+        const rows = lts?.[entity] || [];
+        const v = Number(rows.length ? rows[rows.length - 1].state : NaN);
+        if (Number.isFinite(v)) return v;
+      } catch (e) { /* немає й статистики */ }
+      return null;
+    }
+
+    async _onSubmit(event) {
       event.preventDefault();
       const data = new FormData(event.target);
       const iso = this._fromLocalInput(data.get('iso'));
@@ -249,9 +278,10 @@ if (!customElements.get(tag)) {
       if (!Number.isFinite(value)) { this._error = 'Некоректний показник'; return this._render(); }
       const note = String(data.get('note') || '');
       const author = this._hass.user?.name || 'Користувач';
+      const energy_kwh = await this._energyAt(iso);
       return this._apply(this._form.id
-        ? { action: 'edit', id: this._form.id, iso, value, note }
-        : { action: 'add', iso, value, note, author });
+        ? { action: 'edit', id: this._form.id, iso, value, note, energy_kwh }
+        : { action: 'add', iso, value, note, author, energy_kwh });
     }
 
     _style() {

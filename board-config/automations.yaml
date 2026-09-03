@@ -1244,6 +1244,14 @@
     entity_id:
     - sensor.t34_smart_plug_power_2
     - sensor.t34_smart_plug_power
+  # Страховка (03.09.2026): якщо HA рестартує посеред пуску, прапорець
+  # відновлюється як on, а потужність після старту вже 0 - події зміни немає,
+  # і «насос працює» висить годинами (history_stats і картки пусків тоді
+  # брешуть). Тому стан перераховується ще й після старту і кожні 5 хвилин.
+  - trigger: homeassistant
+    event: start
+  - trigger: time_pattern
+    minutes: "/5"
   conditions: []
   actions:
   - if:
@@ -1272,7 +1280,19 @@
   triggers:
   - trigger: state
     entity_id: sensor.zhurnal_pokaznykiv_vody
-  conditions: []
+  # 03.09.2026: не спрацьовувати на появу сутності при старті HA і на зміни, які
+  # не торкаються останнього живого рядка (нотатка, приховування старого запису,
+  # оновлення calibration). Раніше кожен рестарт плати перераховував коефіцієнт
+  # «сьогоднішньою» енергією проти старого показника і тихо занижував його.
+  conditions:
+  - condition: template
+    value_template: >-
+      {% set old = (trigger.from_state.attributes.readings if trigger.from_state else []) | default([], true) | rejectattr('deleted') | list %}
+      {% set new = (trigger.to_state.attributes.readings if trigger.to_state else []) | default([], true) | rejectattr('deleted') | list %}
+      {% set o = old | last if old | count else none %}
+      {% set n = new | last if new | count else none %}
+      {{ trigger.from_state is not none and n is not none
+         and (o is none or o.id != n.id or o.value != n.value or o.iso != n.iso or (o.energy_kwh | default(none)) != (n.energy_kwh | default(none))) }}
   actions:
   - variables:
       calibration: '{{ state_attr(''sensor.zhurnal_pokaznykiv_vody'', ''calibration'')
@@ -1283,8 +1303,12 @@
       new_reading: '{{ (rows | last).value | float(0) if rows | count > 0 else 0 }}'
       water_delta: '{{ ((rows | last).value | float(0) if rows | count > 0 else 0)
         - baseline }}'
-      energy_delta: '{{ (states(''sensor.t34_smart_plug_nasos_sverdlovini_spozhito'')
-        | float(0)) + (calibration.get(''energy_offset_kwh'', 0.01748706) | float(0.01748706))
+      # Енергія на момент ПОКАЗНИКА (поле energy_kwh, яке форма пише з 03.09),
+      # і лише за його відсутності - поточне значення інтегратора, як раніше.
+      energy_at_reading: >-
+        {% set e = (rows | last).energy_kwh if rows | count > 0 else none %}
+        {{ e | float if e is not none and e | float(-1) >= 0 else states('sensor.t34_smart_plug_nasos_sverdlovini_spozhito') | float(0) }}
+      energy_delta: '{{ (energy_at_reading | float(0)) + (calibration.get(''energy_offset_kwh'', 0.01748706) | float(0.01748706))
         }}'
   - condition: template
     value_template: '{{ rows | count > 0 and new_reading >= baseline }}'

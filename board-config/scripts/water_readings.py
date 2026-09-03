@@ -110,7 +110,7 @@ def save(data: dict) -> None:
     backup()
     data["version"] = VERSION
     data["updated_at"] = now_iso()
-    data["readings"].sort(key=lambda row: row.get("iso", ""))
+    data["readings"].sort(key=_sort_key)
     temp = f"{STORE}.tmp"
     with open(temp, "w", encoding="utf-8") as handle:
         json.dump(data, handle, ensure_ascii=False, indent=1)
@@ -149,7 +149,27 @@ def snapshot(row: dict) -> dict:
         "value": row.get("value"),
         "author": row.get("author"),
         "note": row.get("note", ""),
+        "energy_kwh": row.get("energy_kwh"),
     }
+
+
+def _energy_arg(value):
+    """Енергія на момент показника, кВт·год; порожнє або нечислове - None."""
+    if value in (None, "", "null"):
+        return None
+    try:
+        return round(float(value), 4)
+    except (TypeError, ValueError):
+        return None
+
+
+def _sort_key(row: dict):
+    """Сортування за часом, а не за рядком iso: після переходу на зимовий час
+    рядки з +02:00 і +03:00 в один день інакше міняються місцями."""
+    try:
+        return datetime.fromisoformat(str(row.get("iso", "")).replace("Z", "+00:00"))
+    except ValueError:
+        return datetime.max.replace(tzinfo=timezone.utc)
 
 
 def cmd_add(args: argparse.Namespace) -> dict:
@@ -160,6 +180,9 @@ def cmd_add(args: argparse.Namespace) -> dict:
         "value": round(float(args.value), 3),
         "author": args.author or "Користувач",
         "note": args.note or "",
+        # Енергія інтегратора на момент показника (03.09.2026): без неї
+        # коефіцієнт рахувався від енергії на момент введення, а не зняття.
+        "energy_kwh": _energy_arg(getattr(args, "energy_kwh", None)),
         "deleted": False,
         "deleted_at": None,
         "deleted_by": None,
@@ -184,6 +207,9 @@ def cmd_edit(args: argparse.Namespace) -> dict:
         row["author"] = args.author
     if args.note is not None:
         row["note"] = args.note
+    energy = _energy_arg(getattr(args, "energy_kwh", None))
+    if energy is not None:
+        row["energy_kwh"] = energy
     after = snapshot(row)
     if after == before:
         return {"ok": True, "action": "edit", "id": row["id"], "changed": False}
@@ -256,7 +282,7 @@ def cmd_export(args: argparse.Namespace) -> dict:
     rows = data["readings"]
     if not args.include_deleted:
         rows = [row for row in rows if not row.get("deleted")]
-    rows = sorted(rows, key=lambda row: row.get("iso", ""))
+    rows = sorted(rows, key=_sort_key)
     total = len(rows)
     if args.limit and args.limit > 0:
         rows = rows[-args.limit :]
@@ -267,6 +293,7 @@ def cmd_export(args: argparse.Namespace) -> dict:
             "value": row["value"],
             "author": row.get("author", ""),
             "note": row.get("note", ""),
+            "energy_kwh": row.get("energy_kwh"),
             "deleted": bool(row.get("deleted")),
             "edited": bool(row.get("revisions")),
             "revisions": len(row.get("revisions", [])),
@@ -328,8 +355,8 @@ def cmd_apply(args: argparse.Namespace) -> dict:
     body = json.loads(raw)
     action = body.get("action")
     handlers = {
-        "add": (cmd_add, ("iso", "value", "author", "note")),
-        "edit": (cmd_edit, ("id", "iso", "value", "author", "note", "by")),
+        "add": (cmd_add, ("iso", "value", "author", "note", "energy_kwh")),
+        "edit": (cmd_edit, ("id", "iso", "value", "author", "note", "by", "energy_kwh")),
         "delete": (cmd_delete, ("id", "by")),
         "restore": (cmd_restore, ("id", "by")),
         "calibration": (
@@ -361,6 +388,7 @@ def main() -> int:
     add.add_argument("--value", required=True)
     add.add_argument("--author", default="")
     add.add_argument("--note", default="")
+    add.add_argument("--energy-kwh", dest="energy_kwh", default=None)
     add.set_defaults(func=cmd_add)
 
     edit = sub.add_parser("edit")
@@ -370,6 +398,7 @@ def main() -> int:
     edit.add_argument("--author", default="")
     edit.add_argument("--note", default=None)
     edit.add_argument("--by", default="")
+    edit.add_argument("--energy-kwh", dest="energy_kwh", default=None)
     edit.set_defaults(func=cmd_edit)
 
     delete = sub.add_parser("delete")

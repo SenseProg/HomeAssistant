@@ -367,6 +367,18 @@ views:
         - select.zariadka_7_5kvt_charge_state
         # binary_sensor.cam1_motion прибрано: десятки записів «Рух · Двір» за добу
         # топили рідкісні корисні події. Рух живе на вкладці «Камера і рух».
+    - type: history-graph
+      title: Відключення і полив · 24 години (тестування)
+      hours_to_show: 24
+      grid_options:
+        columns: full
+      entities:
+      - entity: binary_sensor.svitlo_vidsutnie
+        name: Мережа зникла
+      - entity: binary_sensor.invertor_zviazok
+        name: Зв'язок з інвертором
+      - entity: switch.mini_switch_k601_2_switch_1_2
+        name: Насос поливу
   # --- Секція 7 · Швидкі дії ---
   - type: grid
     column_span: 1
