@@ -116,6 +116,22 @@ only after a *completed* automatic backup, so aborted runs pile up: 26 archives,
 dir ("Structure needs cleaning") also aborts the tar - keep such leftovers in
 `/userdata/hass/tmp/`.
 
+## No RTC: every boot starts in 2024 (2026-09-03)
+
+The board's RTC is dead, so a cold boot starts on 2024-06-17 until
+`timesync-retry.timer` (90 s after boot) fixes it. Home Assistant used to start
+before that: recorder rows stamped 2024 (purged by the nightly purge, they are
+"older than 21 days"), clips in a `2024-06-17` folder, and - worst - the
+long-lived token looked "not yet valid", five failed local requests and
+`http.ban` banned 127.0.0.1 (`ip_bans.yaml`, entry dated 2024). The ban lives in
+memory until HA restarts; the LAN address 192.168.50.141:8123 is a different
+client IP and keeps working - `deploy.sh reload` falls back to it. Fix:
+drop-in `home-assistant.service.d/wait-for-clock.conf` (ExecStartPre waits up
+to 5 min for year >= 2026, restarts timesyncd once), installed 03.09; remove
+the `127.0.0.1` entry from `ip_bans.yaml` before the next restart
+(`finish-video-move.sh` does it). Symptom to recognise: `403: Forbidden` on
+every localhost API call while the browser works.
+
 ## Backup meaning and location
 
 In this project, **backup** means a copy stored outside the MB35x8 board on the

@@ -18,7 +18,7 @@
 #   4. переносить копії статистики з backups/statistics у MB35x8/statistics,
 #      щоб 136 МБ .gz не їхали в кожен архів;
 #   5. запускає HA і чекає відповіді.
-# Файли-джерела кладе поруч deploy: /home/forlinx/{mnt-homemate_media-video.mount,nas-mounts.service}
+# Файли-джерела кладе поруч deploy: /home/forlinx/{mnt-homemate_media-video.mount,nas-mounts.service,wait-for-clock.conf}
 set -u
 CS=/userdata/hass/config-standalone
 NEW=/mnt/homemate_media/video
@@ -76,6 +76,27 @@ if mountpoint -q "$NEW" && [ -d "$CS/backups/statistics" ]; then
   mv -n "$CS/backups/statistics/"* "$NEW/MB35x8/statistics/" 2>/dev/null || true
   rmdir "$CS/backups/statistics" 2>/dev/null || true
   echo "   у новому місці: $(ls "$NEW/MB35x8/statistics" | wc -l) файлів"
+fi
+
+echo "== 4б. HA чекає правильного годинника (drop-in wait-for-clock.conf)"
+# Плата без RTC стартує з 2024 року; HA стартував раніше за NTP і писав історію
+# з датою 2024 (03.09.2026 13:58 після знеструмлення). Drop-in змушує HA
+# зачекати до 5 хв на правильний рік.
+if [ -f "$SRC/wait-for-clock.conf" ]; then
+  install -d /etc/systemd/system/home-assistant.service.d
+  install -m 644 "$SRC/wait-for-clock.conf" /etc/systemd/system/home-assistant.service.d/wait-for-clock.conf
+  systemctl daemon-reload
+  echo "   встановлено"
+fi
+
+echo "== 4в. бан localhost в ip_bans.yaml (наслідок старту з годинником 2024)"
+# Токен виглядав «ще не чинним», п'ять невдач - і HA забанив 127.0.0.1; бан
+# живе в пам'яті до рестарту, а файл перечитується при старті - тому чистимо
+# файл саме перед стартом.
+IPB=/userdata/hass/config/ip_bans.yaml
+if [ -f "$IPB" ] && grep -q "^127.0.0.1:" "$IPB"; then
+  sed -i '/^127\.0\.0\.1:/,/^[^ ]/{/^127\.0\.0\.1:/d;/^  /d}' "$IPB"
+  echo "   запис про 127.0.0.1 прибрано"
 fi
 
 echo "== 5. запускаю Home Assistant"

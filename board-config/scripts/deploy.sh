@@ -40,8 +40,15 @@ case "$cmd" in
     exit $fail;;
   reload)
     TOKEN=$(cat /home/forlinx/.ha_token)
+    # localhost may be banned by HA's ip_ban (seen 03.09.2026: the board booted
+    # with a 2024 clock, the token looked "not yet valid", 5 failures -> ban).
+    # The LAN address is a different client IP and keeps working.
     for d in "$@"; do
       code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 60 -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" -X POST "http://localhost:8123/api/services/$d/reload" -d '{}')
+      if [ "$code" = "403" ]; then
+        code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 60 -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" -X POST "http://192.168.50.141:8123/api/services/$d/reload" -d '{}')
+        code="$code (via LAN ip, localhost banned)"
+      fi
       echo "reload $d: $code"
     done;;
   *) echo "usage: deploy.sh deploy <stamp> <name>:<target>:<sha256> ... | reload <domain> ..."; exit 2;;
