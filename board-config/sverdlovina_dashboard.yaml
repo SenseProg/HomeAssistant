@@ -14,6 +14,42 @@ views:
   max_columns: 4
   path: well
   sections:
+  # 03.09.2026: замість бейджів (власник: «збільшити в розмірі») - ряд високих
+  # плиток на всю ширину; ті самі п'ять сутностей.
+  - type: grid
+    column_span: 4
+    cards:
+    - type: horizontal-stack
+      grid_options:
+        columns: full
+      cards:
+      - type: tile
+        entity: binary_sensor.nasos_sverdlovini_zviazok
+        name: Зв'язок з розеткою
+        vertical: true
+      - type: tile
+        entity: switch.t34_smart_plug_switch_1_2
+        name: Живлення насоса
+        icon: mdi:power-plug
+        vertical: true
+      - type: tile
+        entity: input_boolean.nasos_sverdlovini_pratsiuie
+        name: Насос працює
+        icon: mdi:water-pump
+        vertical: true
+      - type: tile
+        entity: sensor.nasos_sverdlovini_ostannii_pusk
+        name: Останній пуск
+        color: teal
+        vertical: true
+        state_content:
+        - state
+        - voda_txt
+        - tryvalist_txt
+      - type: tile
+        entity: counter.nasos_sverdlovini_zapusky
+        name: Пусків сьогодні
+        vertical: true
   - cards:
     - grid_options:
         columns: full
@@ -323,36 +359,3 @@ views:
     type: grid
   title: Облік води
   type: sections
-  badges:
-  - type: entity
-    entity: binary_sensor.nasos_sverdlovini_zviazok
-    name: Зв'язок з розеткою
-    show_name: true
-    show_state: true
-  - type: entity
-    entity: switch.t34_smart_plug_switch_1_2
-    name: Живлення насоса
-    icon: mdi:power-plug
-    show_name: true
-    show_state: true
-  - type: entity
-    entity: input_boolean.nasos_sverdlovini_pratsiuie
-    name: Насос працює
-    icon: mdi:water-pump
-    show_name: true
-    show_state: true
-  - type: entity
-    entity: sensor.nasos_sverdlovini_ostannii_pusk
-    name: Останній пуск
-    show_name: true
-    show_state: true
-    state_content:
-    - state
-    - voda_txt
-    - tryvalist_txt
-    color: teal
-  - type: entity
-    entity: counter.nasos_sverdlovini_zapusky
-    name: Пусків сьогодні
-    show_name: true
-    show_state: true

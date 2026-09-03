@@ -729,10 +729,29 @@
   triggers:
   - trigger: time
     at: input_datetime.zariadka_pochatok
+    id: chas
+  # 03.09.2026: без світла 7 кВт зарядки від батареї не буває - вікно чекає
+  # мережі; якщо світло повернулось посеред вікна, стартуємо із запізненням.
+  - trigger: state
+    entity_id: binary_sensor.svitlo_vidsutnie
+    from: 'on'
+    to: 'off'
+    for: '00:05:00'
+    id: svitlo
   conditions:
   - condition: state
     entity_id: input_boolean.zariadka_rozklad
     state: 'on'
+  - condition: state
+    entity_id: binary_sensor.svitlo_vidsutnie
+    state: 'off'
+  - condition: or
+    conditions:
+    - condition: trigger
+      id: chas
+    - condition: time
+      after: input_datetime.zariadka_pochatok
+      before: input_datetime.zariadka_kinets
   actions:
   - action: number.set_value
     target:
@@ -777,6 +796,10 @@
   - condition: state
     entity_id: input_boolean.zariadka_rozklad
     state: 'on'
+  # 03.09.2026: підключили авто посеред відключення - чекаємо мережі
+  - condition: state
+    entity_id: binary_sensor.svitlo_vidsutnie
+    state: 'off'
   - condition: template
     value_template: '{% set now_t = now().strftime(''%H:%M'') %} {% set a = states(''input_datetime.zariadka_pochatok'')[:5]
       %} {% set b = states(''input_datetime.zariadka_kinets'')[:5] %} {% if a <= b
@@ -2355,10 +2378,30 @@
   triggers:
   - trigger: time
     at: input_datetime.boiler_babusi_pochatok
+    id: chas
+  # 03.09.2026: якщо о початку вікна світла не було, стартуємо, щойно мережа
+  # повернеться і протримається 5 хвилин - але лише поки вікно ще триває.
+  - trigger: state
+    entity_id: binary_sensor.svitlo_vidsutnie
+    from: 'on'
+    to: 'off'
+    for: '00:05:00'
+    id: svitlo
   conditions:
   - condition: state
     entity_id: input_boolean.boiler_babusi_rozklad
     state: 'on'
+  # Без світла 2 кВт бойлера бабусі на батареї не гріємо: розклад чекає мережі.
+  - condition: state
+    entity_id: binary_sensor.svitlo_vidsutnie
+    state: 'off'
+  - condition: or
+    conditions:
+    - condition: trigger
+      id: chas
+    - condition: time
+      after: input_datetime.boiler_babusi_pochatok
+      before: input_datetime.boiler_babusi_kinets
   actions:
   - action: persistent_notification.dismiss
     data:
@@ -2633,7 +2676,11 @@
     Вимикає важкі споживачі, поки будинок живиться від батареї. Тригерів три,
     а не один: окрім самого зникнення мережі, автоматизація реагує на вмикання
     кожного з приладів - інакше бойлер, увімкнений вручну через годину після
-    початку відключення, працював би до самого кінця.
+    початку відключення, працював би до самого кінця. Насос свердловини з
+    03.09.2026 тут НЕ вимикається (вода має бути) - його береже окрема
+    автоматизація за порогом батареї. Що саме вимкнено, записується ключами в
+    input_text.bez_svitla_vymkneno, і «Світло - з'явилось - увімкнути назад»
+    повертає саме це.
   triggers:
   - trigger: state
     entity_id: binary_sensor.svitlo_vidsutnie
@@ -2648,9 +2695,12 @@
     - switch.terneo_2_power
     - switch.sushka_socket
     - switch.mala_pralna_mashina_socket
-    - switch.t34_smart_plug_switch_1_2
     - switch.mini_switch_k601_2_switch_1_2
     to: 'on'
+  # Заряджання авто (03.09.2026): 7 кВт від батареї - її кінець за годину.
+  - trigger: state
+    entity_id: select.zariadka_7_5kvt_charge_state
+    to: Open charging
   conditions:
   - condition: state
     entity_id: input_boolean.bez_svitla_vymykaty
@@ -2679,9 +2729,6 @@
         {% if is_state('switch.mala_pralna_mashina_socket', 'on') %}
           {% set ns.l = ns.l + ['мала пральна машина'] %}
         {% endif %}
-        {% if is_state('switch.t34_smart_plug_switch_1_2', 'on') %}
-          {% set ns.l = ns.l + ['насос свердловини'] %}
-        {% endif %}
         {% if is_state('switch.mini_switch_k601_2_switch_1_2', 'on') %}
           {% set ns.l = ns.l + ['насос поливу'] %}
         {% endif %}
@@ -2691,10 +2738,35 @@
         {% if is_state('fan.siku_blauberg_fan_192_168_50_27', 'on') or is_state('fan.siku_blauberg_fan_192_168_50_123', 'on') %}
           {% set ns.l = ns.l + ['рекуператори Blauberg'] %}
         {% endif %}
+        {% if is_state('select.zariadka_7_5kvt_charge_state', 'Open charging') %}
+          {% set ns.l = ns.l + ['заряджання авто'] %}
+        {% endif %}
         {% if is_state('sensor.pralnia_pralna_mashina_machine_state', 'run') %}
           {% set ns.l = ns.l + ['велика пральна машина (на паузу)'] %}
         {% endif %}
         {{ ns.l | join(', ') }}
+  # Пам'ять для «увімкнути назад» (03.09.2026): ключі приладів, які зараз
+  # увімкнені і які ми зараз вимкнемо. Дописуємо до вже збережених (прилад,
+  # увімкнений посеред відключення, теж має повернутись), без дублів.
+  - variables:
+      klyuchi: >-
+        {% set raw = states('input_text.bez_svitla_vymkneno') %}
+        {% set ns = namespace(l=(raw if raw not in ['unknown', 'unavailable'] else '').split(',') | map('trim') | reject('eq', '') | list) %}
+        {% if is_state('water_heater.144036023323246_water_heater', 'on') %}{% set ns.l = ns.l + ['boiler'] %}{% endif %}
+        {% if is_state('switch.terneo_1_power', 'on') %}{% set ns.l = ns.l + ['pidloha1'] %}{% endif %}
+        {% if is_state('switch.terneo_2_power', 'on') %}{% set ns.l = ns.l + ['pidloha2'] %}{% endif %}
+        {% if is_state('switch.sushka_socket', 'on') %}{% set ns.l = ns.l + ['sushka'] %}{% endif %}
+        {% if is_state('switch.mala_pralna_mashina_socket', 'on') %}{% set ns.l = ns.l + ['mpralka'] %}{% endif %}
+        {% if is_state('switch.2_floor_heater', 'on') %}{% set ns.l = ns.l + ['heater2'] %}{% endif %}
+        {% if is_state('fan.2_floor_supply_fan', 'on') or is_state('fan.2_floor_extract_fan', 'on') %}{% set ns.l = ns.l + ['prana'] %}{% endif %}
+        {% if is_state('fan.siku_blauberg_fan_192_168_50_27', 'on') or is_state('fan.siku_blauberg_fan_192_168_50_123', 'on') %}{% set ns.l = ns.l + ['blauberg'] %}{% endif %}
+        {% if is_state('select.zariadka_7_5kvt_charge_state', 'Open charging') %}{% set ns.l = ns.l + ['ev'] %}{% endif %}
+        {{ ns.l | unique | list | join(',') }}
+  - action: input_text.set_value
+    target:
+      entity_id: input_text.bez_svitla_vymkneno
+    data:
+      value: "{{ klyuchi }}"
   # Вимикаємо беззастережно, а не в гілці if: вимкнути вже вимкнене нічого не
   # коштує, а от пропустити увімкнене через чужу умову - коштує автономії.
   # continue_on_error через недоступні terneo: помилка на них не має зупиняти
@@ -2712,8 +2784,7 @@
       # пральня
       - switch.sushka_socket
       - switch.mala_pralna_mashina_socket
-      # насоси: свердловина і полив
-      - switch.t34_smart_plug_switch_1_2
+      # насос поливу (насос свердловини - окрема автоматизація за порогом батареї)
       - switch.mini_switch_k601_2_switch_1_2
       # догрівач рекуператора PRANA
       - switch.2_floor_heater
@@ -2725,6 +2796,19 @@
       - fan.siku_blauberg_fan_192_168_50_123
       - fan.siku_blauberg_fan_192_168_50_27
     continue_on_error: true
+  # Заряджання авто: Close charging зупиняє сесію (switch на неї не впливає,
+  # перевірено 09.08). Лише якщо сесія відкрита - інакше станція нічого не робить.
+  - if:
+    - condition: state
+      entity_id: select.zariadka_7_5kvt_charge_state
+      state: Open charging
+    then:
+    - action: select.select_option
+      target:
+        entity_id: select.zariadka_7_5kvt_charge_state
+      data:
+        option: Close charging
+      continue_on_error: true
   # PRANA окремо і не через fan.turn_off. Перевірено живим тестом 01.09.2026:
   # прилад має третій канал bounded, якого немає в Home Assistant, і саме він
   # вимикає його цілком. Команда ж fan.turn_off на потоці supply чи extract
@@ -2758,14 +2842,17 @@
           {% if 'бойлер' in bulo %}Вода була
           {{ state_attr('water_heater.144036023323246_water_heater',
           'current_temperature') }}°.{% endif %}
-          Увімкнути назад можна на панелі - автоматика цього не робить.
+          {% if is_state('input_boolean.pislia_svitla_vmykaty', 'on') %}Щойно
+          світло протримається 5 хвилин, автоматика увімкне все назад.{% else %}Увімкнути
+          назад можна на панелі - автоматика цього не робить.{% endif %}
   mode: single
 - id: svitlo_zyavylos_nahadaty_boiler
   initial_state: true
   alias: Світло - нагадати про бойлер
   description: >-
-    Назад бойлер сам не вмикається - рішення, коли гріти воду, лишається за
-    людьми, а не за автоматикою. Тому лише нагадування.
+    Нагадування на випадок, коли автоматичне повернення (тумблер
+    input_boolean.pislia_svitla_vmykaty) вимкнене: тоді бойлер сам не
+    вмикається, і рішення, коли гріти воду, лишається за людьми.
   triggers:
   - trigger: state
     entity_id: binary_sensor.svitlo_vidsutnie
@@ -2778,6 +2865,9 @@
   - condition: state
     entity_id: input_boolean.bez_svitla_vymykaty
     state: 'on'
+  - condition: state
+    entity_id: input_boolean.pislia_svitla_vmykaty
+    state: 'off'
   actions:
   - delay: 00:02:00
   - action: script.spovistyty_vsikh
@@ -2786,6 +2876,164 @@
       message: >-
         Світло повернулось. Бойлер вимкнули на час відключення - увімкніть,
         якщо потрібна гаряча вода.
+  mode: single
+- id: svitlo_zyavylos_uvimknuty_nazad
+  initial_state: true
+  alias: Світло - з'явилось - увімкнути назад
+  description: >-
+    Вмикає назад лише те, що вимкнула автоматика («Без світла - вимкнути важкі
+    споживачі» або «насос при низькому заряді»; список ключів у
+    input_text.bez_svitla_vymkneno), коли мережа протрималась 5 хвилин - щоб не
+    смикати прилади на кожному блиманні. Рішення власника 03.09.2026:
+    півторахвилинне зникнення мережі лишило дім без бойлера, насоса свердловини
+    й вентиляції до ручного втручання. Тумблер input_boolean.pislia_svitla_vmykaty
+    вимикає цю поведінку - тоді лишається нагадування про бойлер. Тригер на
+    старт HA - на випадок рестарту між поверненням світла і спливом 5 хвилин.
+  triggers:
+  - trigger: state
+    entity_id: binary_sensor.svitlo_vidsutnie
+    from: 'on'
+    to: 'off'
+    for: '00:05:00'
+    id: svitlo
+  - trigger: homeassistant
+    event: start
+    id: start
+  conditions:
+  - condition: state
+    entity_id: input_boolean.pislia_svitla_vmykaty
+    state: 'on'
+  - condition: template
+    value_template: "{{ states('input_text.bez_svitla_vymkneno') not in ['unknown', 'unavailable', ''] }}"
+  actions:
+  - if:
+    - condition: trigger
+      id: start
+    then:
+    - delay: '00:05:00'
+  - condition: state
+    entity_id: binary_sensor.svitlo_vidsutnie
+    state: 'off'
+  - variables:
+      klyuchi: "{{ states('input_text.bez_svitla_vymkneno').split(',') | map('trim') | reject('eq', '') | list }}"
+      # switch-и одним викликом; бойлер, Blauberg і PRANA - інші домени/команди
+      switches: >-
+        {% set m = {'pidloha1': 'switch.terneo_1_power', 'pidloha2': 'switch.terneo_2_power',
+                    'sushka': 'switch.sushka_socket', 'mpralka': 'switch.mala_pralna_mashina_socket',
+                    'heater2': 'switch.2_floor_heater', 'nasos': 'switch.t34_smart_plug_switch_1_2'} %}
+        {{ klyuchi | select('in', m) | map('extract', m) | list }}
+      nazvy: >-
+        {% set n = {'boiler': 'бойлер', 'pidloha1': 'тепла підлога, контур 1',
+                    'pidloha2': 'тепла підлога, контур 2', 'sushka': 'сушарка',
+                    'mpralka': 'мала пральна машина', 'heater2': 'обігрів другого поверху',
+                    'prana': 'рекуператор PRANA', 'blauberg': 'рекуператори Blauberg',
+                    'nasos': 'насос свердловини', 'ev': 'заряджання авто'} %}
+        {{ klyuchi | select('in', n) | map('extract', n) | list | join(', ') }}
+  - if:
+    - condition: template
+      value_template: "{{ switches | count > 0 }}"
+    then:
+    - action: switch.turn_on
+      target:
+        entity_id: "{{ switches }}"
+      continue_on_error: true
+  - if:
+    - condition: template
+      value_template: "{{ 'boiler' in klyuchi }}"
+    then:
+    - action: water_heater.turn_on
+      target:
+        entity_id: water_heater.144036023323246_water_heater
+      continue_on_error: true
+  - if:
+    - condition: template
+      value_template: "{{ 'blauberg' in klyuchi }}"
+    then:
+    - action: fan.turn_on
+      target:
+        entity_id:
+        - fan.siku_blauberg_fan_192_168_50_27
+        - fan.siku_blauberg_fan_192_168_50_123
+      continue_on_error: true
+  - if:
+    - condition: template
+      value_template: "{{ 'prana' in klyuchi }}"
+    then:
+    - action: rest_command.prana_start
+      continue_on_error: true
+  - if:
+    - condition: template
+      value_template: "{{ 'ev' in klyuchi }}"
+    then:
+    - action: select.select_option
+      target:
+        entity_id: select.zariadka_7_5kvt_charge_state
+      data:
+        option: Open charging
+      continue_on_error: true
+  - action: input_text.set_value
+    target:
+      entity_id: input_text.bez_svitla_vymkneno
+    data:
+      value: ''
+  - action: script.spovistyty_vsikh
+    data:
+      title: 🔌 Увімкнено назад
+      message: >-
+        Світло є вже 5 хвилин. Увімкнено: {{ nazvy | trim }}.
+        Батарея {{ states('sensor.inverter_battery') }}%.
+  mode: single
+- id: bez_svitla_nasos_sverdlovyny_batareia
+  initial_state: true
+  alias: Без світла - насос свердловини при низькому заряді
+  description: >-
+    Насос свердловини не вимикається разом із важкими споживачами (рішення
+    власника 03.09.2026: вода має бути), а лише коли без світла батарея сідає
+    нижче input_number.nasos_sverdlovyny_porih_batarei. Записується в пам'ять
+    автовимикання і повертається разом з рештою, щойно світло протримається
+    5 хвилин. Другий тригер - на випадок, коли батарея вже нижче порога в
+    момент зникнення мережі.
+  triggers:
+  - trigger: numeric_state
+    entity_id: sensor.inverter_battery
+    below: input_number.nasos_sverdlovyny_porih_batarei
+    for: '00:01:00'
+  - trigger: state
+    entity_id: binary_sensor.svitlo_vidsutnie
+    to: 'on'
+  conditions:
+  - condition: state
+    entity_id: binary_sensor.svitlo_vidsutnie
+    state: 'on'
+  - condition: numeric_state
+    entity_id: sensor.inverter_battery
+    below: input_number.nasos_sverdlovyny_porih_batarei
+  - condition: state
+    entity_id: switch.t34_smart_plug_switch_1_2
+    state: 'on'
+  actions:
+  - variables:
+      klyuchi: >-
+        {% set raw = states('input_text.bez_svitla_vymkneno') %}
+        {% set l = (raw if raw not in ['unknown', 'unavailable'] else '').split(',') | map('trim') | reject('eq', '') | list %}
+        {{ (l + ['nasos']) | unique | list | join(',') }}
+  - action: input_text.set_value
+    target:
+      entity_id: input_text.bez_svitla_vymkneno
+    data:
+      value: "{{ klyuchi }}"
+  - action: switch.turn_off
+    target:
+      entity_id: switch.t34_smart_plug_switch_1_2
+    continue_on_error: true
+  - action: script.spovistyty_vsikh
+    data:
+      title: 🪫 Насос свердловини вимкнено
+      message: >-
+        Батарея {{ states('sensor.inverter_battery') }}% при порозі
+        {{ states('input_number.nasos_sverdlovyny_porih_batarei') }}%, світла
+        немає. Насос вимкнено, щоб зберегти заряд; увімкнеться сам, коли світло
+        протримається 5 хвилин.
   mode: single
 - id: pralka_prannia_zaversheno
   alias: Пральна машина - прання завершено
@@ -2940,6 +3188,8 @@
           "automation.batareia_poperedzhennia",
           "automation.batareia_kritichnii_riven",
           "automation.svitlo_nagadati_pro_boiler",
+          "automation.svitlo_z_iavilos_uvimknuti_nazad",
+          "automation.bez_svitla_nasos_sverdlovini_pri_nizkomu_zariadi",
           "automation.invertor_nemaie_zviazku",
           "automation.invertor_zviazok_vidnovleno" ] %}
         {% set ns = namespace(l=[]) %}

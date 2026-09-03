@@ -1301,6 +1301,8 @@ views:
       entities:
       - entity: automation.bez_svitla_vimknuti_vazhki_spozhivachi
         name: "Без світла - вимкнути важкі споживачі"
+      - entity: automation.svitlo_z_iavilos_uvimknuti_nazad
+        name: "Світло - з'явилось - увімкнути назад"
     - type: markdown
       title: Що вони роблять
       grid_options:
@@ -1598,6 +1600,8 @@ views:
         name: "Батарея - критичний рівень"
       - entity: automation.bez_svitla_vimknuti_vazhki_spozhivachi
         name: "Без світла - вимкнути важкі споживачі"
+      - entity: automation.svitlo_z_iavilos_uvimknuti_nazad
+        name: "Світло - з'явилось - увімкнути назад"
       - entity: automation.invertor_nemaie_zviazku
         name: "Інвертор - немає звʼязку"
       - entity: automation.invertor_zviazok_vidnovleno
@@ -2188,6 +2192,8 @@ views:
       entities:
       - entity: automation.bez_svitla_vimknuti_vazhki_spozhivachi
         name: "Без світла - вимкнути важкі споживачі"
+      - entity: automation.svitlo_z_iavilos_uvimknuti_nazad
+        name: "Світло - з'явилось - увімкнути назад"
       - entity: automation.svitlo_zniklo
         name: "Світло - зникло"
     - type: markdown
@@ -3096,6 +3102,10 @@ views:
         name: "Свердловина — рахувати запуски насоса"
       - entity: automation.sverdlovina_obnuliti_dobovi_lichilniki_nasosa
         name: "Свердловина — обнулити добові лічильники насоса"
+      - entity: automation.bez_svitla_nasos_sverdlovini_pri_nizkomu_zariadi
+        name: "Без світла — насос лише при низькому заряді батареї"
+      - entity: automation.svitlo_z_iavilos_uvimknuti_nazad
+        name: "Світло — з'явилось — увімкнути назад"
     - type: markdown
       title: Що вони роблять
       grid_options:
@@ -4320,6 +4330,8 @@ views:
       entities:
       - entity: automation.bez_svitla_vimknuti_vazhki_spozhivachi
         name: "Без світла - вимкнути важкі споживачі"
+      - entity: automation.svitlo_z_iavilos_uvimknuti_nazad
+        name: "Світло - з'явилось - увімкнути назад"
     - type: markdown
       title: Що вони роблять
       grid_options:
@@ -5116,6 +5128,23 @@ views:
       grid_options:
         columns: full
         rows: 1
+    - type: tile
+      entity: input_boolean.pislia_svitla_vmykaty
+      name: Вмикати назад, коли світло є 5 хвилин
+      icon: mdi:power-plug
+      features_position: bottom
+      features:
+      - type: toggle
+      grid_options:
+        columns: full
+        rows: 1
+    - type: tile
+      entity: input_text.bez_svitla_vymkneno
+      name: Що вимкнула автоматика (ключі)
+      icon: mdi:format-list-bulleted
+      grid_options:
+        columns: full
+        rows: 1
     - type: entities
       grid_options:
         columns: full
@@ -5136,12 +5165,22 @@ views:
         name: Рекуператор, Олеся
       - entity: fan.2_floor_supply_fan
         name: PRANA, приплив
+      - entity: fan.2_floor_extract_fan
+        name: PRANA, витяжка
+      - entity: switch.mala_pralna_mashina_socket
+        name: Мала пральна машина, розетка
+      - entity: switch.mini_switch_k601_2_switch_1_2
+        name: Насос поливу
+      - entity: select.zariadka_7_5kvt_charge_state
+        name: Заряджання авто (сесія)
+      - entity: switch.t34_smart_plug_switch_1_2
+        name: Насос свердловини — лише при батареї нижче порога
     - type: markdown
       text_only: true
       grid_options:
         columns: full
       content: |-
-        Вимикаються при переході на батарею і знову, якщо хтось увімкнув їх посеред відключення. Пральна машина **не** вимикається ніколи — лише попередження. Насоси поливу і свердловини автоматика блекауту не чіпає.
+        Вимикаються при переході на батарею і знову, якщо хтось увімкнув їх посеред відключення; сесія заряджання авто закривається. Велика пральна машина ставиться на паузу, а не знеструмлюється. **Насос свердловини не вимикається** — вода має бути; його вимкне лише окрема автоматизація, коли батарея сяде нижче порогу «Насос свердловини · вимикати нижче». Щойно мережа протримається 5 хвилин, усе вимкнене автоматикою вмикається назад (тумблер вище); насос поливу назад не вмикається — ним керує розклад поливу.
   # --- Секція 3 · Пороги ---
   - type: grid
     column_span: 2
@@ -5181,6 +5220,16 @@ views:
     - type: tile
       entity: input_number.batareia_porih_krytychno
       name: Батарея · критично
+      features:
+      - type: numeric-input
+        style: slider
+      grid_options:
+        columns: full
+        rows: 2
+    - type: tile
+      entity: input_number.nasos_sverdlovyny_porih_batarei
+      name: Насос свердловини · вимикати нижче
+      icon: mdi:water-pump-off
       features:
       - type: numeric-input
         style: slider
@@ -5256,7 +5305,13 @@ views:
         columns: full
       entities:
       - entity: automation.bez_svitla_vimknuti_vazhki_spozhivachi
-        name: Вимкнути важкі споживачі
+        name: "Вимкнути важкі споживачі: бойлер Midea, тепла підлога ×2, сушарка, мала пральна, насос поливу, обігрів 2-го поверху, PRANA, Blauberg, зарядка авто"
+        secondary_info: last-triggered
+      - entity: automation.svitlo_z_iavilos_uvimknuti_nazad
+        name: Увімкнути назад, коли світло є 5 хвилин
+        secondary_info: last-triggered
+      - entity: automation.bez_svitla_nasos_sverdlovini_pri_nizkomu_zariadi
+        name: Насос свердловини при низькому заряді
         secondary_info: last-triggered
       - entity: automation.boiler_babusi_pochatok_nagrivu
         name: Бойлер бабусі · початок нагріву
@@ -5271,7 +5326,7 @@ views:
       grid_options:
         columns: full
       content: |-
-        Перша — єдина, що діє сама. Нічні розклади бойлера бабусі і зарядки тут для довідки: під час відключення вони теж виконаються, якщо їх не вимкнути.
+        Перші три діють самі: вимкнути при зникненні мережі, увімкнути назад за 5 хвилин світла, насос свердловини за порогом батареї. Розклади бойлера бабусі і зарядки авто показані тут, бо це два нічні споживачі на 2 і 7 кВт, що стартують за годинником: з 03.09 без світла вони не стартують і чекають мережі, а якщо світло повернеться посеред вікна — стартують із запізненням. Вимикати розклад на час відключення більше не потрібно.
   # --- Секція 5б · Умови блекауту: хто свідчить про мережу (02.09.2026) ---
   # Кожна плитка інтерактивна: тап відкриває історію сутності. Два свідки:
   # інвертор (головний: «бачить мережу» + частота) і лічильник вводу (запасний:
