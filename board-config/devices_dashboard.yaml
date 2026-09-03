@@ -2232,7 +2232,7 @@ views:
           - entity: binary_sensor.cam1_motion
             name: Рух
       - type: iframe
-        url: /local/motion/gallery.html?v=12
+        url: /local/motion/gallery.html?v=13
         aspect_ratio: 115%
     - type: entities
       title: Автоматизації

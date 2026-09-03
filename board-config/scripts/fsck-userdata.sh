@@ -101,7 +101,7 @@ sudo mount /userdata && findmnt -n -o TARGET,OPTIONS /userdata
 sudo systemctl start nas-mounts.service
 sleep 5
 sudo systemctl start nas-mounts.timer tv-photo-cache.timer wyoming-vosk home-assistant
-for m in /userdata /userdata/hass/config/media/video /userdata/hass/config/www/motion-clips /userdata/hass/config/backups; do
+for m in /userdata /mnt/homemate_media/video /userdata/hass/config-standalone/backups; do
   mountpoint -q "$m" && echo "   ok   $m" || echo "   DOWN $m"
 done
 

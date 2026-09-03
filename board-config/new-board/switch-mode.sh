@@ -78,7 +78,7 @@ ip -4 -br addr show eth0 | sed 's/^/   /'
 echo "== монти NAS"
 sudo systemctl start nas-mounts.service 2>/dev/null
 sleep 6
-for m in /userdata/hass/config/media/video /userdata/hass/config/www/motion-clips; do
+for m in /mnt/homemate_media/video /userdata/hass/config-standalone/backups; do
   mountpoint -q "$m" && echo "   ok   $m" || echo "   DOWN $m"
 done
 

@@ -49,11 +49,21 @@ import time
 from pathlib import Path
 
 DB = Path(os.environ.get("HA_RECORDER_DB", "/userdata/hass/config/home-assistant_v2.db"))
-DEST = Path(
-    os.environ.get(
-        "STATS_BACKUP_DIR", "/userdata/hass/config-standalone/backups/statistics"
-    )
-)
+
+
+def _default_dest() -> str:
+    # 03.09.2026: копії лежали в backups/statistics - тобто всередині дерева
+    # конфігу, і 136 МБ .gz їхали в кожен нічний архів HA (backups/*.tar
+    # виключено, backups/statistics/*.gz - ні). Після finish-video-move.sh
+    # шара NAS змонтована поза деревом, і копії живуть у MB35x8/statistics
+    # поруч із backups; до того - старий шлях, щоб 03:50 не писало на плату.
+    new = Path("/mnt/homemate_media/video")
+    if os.path.ismount(new):
+        return str(new / "MB35x8" / "statistics")
+    return "/userdata/hass/config-standalone/backups/statistics"
+
+
+DEST = Path(os.environ.get("STATS_BACKUP_DIR") or _default_dest())
 TABLES = ("statistics_meta", "statistics", "statistics_short_term", "statistics_runs")
 KEEP = 30
 

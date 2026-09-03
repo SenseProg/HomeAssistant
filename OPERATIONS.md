@@ -96,8 +96,12 @@ encryption material must never be committed.
 
 1. Git contains declarative YAML, systemd units, and operational scripts.
 2. Home Assistant creates an encrypted settings-only backup every day directly
-   on the NAS and retains seven copies; recorder history and NAS media are
-   excluded.
+   on the NAS and retains seven copies; recorder history is excluded. NAS media
+   stays out only because it is mounted *outside* the config tree
+   (`/mnt/homemate_media/{foto,video}`, with symlinks from `media/`): Core
+   archives everything under config, mounts included. Learned 2026-09-03 -
+   clips mounted under `media/video` and `www/motion-clips` made every archive
+   5–9 GB and abort mid-way, so no backup completed between 11.08 and 03.09.
 3. The NAS receives those encrypted archives plus incremental system journals;
    no persistent backup archive is stored on the board.
 4. CloudMate must replicate `HomeAssistant/MB35x8` off-site to complete 3-2-1.

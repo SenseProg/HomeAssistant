@@ -18,28 +18,31 @@ homeassistant:
   # router, so it is the only way in from outside.
   external_url: https://ha.sonyachny.pp.ua
   internal_url: http://192.168.50.141:8123
-  # camera.record refuses to write anywhere outside this list. The path below
-  # is an NFS mount of the NAS (systemd unit userdata-hass-config-media-video.mount),
-  # so motion clips never land on the board's own 2.5 GB partition.
+  # camera.record refuses to write anywhere outside this list. The clip path
+  # is an NFS mount of the NAS, so motion clips never land on the board's own
+  # 2.5 GB partition.
   allowlist_external_dirs:
-    # These MUST be the canonical config-standalone paths, not the
-    # /userdata/hass/config ones. switch-mode.sh makes config a symlink, and
-    # Home Assistant resolves the requested path to its real location before
+    # Home Assistant resolves the requested path to its REAL location before
     # comparing it against this list, while the list itself is compared as
-    # written. So a clip aimed at /userdata/hass/config/media/video/... becomes
-    # /userdata/hass/config-standalone/media/video/... and matches nothing.
+    # written. switch-mode.sh makes /userdata/hass/config a symlink, and since
+    # 03.09.2026 media/video is itself a symlink to /mnt/homemate_media/video
+    # (the NAS share now lives outside the config tree - Core backups archive
+    # everything under config, mounts included, which is how the nightly
+    # archive grew to 5-9 GB and aborted every night). So a clip aimed at
+    # /userdata/hass/config/media/video/... becomes
+    # /mnt/homemate_media/video/... and must match THAT entry.
     #
-    # Measured 2026-08-17: this is why every motion clip and snapshot failed
-    # with "no access to path" from the moment of the move onwards - on the old
-    # board config was a real directory, so the paths matched and it worked.
-    # The /userdata/hass/config forms are kept too, harmlessly, in case the
-    # symlink is ever removed.
+    # Measured 2026-08-17: a missing real-path entry is why every motion clip
+    # and snapshot failed with "no access to path" after the move to the
+    # symlinked config - on the old board config was a real directory.
+    # The older forms are kept too, harmlessly, until finish-video-move.sh has
+    # run and in case a symlink is ever removed. www/motion-clips is gone: the
+    # gallery reads clips through media_source with signed URLs.
+    - /mnt/homemate_media/video
     - /userdata/hass/config-standalone/media/video
     - /userdata/hass/config-standalone/www/motion
-    - /userdata/hass/config-standalone/www/motion-clips
     - /userdata/hass/config/media/video
     - /userdata/hass/config/www/motion
-    - /userdata/hass/config/www/motion-clips
 
 # Read-only local telemetry from the Tenda access point and range extender.
 rest: !include network_monitoring.yaml
@@ -1156,25 +1159,16 @@ command_line:
       unit_of_measurement: MB
       state_class: measurement
       scan_interval: 600
-  # Newest motion clips as JSON, for the gallery card on the Останній рух
-  # tab. Path is the www bind mount, so the links need no auth token.
-  - sensor:
-      name: Motion clips list
-      unique_id: motion_clips_list
-      command: >-
-        cd /userdata/hass/config/www/motion-clips 2>/dev/null &&
-        ls -t */ruh_*.mp4 2>/dev/null | head -40 |
-        awk -F/ '{split($2,a,"_"); t=substr(a[2],1,2)":"substr(a[2],3,2)":"substr(a[2],5,2);
-        printf "%s{\"d\":\"%s\",\"t\":\"%s\",\"f\":\"%s\"}", (NR>1?",":""), $1, t, $2}'
-        | awk 'BEGIN{printf "{\"clips\":["} {printf "%s", $0} END{printf "]}"}'
-      value_template: "ok"
-      json_attributes:
-        - clips
-      scan_interval: 120
+  # 03.09.2026: sensor.motion_clips_list знято - жоден дашборд його не читав
+  # (галерея бере clips.json зі scripts-gen-gallery.py), а він щодві хвилини
+  # ганяв ls по NFS. Разом із ним зник bind www/motion-clips.
   - binary_sensor:
       name: NAS videoarkhiv zmontovanyi
       unique_id: nas_video_mount_ok
-      command: mountpoint -q /userdata/hass/config/media/video && echo ON || echo OFF
+      # Обидва шляхи навмисно: до finish-video-move.sh шара змонтована в
+      # config-standalone/media/video, після - у /mnt/homemate_media/video
+      # (а media/video - symlink). Так кліпи не зупиняються між деплоєм і рестартом.
+      command: "{ mountpoint -q /mnt/homemate_media/video || mountpoint -q /userdata/hass/config-standalone/media/video; } && echo ON || echo OFF"
       payload_on: "ON"
       payload_off: "OFF"
       scan_interval: 300
@@ -1210,6 +1204,8 @@ shell_command:
   # Keep the clip folder bounded. It lives on the NAS, but an unbounded
   # folder is still bad manners - and if the mount ever silently fell away
   # this would be running against the board's own disk.
-  prepare_motion_dir: "d=/userdata/hass/config/media/video/ha-motion; mkdir -p $d/$(date +%Y-%m-%d); find $d -mindepth 1 -maxdepth 1 -type d -mtime +14 -exec rm -rf {} +"
+  # ...і прибирає *.tmp старші за годину: обірваний запис лишає їх назавжди
+  # (сім штук за серпень), а бекап на такому файлі, що зникає посеред tar, падає.
+  prepare_motion_dir: "d=/userdata/hass/config/media/video/ha-motion; mkdir -p $d/$(date +%Y-%m-%d); find $d -mindepth 1 -maxdepth 1 -type d -mtime +14 -exec rm -rf {} +; find $d -name '*.tmp' -mmin +60 -delete"
   rebuild_clip_gallery: "/userdata/hass/venv/bin/python /userdata/hass/config/scripts-gen-gallery.py"
   update_motion_snapshot: "cd /userdata/hass/config/www/motion && ls -t motion_*.jpg 2>/dev/null | head -1 | xargs -I{} cp {} latest.jpg && ls -t motion_*.jpg 2>/dev/null | tail -n +31 | xargs -r rm --"

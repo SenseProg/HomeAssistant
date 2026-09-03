@@ -11,14 +11,18 @@ After=network.target
 [Service]
 Type=oneshot
 # Mount points are named by PATH, not by unit name, on purpose: the escapes in
-# userdata-hass-config\x2dstandalone-www-motion\x2dclips.mount do not survive
-# being passed through systemd and then a shell - the first version of this file
-# silently skipped exactly that one mount. systemctl converts a path itself.
+# userdata-hass-config\x2dstandalone-backups.mount do not survive being passed
+# through systemd and then a shell - the first version of this file silently
+# skipped exactly such a mount. systemctl converts a path itself.
 #
-# The paths go to config-standalone, not to config: systemd refuses to mount on
-# any path containing a symlink, and /userdata/hass/config is the symlink that
-# switch-mode.sh flips between modes. Measured 2026-08-13: with the old paths
-# three of the five mounts could never come up in standalone mode. If the board
-# is ever switched back to mirror, these three paths must follow to config-mirror.
-ExecStart=/bin/sh -c 'for m in /userdata /userdata/hass/config-standalone/media/video /userdata/hass/config-standalone/www/motion-clips /mnt/homemate_media/foto /userdata/hass/config-standalone/backups; do mountpoint -q "$m" || systemctl start "$m" || true; done'
+# The backups path goes to config-standalone, not to config: systemd refuses to
+# mount on any path containing a symlink, and /userdata/hass/config is the
+# symlink that switch-mode.sh flips between modes. If the board is ever
+# switched back to mirror, that path must follow to config-mirror.
+#
+# 2026-09-03: the camera archive moved out of the config tree to
+# /mnt/homemate_media/video (config-standalone/media/video is a symlink to it),
+# and the www/motion-clips bind is gone - Home Assistant Core archived both
+# into every nightly backup. See finish-video-move.sh.
+ExecStart=/bin/sh -c 'for m in /userdata /mnt/homemate_media/video /mnt/homemate_media/foto /userdata/hass/config-standalone/backups; do mountpoint -q "$m" || systemctl start "$m" || true; done'
 SuccessExitStatus=0 1

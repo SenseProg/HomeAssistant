@@ -61,27 +61,34 @@ with readable names; on the board they are:
 
 | stored here | real filename on the board |
 | --- | --- |
-| `userdata-hass-config-standalone-media-video.mount` | `userdata-hass-config\x2dstandalone-media-video.mount` |
 | `userdata-hass-config-standalone-backups.mount` | `userdata-hass-config\x2dstandalone-backups.mount` |
-| `userdata-hass-config-standalone-www-motion-clips.mount` | `userdata-hass-config\x2dstandalone-www-motion\x2dclips.mount` |
+| `mnt-homemate_media-video.mount` | `mnt-homemate_media-video.mount` (no escapes: the path has no dashes) |
+
+`userdata-hass-config-standalone-media-video.mount` and the `www/motion-clips`
+bind were removed on 2026-09-03 - see the next section.
 
 Generate the correct name with `systemd-escape -p --suffix=mount <path>` rather
 than typing it.
 
-**Why `www/motion-clips` stays a bind mount, and what it costs.** The bind puts
-14 days of camera clips (7 GB on 2026-09-02) inside the config tree, and Home
-Assistant's nightly "settings-only" backup archives every byte of it: the
-archives on the NAS are 5.4–7.2 GB a night instead of ~50 MB, and take over an
-hour. The obvious fix — a symlink to `media/video/ha-motion` like the photo
-library — was tried and reverted the same day: `/local/…` is served by aiohttp
-with `follow_symlinks` off, so a symlink that resolves **outside** `www/`
-answers 404 (a symlink to a file inside `www/` answers 200, which is what made
-the first test look promising). `media/*` itself is not in the backup — the
-137 GB share mounted at `media/video` is proof — so the clips are the only
-heavy thing. Options left: shorter retention for the `www`-exposed copy
-(`prepare_motion_dir` prunes at 14 days), a second, smaller directory with
-hardlinks to the last two days bound at `www/motion-clips`, or a gallery that
-opens clips through the media browser instead of `/local`.
+**Camera clips live outside the config tree since 2026-09-03.** Until then the
+NAS share was mounted at `config-standalone/media/video` and mounted a second
+time at `www/motion-clips` so `/local/` could serve clips without a token. Home
+Assistant Core archives the *whole* config tree, mounts included - its only
+excludes are `backups/*.tar`, logs, `tts/*`, `.cache/*` (`backup/const.py`);
+the earlier belief that `media/*` is skipped was wrong (the 137 GB that "proved"
+it were the `backups/*.tar` files themselves). Result: 5–9 GB nightly archives
+that aborted mid-tar whenever a clip was renamed - 21 aborted archives, 127 GB
+on the NAS, and no completed backup since 10.08 (`securetar.AddFileError` in
+the journal, `last_completed_automatic_backup` stuck). The fix mirrors the
+photo album: `mnt-homemate_media-video.mount` mounts the share at
+`/mnt/homemate_media/video`, `media/video` is a symlink to it, the bind is
+gone, and `allowlist_external_dirs` lists the real path. The gallery
+(`scripts-gen-gallery.py` → `www/motion/gallery.html`) now emits media-source
+ids and asks the parent window's `hass.callWS(media_source/resolve_media)`
+for a signed `/media/local/...?authSig=` URL per tile (valid 24 h) - a plain
+symlink under `www/` would not do, because `/local/` refuses symlinks that
+resolve outside `www/`. `finish-video-move.sh` performs the switch (needs an
+HA restart, which the owner runs).
 
 If the board is ever switched back to mirror mode, these three paths must follow
 to `config-mirror`, in the units and in `nas-mounts.service` alike.

@@ -97,6 +97,25 @@ or an external database - not SQLite on NFS. Excluding an entity also stops
 its long-term statistics; nothing in the batch has a kWh unit, so the Energy
 panel is unaffected. Recorder settings apply only after an HA restart.
 
+## Backups: what actually goes into the archive (2026-09-03)
+
+Core's backup archives the whole config tree, mounts and bind mounts included;
+the only excludes are `backups/*.tar`, `tmp_backups/*.tar`, `*.log*`, `tts/*`,
+`.cache/*`, `__pycache__` and (settings-only) the recorder database
+(`homeassistant/components/backup/const.py`). `media/*` is NOT excluded. Never
+mount NAS data under `/userdata/hass/config*/`; mount it under
+`/mnt/homemate_media/` and symlink from `media/` (symlinked dirs are stored as
+links, not followed). Camera clips: `/mnt/homemate_media/video` ←
+`media/video`, gallery through `media_source/resolve_media` signed URLs
+(24 h), never a `www` bind. Diagnosis when the size looks wrong: `backup/info`
+and `backup/config/info` over WebSocket (`last_completed_automatic_backup`
+frozen = every run since then aborted), `journalctl -u home-assistant | grep
+AddFileError` for the file that broke the tar. Retention (`copies: 7`) runs
+only after a *completed* automatic backup, so aborted runs pile up: 26 archives,
+127 GB on the NAS on 03.09. A stale sqlite `-shm` of a broken copy in the config
+dir ("Structure needs cleaning") also aborts the tar - keep such leftovers in
+`/userdata/hass/tmp/`.
+
 ## Backup meaning and location
 
 In this project, **backup** means a copy stored outside the MB35x8 board on the

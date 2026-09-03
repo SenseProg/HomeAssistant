@@ -1,0 +1,22 @@
+[Unit]
+Description=NAS share with camera clips, outside the Home Assistant config tree (read-write)
+# 03.09.2026: until now the share was mounted at config-standalone/media/video.
+# Home Assistant Core archives the whole config tree, mounts included (the
+# only excludes are backups/*.tar, logs, tts, .cache), so the nightly backup
+# carried every clip - 5-9 GB - and aborted whenever a clip vanished mid-tar.
+# Same layout as the photo album now: the mount lives here, and
+# config-standalone/media/video is a symlink to it, so camera.record and the
+# media browser keep their usual paths. allowlist_external_dirs must list this
+# real path, because HA resolves symlinks before comparing.
+After=network-online.target
+Wants=network-online.target
+
+[Mount]
+What=192.168.50.25:/HomeAssistant
+Where=/mnt/homemate_media/video
+Type=nfs
+Options=rw,soft,timeo=100,retrans=3,noatime,nolock,_netdev
+TimeoutSec=30
+
+[Install]
+WantedBy=multi-user.target

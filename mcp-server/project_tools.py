@@ -72,6 +72,8 @@ SYNC_TARGETS: dict[str, str] = {
     "board-config/scripts/lovelace_push.py": "/userdata/hass/config/scripts/lovelace_push.py",
     "board-config/scripts/ha_admin.py": "/userdata/hass/config/scripts/ha_admin.py",
     "board-config/scripts/water_lts_import.py": "/userdata/hass/config/scripts/water_lts_import.py",
+    # Галерея кліпів (03.09.2026): до того жила лише на платі в корені конфігу.
+    "board-config/scripts-gen-gallery.py": "/userdata/hass/config/scripts-gen-gallery.py",
     # Storage-дашборд журналу сповіщень: джерело правди - файл, на плату він
     # їде через lovelace_push.py, а не через lovelace.dashboards (рестарт).
     "board-config/notifications_dashboard.yaml": "/userdata/hass/config/notifications_dashboard.yaml",
