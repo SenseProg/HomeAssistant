@@ -158,7 +158,7 @@ integrator a few hundredths of a kWh below the sum of its own history, and the
 "розрахунковий показник" drifts a little below the cards' sums.)
 
 **Since 2026-09-03 the daily and monthly numbers come from long-term
-statistics**, not raw history. The recorder keeps 7 days (`purge_keep_days`),
+statistics**, not raw history. The recorder kept 7 days (`purge_keep_days`, 21 since 2026-09-03),
 so the daily card's "за 30 днів" used to mean "за 7" and the Overview's "цього
 місяця" went stale after the 8th. `well-daily-water-card` and
 `well-water-overview-card` now call `recorder/statistics_during_period`

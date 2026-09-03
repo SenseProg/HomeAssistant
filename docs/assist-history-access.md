@@ -91,7 +91,7 @@ CLI на платі.
   не розширюють право діяти.
 - `.storage`, база recorder, токени й секрети недоступні як і раніше; історія
   читається виключно через штатний read-only API `recorder.history`.
-- Recorder тримає 14 діб (`purge_keep_days: 14`) і не пише домени `automation`,
+- Recorder тримає 21 добу (`purge_keep_days: 21` з 03.09.2026) і не пише домени `automation`,
   `script`, `update`, `persistent_notification`. Тому «яка автоматизація це
   зробила» з історії станів не видно — це окреме обмеження, не наслідок цієї
   зміни.

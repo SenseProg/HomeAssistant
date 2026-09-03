@@ -78,8 +78,24 @@ Recovery sequence that worked, in this order:
 3. Remove the cause before starting again, otherwise the log refills within days.
 
 Prevention: keep debug logging strictly temporary and prefer a narrower logger
-target; watch `df -h /userdata` whenever the database is near 900 MB, since
-`purge_keep_days: 14` alone does not bound the WAL.
+target; watch `df -h /userdata` whenever the database is near 1.5 GB, since
+`purge_keep_days` alone does not bound the WAL.
+
+## Recorder retention (2026-09-03)
+
+`purge_keep_days: 21`, `auto_repack: false`, ~65 MB/day after the second
+exclude batch in `configuration.yaml` (Deye duplicates «Load UPS»/«Internal
+CT»/«Output»/«Power Losses»/external CT, `inverter_connection` and
+`inverter_update_interval` attribute churn, Sonoff gate voltages, cloud
+duplicates of local `_2` meter/plug entities). Measured before the cut:
+3.87 M `states` rows per 7.3 days, 1.24 GB file with 385 MB free pages,
+~110 MB/day of real data. 21 days ≈ 1.4 GB on the 2.4 GB partition; the
+`/userdata` free-space watchdog (250 MB) is the safety net - fall back to 14
+if it fires. Repack is off because VACUUM needs a full copy of the file.
+Next reserve if more depth is wanted: Deye poll interval 5 → 10 s (~-25 %),
+or an external database - not SQLite on NFS. Excluding an entity also stops
+its long-term statistics; nothing in the batch has a kWh unit, so the Energy
+panel is unaffected. Recorder settings apply only after an HA restart.
 
 ## Backup meaning and location
 

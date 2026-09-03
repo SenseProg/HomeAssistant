@@ -546,7 +546,7 @@ template:
   # --- Вода свердловини як лічильник (03.09.2026) ---
   #
   # Картки «по днях · 30 днів» і «рік по місяцях» на сторінці свердловини читали
-  # сиру історію, а recorder тримає 7 днів - тому 23 з 30 стовпчиків завжди
+  # сиру історію, а recorder тримав 7 днів - тому 23 з 30 стовпчиків завжди
   # порожні. Довгострокова статистика (LTS) живе роками, але лише для сенсорів
   # зі state_class. Цей сенсор - розрахункова вода в м³ від контрольної точки
   # як total_increasing з device_class water: HA сам веде добові й місячні суми,
@@ -1389,10 +1389,26 @@ recorder:
   # partition, leaving 2.0 GB free here instead of 846 MB. At the ~130 MB
   # a day measured above, seven days lands near 0.9 GB - so the three-day
   # value forced by the old cramped partition is no longer needed.
-  purge_keep_days: 7
+  # 2026-09-03 (власник: «збільши зберігання історії»). Виміряно на платі:
+  # 3,87 млн рядків states за 7,3 доби, файл 1,24 ГБ, з них 385 МБ - вільні
+  # сторінки, тобто ~110 МБ/добу справжніх даних. 42 % рядків писали
+  # сутності, яких немає на жодному дашборді: дублі Deye («Load UPS» =
+  # «Load», «Internal CT» = «Grid Lx», «Output Lx», «Power Losses», зовнішні
+  # CT без датчиків), хмарні дублі локальних напруг/струмів, base64-«фази»
+  # лічильника. Після їх виключення (другий зріз нижче) ~65 МБ/добу:
+  # 21 доба ≈ 1,4 ГБ, на розділі 2,4 ГБ лишається ~0,8 ГБ. Сторож вільного
+  # місця /userdata (command_line, поріг 250 МБ) - запобіжник: якщо кричить,
+  # повертати 14. Довше на цій платі не вийде без іншого носія або зовнішньої
+  # БД; наступний резерв - інтервал опитування Deye 5 → 10 с (ще ~−25 %).
+  purge_keep_days: 21
   # Reduce SQLite/eMMC write frequency while keeping adequate history resolution.
   commit_interval: 30
   auto_purge: true
+  # VACUUM другої неділі місяця потребує вільного місця на копію файлу
+  # (~1,4 ГБ) - на розділі 2,4 ГБ його не буде, і на eMMC це зайве зношення.
+  # Чистка без repack повторно використовує звільнені сторінки, тож файл
+  # просто перестає рости, досягнувши розміру 21 доби.
+  auto_repack: false
   exclude:
     domains:
       - update
@@ -1459,6 +1475,59 @@ recorder:
       - sensor.inverter_pv1_voltage
       - sensor.inverter_pv2_current
       - sensor.inverter_pv2_voltage
+      # Другий зріз (2026-09-03, у дужках рядків за 7 діб). Deye: «Load UPS»
+      # дублює «Load», «Internal CT» - «Grid Lx», «Output Lx Power»,
+      # «Power Losses» і зовнішні CT (датчики не підключені - шум) ніде не
+      # показуються; connection/update_interval міняють атрибути кожні 5 с,
+      # їх стан вкладка читає наживо, а на «Зв'язку» історію веде
+      # binary_sensor.invertor_zviazok.
+      - binary_sensor.inverter_connection        # 70 700
+      - sensor.inverter_update_interval          # 70 700
+      - sensor.inverter_load_ups_power           # 68 700
+      - sensor.inverter_load_ups_l1_power        # 65 900
+      - sensor.inverter_load_ups_l2_power        # 59 000
+      - sensor.inverter_load_ups_l3_power        # 63 700
+      - sensor.inverter_internal_power           # 66 200
+      - sensor.inverter_internal_ct1_power       # 63 700
+      - sensor.inverter_internal_ct2_power       # 62 400
+      - sensor.inverter_internal_ct3_power       # 62 600
+      - sensor.inverter_output_l1_power          # 38 900
+      - sensor.inverter_output_l2_power          # 53 800
+      - sensor.inverter_output_l3_power          # 61 200
+      - sensor.inverter_output_frequency         # 24 700
+      - sensor.inverter_power_losses             # 60 100
+      - sensor.inverter_external_power           # 42 500
+      - sensor.inverter_external_ct1_power       # 13 400
+      - sensor.inverter_external_ct2_power       # 37 800
+      - sensor.inverter_external_ct3_power       # 25 200
+      - datetime.inverter_date_time              # щохвилини
+      # Sonoff «Ворота. Гараж.»: напруга двох каналів - 214 000 рядків,
+      # найбільший записувач будинку; потужність і енергія лишаються.
+      - sensor.sonoff_1001338bf7_voltage_1
+      - sensor.sonoff_1001338bf7_voltage_2
+      # Хмарні дублі локальних (_2) сутностей лічильника вводу .219 і
+      # розеток: дашборди й автоматизації читають локальні; «phase_a/b/c»
+      # без суфікса - base64-рядок, а не число.
+      - sensor.energy_meter_phase_a
+      - sensor.energy_meter_phase_b
+      - sensor.energy_meter_phase_c
+      - sensor.energy_meter_phase_a_current
+      - sensor.energy_meter_phase_b_current
+      - sensor.energy_meter_phase_c_current
+      - sensor.energy_meter_phase_a_power
+      - sensor.energy_meter_phase_b_power
+      - sensor.energy_meter_phase_c_power
+      - sensor.energy_meter_phase_a_voltage
+      - sensor.energy_meter_phase_b_voltage
+      - sensor.energy_meter_phase_c_voltage
+      - sensor.energy_meter_power_factor_a
+      - sensor.energy_meter_power_factor_b
+      - sensor.energy_meter_power_factor_c
+      - sensor.t34_smart_plug_voltage
+      - sensor.t34_smart_plug_current
+      - sensor.smart_plug_6_voltage
+      - sensor.sushka_voltage_cloud
+      - sensor.zariadka_7_5kvt_current_a
 
 # --- Separate YAML dashboard with instantaneous power graphs ---
 lovelace:
