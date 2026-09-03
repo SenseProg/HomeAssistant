@@ -31,6 +31,15 @@ to it fails with `Cannot assign requested address`.
 4. Distinguish a full-board power loss from a Home Assistant restart.
 5. Suspect supply, connectors, RTC battery, and physical link before modifying
    software when journals end abruptly with no OOM/panic.
+6. After any reboot check the clock the services started under: `date` and
+   `systemctl show home-assistant -p ActiveEnterTimestamp --value`. The RTC is
+   dead, every boot starts on 2024-06-17, and a service that started before
+   NTP keeps living with that start (TLS "not yet valid", `setup_error` in
+   cloud integrations, localhost banned by HA) until it is restarted.
+   `journalctl --list-boots` shows a wrong boot start time after the jump; do
+   not trust it. In systemd units, `$VAR` in `ExecStart*=` is substituted by
+   systemd before the shell runs (write `$$VAR`), and `ExecStartPre=` runs as
+   the unit's `User=` unless the executable is prefixed with `+`.
 
 Recorder unclean-shutdown messages are consequences of abrupt board loss, not
 proof that SQLite caused it.

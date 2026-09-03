@@ -69,9 +69,49 @@ def test_sync_targets_cover_config_scripts() -> None:
         assert (repo_root / repo_path).is_file(), repo_path
 
 
+SYSTEMD_UNITS_NOT_SYNCED = {
+    # Вимкнений на платі: тимчасовий тунель без акаунта, замінений cloudflared-ha.
+    "board-config/new-board/systemd/cloudflared-quick.service",
+    # Ім'я на платі містить systemd-екранування (\x2d): не звіряється свідомо,
+    # див. коментар у SYNC_TARGETS.
+    "board-config/new-board/systemd/userdata-hass-config-standalone-backups.mount",
+    # Застаріла копія до 03.09.2026 (з bind www/motion-clips). Звірка йде за
+    # new-board/systemd/nas-mounts.service; цю копію має видалити власник
+    # (класифікатор дозволів блокує видалення файлів з сесії агента).
+    "board-config/systemd/nas-mounts.service",
+    # Побайтовий дубль board-config/systemd/netplan-fallback.service, який і
+    # звіряється; теж чекає на видалення власником.
+    "board-config/new-board/systemd/netplan-fallback.service",
+}
+
+
+def test_sync_targets_cover_every_systemd_unit_in_repo() -> None:
+    """Кожен юніт у board-config/systemd/ і board-config/new-board/systemd/ звіряється.
+
+    До 03.09.2026 одинадцять юнітів new-board/systemd/ (timesync-retry,
+    wait-for-clock, cloudflared-ha, tv-photo-cache, новий nas-mounts) жили поза
+    sync, а звірка порівнювала стару копію nas-mounts.service.
+    """
+    repo_root = Path(__file__).resolve().parents[2]
+    for folder in ("board-config/systemd", "board-config/new-board/systemd"):
+        for path in sorted((repo_root / folder).rglob("*")):
+            if not path.is_file() or path.suffix not in (".service", ".timer", ".mount", ".conf"):
+                continue
+            rel = path.relative_to(repo_root).as_posix()
+            if rel in SYSTEMD_UNITS_NOT_SYNCED:
+                continue
+            assert rel in project_tools.SYNC_TARGETS, rel
+    # Кожен таргет справді існує в репо (мертвий запис маскував би remote_missing).
+    for repo_path in project_tools.SYNC_TARGETS:
+        assert (repo_root / repo_path).is_file(), repo_path
+
+
 HEALTHY_STDOUT = """ha_version=2026.7.4
 ha_service=active
 ha_http=200
+ha_http_lan=200
+clock_year=2026
+ha_started_year=2026
 uptime=up 2 hours
 journal_cap=50M
 root=/dev/root 12320264 9609344 2142472 82% /
@@ -89,6 +129,7 @@ backup_newest=/userdata/hass/config/backups/Automatic_backup_x.tar
 backup_age_h=12
 backup_size_mb=48
 photo_mount=active
+video_mount=active
 nas_mounts_timer=enabled
 analyst_timer=missing
 cloudflared=active
@@ -99,6 +140,7 @@ entities_total=983
 entities_unavailable=40
 inverter_unavailable=0
 automations_orphaned=0
+entries_setup_error=
 """
 
 
@@ -143,6 +185,50 @@ def test_board_health_reports_filesystem_backup_and_link_problems(monkeypatch) -
     # Ключі більше не клеяться: кожне поле окремо.
     assert result["values"]["cloudflared"] == "active"
     assert result["values"]["analyst_timer"] == "missing"
+
+
+def test_board_health_flags_a_start_under_the_2024_clock(monkeypatch) -> None:
+    """Стан 03.09.2026 14:00: плата без RTC підняла HA раніше за NTP. localhost
+    забанений (403) при живій LAN-адресі, обидва записи Tuya і Yasno в
+    setup_error, і так до рестарту. Стара версія бачила лише «HTTP 403»."""
+    sick = (
+        HEALTHY_STDOUT.replace("ha_http=200", "ha_http=403")
+        .replace("ha_started_year=2026", "ha_started_year=2024")
+        .replace("entries_setup_error=", "entries_setup_error=tuya,tuya,yasno_outages")
+    )
+    monkeypatch.setattr(project_tools, "_ssh", _ssh_stub(sick))
+    result = project_tools.board_health()
+    assert result["healthy"] is False
+    joined = " | ".join(result["problems"])
+    for needle in ("127.0.0.1 is banned", "started under a 2024 clock", "tuya,tuya,yasno_outages"):
+        assert needle in joined, needle
+
+
+def test_board_health_flags_clock_behind_the_backup(monkeypatch) -> None:
+    """Від'ємний вік бекапу раніше проходив перевірку «> 48 год» як здоровий."""
+    sick = HEALTHY_STDOUT.replace("backup_age_h=12", "backup_age_h=-19000").replace(
+        "clock_year=2026", "clock_year=2024"
+    )
+    monkeypatch.setattr(project_tools, "_ssh", _ssh_stub(sick))
+    result = project_tools.board_health()
+    assert result["healthy"] is False
+    joined = " | ".join(result["problems"])
+    assert "clock is behind the NAS" in joined
+    assert "board clock is wrong (year 2024)" in joined
+
+
+def test_board_health_flags_inverter_data_loss_even_when_logger_pings(monkeypatch) -> None:
+    """Пінг логера ok, а 202 сутності інвертора unavailable: сесія опитування
+    мертва. Поле збиралось з 02.09, але в problems не потрапляло."""
+    sick = HEALTHY_STDOUT.replace("inverter_unavailable=0", "inverter_unavailable=202").replace(
+        "video_mount=active", "video_mount=inactive"
+    )
+    monkeypatch.setattr(project_tools, "_ssh", _ssh_stub(sick))
+    result = project_tools.board_health()
+    assert result["healthy"] is False
+    joined = " | ".join(result["problems"])
+    assert "202 inverter entities are unavailable although the logger answers ping" in joined
+    assert "mnt-homemate_media-video.mount is inactive" in joined
 
 
 def test_storage_dashboards_sync_matches_when_board_equals_repo(monkeypatch) -> None:

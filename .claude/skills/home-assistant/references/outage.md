@@ -143,11 +143,55 @@ open); the ext4 journal (done 2026-09-03); a "board rebooted" push with the
 start time and what fail-safe switched off; DHCP reservations for every Tuya
 plug so that a reconnect keeps its address.
 
+## 2026-09-03 evening: the "unknown" state is the hole (not fixed yet)
+
+The template's last branch, `{% else %} false`, was meant as "nobody is
+testifying"; for every trigger and condition it is simply `off`, i.e. "grid
+present". During a real outage the meter at `.219` is dead, so the inverter
+logger is the only witness, and its link flapped 13 times on 02.09. Thirty
+seconds of logger silence therefore turn `svitlo_vidsutnie` `on -> off`:
+`svitlo_zyavylos` pushes "світло з'явилось", five minutes later
+`svitlo_zyavylos_uvimknuty_nazad` switches the boiler, floor heating, dryer,
+ventilation and the EV session back on from the battery, and the night
+schedules of grandma's boiler and the charger (which require `state: 'off'`)
+are free to start. A restart of HA mid-outage with a silent logger does the
+same through the `homeassistant: start` trigger.
+
+Two more defects in the same chain, confirmed by file: the frequency guard
+`| float(50)) < 45` vetoes the sensor when the frequency is unknown, and
+`sensor.spozhyvannia_zaraz_kvt` has no `availability:`, so it reports 0 kW as
+a real value while the logger is down (the "large load on battery" warning can
+never fire and every push prints 0 kW).
+
+**The fix is not `availability:` on `svitlo_vidsutnie`.** That would turn the
+sensor `unavailable` instead of `off`, the `from: 'on' / to: 'off'` triggers
+would never fire again, and the `state: 'off'` conditions in the night
+schedules would fail on every flap - the heavy loads would stay off forever.
+The right shape: a separate "unknown" binary sensor (built from
+`sensor.merezha_dzherelo`, which already exists), a
+`binary_sensor.invertor_zviazok: on` condition in the restore automation and
+in the schedules, `float(0)` for the frequency, and
+`availability: has_value('sensor.inverter_load_power')` on the load sensor.
+
+Also found there: the restore automation does not verify `switch.turn_on`
+and clears its memory anyway; the irrigation pump is shed with a raw
+`switch.turn_off` that Irrigation Unlimited undoes on the next zone; the
+low-battery well-pump shed is conditioned on the plug being `on`, so an
+`unavailable` plug at the threshold is never switched off;
+`boiler_babusi_heat_stop` and `ev_schedule_window_end` have only a time
+trigger (a reboot across the window edge skips them) and are missing from the
+readiness guard's list; `well_pump_daily_reset` runs only at midnight, so a
+board that is down at 00:00 keeps counting two days and the "too many starts"
+alarm can never cross its threshold again; the heavy-load list exists in six
+places and `switch.2_floor_heater` is already missing from two of them.
+
 ## Do not
 
 - Do not derive "grid present" from the meter at `.219`: it is powered by the
   same grid and simply goes `unavailable`, which also happens when its Wi-Fi
   drops.
+- Do not put `availability:` on `binary_sensor.svitlo_vidsutnie` (see above);
+  model "unknown" as its own entity instead.
 - Do not let the assistant or a dashboard treat `svitlo_vidsutnie = off` as
   proof of grid power while `invertor_zviazok` is `off`.
 - Do not add per-phone `notify.mobile_app_*` calls in new automations; call

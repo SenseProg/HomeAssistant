@@ -114,6 +114,14 @@ anything about the board.
     what is pending and who closes it. Update the skill or its references in
     the same commit when a rule changed. The owner asked for this explicitly on
     2026-09-03; a finding that lives only in the conversation is lost.
+16. The GitHub repository `SenseProg/HomeAssistant` is **public** (checked
+    2026-09-03). Nothing that goes into Git - YAML comments, docs, the worklog,
+    the skill - may carry personal data (family names with roles, e-mails,
+    phone models, MAC addresses tied to rooms), public URLs of camera frames
+    or photos, tokens, or private-key paths. The revision of 03.09 found all of
+    these already in the tree; until the owner makes the repository private or
+    cleans it, do not add more, and write worklog entries about exposures in
+    general terms.
 
 ## Connection and canonical paths
 
@@ -161,7 +169,14 @@ confirmation a new session can give. See `docs/incident-register.md`.
 filesystem errors or a missing ext4 journal on `/userdata`, a backup older than
 48 h or larger than 1 GB (it is dragging NAS media), a logged-out Tailscale,
 an inactive Cloudflare tunnel, an unreachable Deye logger or well-pump plug,
-orphaned automation entities. `healthy` is true only when that list is empty.
+orphaned automation entities. Since 2026-09-03 it also reports a wrong board
+clock (`clock_year`), an HA process that started under the 2024 clock
+(`ha_started_year`; cloud integrations then sit in `setup_error` until a
+restart), a banned localhost (403 on localhost while `ha_http_lan` is 200),
+config entries that failed to set up (`entries_setup_error`), inverter
+entities unavailable while the logger pings, a backup "in the future" (clock
+behind the NAS), more than a quarter of all entities unavailable, and the
+photo/video NAS mounts. `healthy` is true only when that list is empty.
 Until 2026-09-02 it said `healthy: true` beside a corrupted filesystem; do not
 trust any older memory that says otherwise. If the list is not empty, also run
 `python mcp-server/cli.py notify-log` — the board has usually been telling the
@@ -342,11 +357,25 @@ Three rules when touching them:
   a 0.038 kWh dip after a restart was read as a counter reset and printed a
   5 148 L bar instead of 618 L.
 
-Three NFS mount units are deliberately absent from `SYNC_TARGETS`: their names
-contain systemd escaping with a backslash
-(`userdata-hass-config\x2dstandalone-backups.mount`), which is not a legal
-filename on the Windows working copy. They are started by `nas-mounts.service`,
-which is tracked.
+Since 2026-09-03 `SYNC_TARGETS` covers both systemd folders of the repo
+(`board-config/systemd/` and `board-config/new-board/systemd/`, including the
+`wait-for-clock.conf` drop-in), the 03.09 version of `nas-mounts.service`
+from `new-board/systemd/` (the pre-03.09 copy with the `www/motion-clips`
+bind still sits in `board-config/systemd/` only because the permission
+classifier blocks file deletion from an agent session; it is excluded from
+sync and waits for the owner to delete it, together with the byte-identical
+duplicates `new-board/home-assistant.service`,
+`new-board/systemd/netplan-fallback.service` and `new-board/default-tailscaled`),
+and the owner's scripts `/home/forlinx/deploy.sh` and
+`/home/forlinx/fsck-userdata.sh`. Two entries are expected to be off until
+the owner runs `finish-video-move.sh`: `nas-mounts.service` shows `mismatch`
+(the board still runs the old unit) and `mnt-homemate_media-video.mount` shows
+`remote_missing`. One NFS mount unit stays out deliberately: its name on the
+board carries systemd escaping (`userdata-hass-config\x2dstandalone-backups.mount`),
+which is not a legal Windows filename and which GNU `sha256sum` escapes in its
+output; `nas-mounts.service` starts it. The test
+`test_sync_targets_cover_every_systemd_unit_in_repo` fails if a unit file is
+added to either folder without a sync entry.
 
 ## Diagnose before changing
 

@@ -103,6 +103,20 @@ which phone was actually reached.
 5. The sensor's attributes are the only place the items live in HA; it must
    stay in `recorder.exclude.entities`.
 
+## Known defects (2026-09-03, not fixed yet)
+
+- `notify_log_mark_read` treats **any** `persistent_notification.dismiss`
+  whose id does not start with `nl_` as "mark everything read" (its `else`
+  branch). The repo has 13 such programmatic dismisses, two of them daily at
+  03:50 and 04:00, so alerts from the night are already "read" by morning.
+  Until fixed: give every notification you dismiss programmatically an `nl_`
+  id or expect the journal to be silently cleared.
+- `inverter_zviazok_vidnovleno` is not paired with the "lost" push: it fires
+  on `from: unavailable` held for 3 min, which can also happen after a restart
+  without any prior loss. The voltage alerts have no hysteresis (three
+  "Перенапруга" pushes in 90 min on 03.09). The readiness guard repeats its
+  "not ready" push every 6 h while a plug is unavailable (12 a day).
+
 ## Script maintenance
 
 `notify_log.py stats` shows size and top titles; `purge --days N` exists but is

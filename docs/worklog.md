@@ -105,7 +105,22 @@
 
 - На платі й у конфігурації нічого не змінено. У SKILL.md («Deploy a file
   safely») три правила: CRLF перед деплоєм, `$$` і `+` у systemd, `www/`
-  публічний. Цей запис і пам'ять асистента.
+  публічний. Цей запис і пам'ять асистента (`86ee640`).
+- Наступним комітом, за наказом «онови скіли, MCP і Git»: `board_health`
+  тепер бачить годинник плати і рік старту HA, бан localhost проти живої
+  LAN-адреси, від'ємний вік бекапу, записи інтеграцій у `setup_error`,
+  сутності інвертора unavailable при живому пінгу, чверть недоступних
+  сутностей, фото/відео-маунти; усі REST-виклики з плати пробують localhost,
+  потім LAN-адресу. `SYNC_TARGETS` покриває обидві теки systemd (включно з
+  `wait-for-clock.conf`, `timesync-retry`, `cloudflared-ha`, `tv-photo-cache`,
+  новим `nas-mounts.service` і `mnt-homemate_media-video.mount`) і скрипти
+  `deploy.sh`/`fsck-userdata.sh` у `/home/forlinx`; тест на повноту юнітів і
+  три тести на нові перевірки здоров'я. Скіли: правило 16 (публічний репо),
+  опис нових полів `health`, звірка юнітів; довідники platform.md (реальні
+  служби плати, 2024-старт і setup_error), outage.md (діра «невідомо =
+  світло є» і чому не `availability:`), notifications.md (відомі дефекти);
+  dashboard-design (hero і блекаут, мобільна сітка, default у markdown);
+  mb35x8-bench (годинник після ребуту, `$$` у systemd).
 
 **Рішення власника (03.09.2026)**
 
@@ -129,6 +144,11 @@
   `board_health`); документація; дизайн-борг.
 - Не перевірялось: статистика `vitrati_na_merezhu_razom`, знімки сторінок на
   телефоні, причина просідання живлення плати о 12:50.
+- Власник: видалити з репо застарілу копію `board-config/systemd/nas-mounts.service`
+  і побайтові дублі `new-board/home-assistant.service`,
+  `new-board/systemd/netplan-fallback.service`, `new-board/default-tailscaled`
+  (класифікатор дозволів заблокував `git rm` із сесії; у звірці й тесті вони
+  вже виключені).
 
 ## 2026-09-03
 

@@ -23,6 +23,32 @@ SSH_KEY = Path(
 HA_VENV = os.environ.get("HA_VENV", "/userdata/hass/venv")
 HA_CONFIG_ROOT = os.environ.get("HA_CONFIG_ROOT", "/userdata/hass/config")
 HA_TOKEN_FILE = os.environ.get("HA_TOKEN_FILE", "/home/forlinx/.ha_token")
+BOARD_LAN_IP = BOARD_HOST.split("@")[-1]
+# Локальні адреси HA на платі, у порядку спроб. localhost буває забанений:
+# після старту з годинником 2024 токен виглядає «ще не чинним», п'ять невдач -
+# і ip_bans.yaml блокує 127.0.0.1 (03.09.2026). Той самий HA відповідає з
+# LAN-адреси, бо для нього це інший клієнт.
+HA_LOCAL_URLS = ("http://localhost:8123", f"http://{BOARD_LAN_IP}:8123")
+# Понад стільки сутностей інвертора unavailable означає, що HA не має даних
+# інвертора, навіть якщо логер пінгується (мертва сесія опитування). 02.09.2026
+# при офлайн-логері їх було 202, при живому - 0.
+INVERTER_UNAVAILABLE_LIMIT = 20
+
+# Спільний шматок для python-скриптів, які виконуються на платі: читає HA REST
+# через перший з HA_LOCAL_URLS, який відповість. Токен лишається на платі.
+_REMOTE_HTTP_GET = f"""
+import json, urllib.request
+def ha_get(path, token):
+    last = None
+    for base in {HA_LOCAL_URLS!r}:
+        req = urllib.request.Request(base + path, headers={{'Authorization': 'Bearer ' + token}})
+        try:
+            with urllib.request.urlopen(req, timeout=15) as response:
+                return json.load(response)
+        except Exception as exc:
+            last = exc
+    raise last
+""".strip()
 
 IRRIGATION_CONTROLLER_IP = "192.168.50.221"
 IRRIGATION_CONTROLLER_MAC = "38:2c:e5:2d:5b:32"
@@ -78,23 +104,47 @@ SYNC_TARGETS: dict[str, str] = {
     # їде через lovelace_push.py, а не через lovelace.dashboards (рестарт).
     "board-config/notifications_dashboard.yaml": "/userdata/hass/config/notifications_dashboard.yaml",
     "board-config/sverdlovina_dashboard.yaml": "/userdata/hass/config/sverdlovina_dashboard.yaml",
-    # systemd. Три NFS-маунти свідомо не тут: їхні імена містять
+    # systemd. Живі юніти плати лежать у двох теках репо: board-config/systemd/
+    # (з першої плати) і board-config/new-board/systemd/ (те, що відрізняється
+    # на поточній). До 03.09.2026 звірялась лише перша, і юніти, які рятують
+    # плату після блекауту (timesync-retry, wait-for-clock, cloudflared-ha,
+    # tv-photo-cache, новий nas-mounts), жили поза sync. Тест
+    # test_sync_targets_cover_every_systemd_unit_in_repo стежить за повнотою.
+    # Один NFS-маунт свідомо не тут: його ім'я на платі містить
     # systemd-екранування зі зворотним слешем
-    # (userdata-hass-config\x2dstandalone-backups.mount), а такий символ
-    # неприпустимий в імені файлу на Windows, де живе робоча копія.
-    # Ними керує nas-mounts.service, який під контролем.
+    # (userdata-hass-config\x2dstandalone-backups.mount) - такий символ
+    # неприпустимий в імені файлу на Windows, а GNU sha256sum екранує його у
+    # виводі. Ним керує nas-mounts.service, який під контролем.
     "board-config/systemd/home-assistant.service": "/etc/systemd/system/home-assistant.service",
+    "board-config/new-board/systemd/home-assistant.service.d/wait-for-clock.conf": "/etc/systemd/system/home-assistant.service.d/wait-for-clock.conf",
     "board-config/systemd/zram-swap.service": "/etc/systemd/system/zram-swap.service",
     "board-config/systemd/mnt-homemate_media-foto.mount": "/etc/systemd/system/mnt-homemate_media-foto.mount",
+    # Відеомаунт 03.09.2026: remote_missing, доки власник не запустить
+    # finish-video-move.sh. Це потрібний сигнал, а не шум.
+    "board-config/new-board/systemd/mnt-homemate_media-video.mount": "/etc/systemd/system/mnt-homemate_media-video.mount",
     "board-config/systemd/wyoming-vosk.service": "/etc/systemd/system/wyoming-vosk.service",
-    "board-config/systemd/nas-mounts.service": "/etc/systemd/system/nas-mounts.service",
+    # nas-mounts.service - версія 03.09.2026 без bind www/motion-clips і без
+    # відео в дереві конфігу. Звірка раніше порівнювала стару копію з
+    # board-config/systemd/ і після перенесення відео повернула б bind; стара
+    # копія лишається в репо до видалення власником і у звірці не бере участі.
+    # До запуску finish-video-move.sh на платі стоїть стара: mismatch чесний.
+    "board-config/new-board/systemd/nas-mounts.service": "/etc/systemd/system/nas-mounts.service",
     "board-config/systemd/nas-mounts.timer": "/etc/systemd/system/nas-mounts.timer",
     "board-config/systemd/netplan-fallback.service": "/etc/systemd/system/netplan-fallback.service",
     "board-config/systemd/mirror-alias-ip.service": "/etc/systemd/system/mirror-alias-ip.service",
+    "board-config/new-board/systemd/cloudflared-ha.service": "/etc/systemd/system/cloudflared-ha.service",
+    "board-config/new-board/systemd/timesync-retry.service": "/etc/systemd/system/timesync-retry.service",
+    "board-config/new-board/systemd/timesync-retry.timer": "/etc/systemd/system/timesync-retry.timer",
+    "board-config/new-board/systemd/tv-photo-cache.service": "/etc/systemd/system/tv-photo-cache.service",
+    "board-config/new-board/systemd/tv-photo-cache.timer": "/etc/systemd/system/tv-photo-cache.timer",
     # Ці два лишаються навмисно, хоч на платі їх немає: нічний аналіз дому
     # зник разом із ними, і remote_missing тут - потрібний сигнал, а не шум.
     "board-config/systemd/house-analyst.service": "/etc/systemd/system/house-analyst.service",
     "board-config/systemd/house-analyst.timer": "/etc/systemd/system/house-analyst.timer",
+    # Скрипти власника поза деревом конфігу, на які спирається скіл: деплой і
+    # ремонт файлової системи. /tmp їх не тримає (systemd-tmpfiles, 03.09.2026).
+    "board-config/scripts/deploy.sh": "/home/forlinx/deploy.sh",
+    "board-config/scripts/fsck-userdata.sh": "/home/forlinx/fsck-userdata.sh",
 }
 
 
@@ -288,6 +338,9 @@ BOARD_HEALTH_COMMAND = f"""
 v=$({shlex.quote(HA_VENV)}/bin/hass --version 2>/dev/null || echo unknown); echo "ha_version=$v"
 v=$(systemctl is-active home-assistant 2>/dev/null || echo inactive); echo "ha_service=$v"
 v=$(curl -s -o /dev/null -w '%{{http_code}}' --max-time 5 http://localhost:8123/ || echo 000); echo "ha_http=$v"
+v=$(curl -s -o /dev/null -w '%{{http_code}}' --max-time 5 http://{BOARD_LAN_IP}:8123/ || echo 000); echo "ha_http_lan=$v"
+echo "clock_year=$(date +%Y)"
+v=$(systemctl show home-assistant -p ActiveEnterTimestamp --value 2>/dev/null | awk '{{print $2}}' | cut -d- -f1); echo "ha_started_year=$v"
 v=$(uptime -p 2>/dev/null || echo unknown); echo "uptime=$v"
 v=$(grep -E '^SystemMaxUse=' /etc/systemd/journald.conf 2>/dev/null | tail -n1 | cut -d= -f2); echo "journal_cap=$v"
 echo "root=$(df -P / 2>/dev/null | tail -n1)"
@@ -301,9 +354,10 @@ v=$(sudo dumpe2fs -h /dev/mmcblk0p8 2>/dev/null | awk -F': *' '/^Filesystem stat
 v=$(sudo dumpe2fs -h /dev/mmcblk0p8 2>/dev/null | awk -F': *' '/^FS Error count/{{print $2}}'); echo "fs_error_count=${{v:-0}}"
 v=$(sudo dumpe2fs -h /dev/mmcblk0p8 2>/dev/null | grep -c has_journal); echo "fs_journal=$v"
 v=$(findmnt -n -o SOURCE -T /userdata/hass/config-standalone/backups 2>/dev/null | grep -c ':'); echo "backup_mount_nfs=$v"
-f=$(ls -t /userdata/hass/config/backups/*.tar 2>/dev/null | head -n1); echo "backup_newest=$f"
+f=$(ls -t /userdata/hass/config-standalone/backups/*.tar 2>/dev/null | head -n1); echo "backup_newest=$f"
 if [ -n "$f" ]; then echo "backup_age_h=$(( ( $(date +%s) - $(stat -c %Y "$f") ) / 3600 ))"; echo "backup_size_mb=$(( $(stat -c %s "$f") / 1048576 ))"; else echo "backup_age_h="; echo "backup_size_mb="; fi
 v=$(systemctl is-active mnt-homemate_media-foto.mount 2>/dev/null || echo inactive); echo "photo_mount=$v"
+v=$(systemctl is-active mnt-homemate_media-video.mount 2>/dev/null || echo inactive); echo "video_mount=$v"
 v=$(systemctl is-enabled nas-mounts.timer 2>/dev/null || echo missing); echo "nas_mounts_timer=$v"
 v=$(systemctl is-enabled house-analyst.timer 2>/dev/null || echo missing); echo "analyst_timer=$v"
 v=$(systemctl is-active cloudflared-ha 2>/dev/null || echo inactive); echo "cloudflared=$v"
@@ -312,11 +366,10 @@ if ping -c 1 -W 1 192.168.50.179 >/dev/null 2>&1; then echo "inverter_ping=ok"; 
 if ping -c 1 -W 1 {WELL_PUMP_IP} >/dev/null 2>&1; then echo "well_pump_ping=ok"; else echo "well_pump_ping=failed"; fi
 if [ -f {shlex.quote(HA_TOKEN_FILE)} ]; then
   {shlex.quote(HA_VENV)}/bin/python - <<'PYEOF'
-import json, urllib.request
+{_REMOTE_HTTP_GET}
 token = open({HA_TOKEN_FILE!r}, encoding='utf-8').read().strip()
-req = urllib.request.Request('http://localhost:8123/api/states', headers={{'Authorization': 'Bearer ' + token}})
 try:
-    states = json.load(urllib.request.urlopen(req, timeout=15))
+    states = ha_get('/api/states', token)
 except Exception as exc:
     print('states_error=' + type(exc).__name__)
 else:
@@ -325,6 +378,13 @@ else:
     print('entities_unavailable=%d' % len(bad))
     print('inverter_unavailable=%d' % sum(1 for s in bad if s['entity_id'].split('.', 1)[1].startswith('inverter_')))
     print('automations_orphaned=%d' % sum(1 for s in bad if s['entity_id'].startswith(('automation.', 'script.'))))
+try:
+    entries = ha_get('/api/config/config_entries/entry', token)
+except Exception as exc:
+    print('entries_error=' + type(exc).__name__)
+else:
+    broken = sorted(str(e.get('domain', '?')) for e in entries if e.get('state') in ('setup_error', 'setup_retry', 'migration_error'))
+    print('entries_setup_error=' + ','.join(broken))
 PYEOF
 else
   echo "states_error=token_missing"
@@ -356,6 +416,13 @@ def board_health() -> dict[str, Any]:
     ключі склеювала в один рядок, бо `systemctl is-enabled` неіснуючого юніта
     не друкує переносу. Тепер кожна перевірка - окреме поле, `problems` - їх
     людський перелік, а `healthy` істинне лише коли перелік порожній.
+
+    Доповнено 03.09.2026 за ревізією: годинник плати і рік старту HA (плата
+    без RTC стартує у 2024, і хмарні інтеграції лягають у setup_error до
+    рестарту), бан localhost проти живої LAN-адреси, від'ємний вік бекапу
+    (годинник позаду NAS), сутності інвертора unavailable при живому пінгу
+    логера, записи інтеграцій у setup_error, фото/відео-маунти. До того
+    частина цих полів збиралась, але в `problems` не потрапляла.
     """
     result = _ssh(BOARD_HEALTH_COMMAND, timeout=120)
     values = _parse_key_values(result["stdout"])
@@ -364,8 +431,28 @@ def board_health() -> dict[str, Any]:
         problems.append("ssh transport failed")
     if values.get("ha_service") != "active":
         problems.append(f"home-assistant.service is {values.get('ha_service')}")
-    if values.get("ha_http") != "200":
-        problems.append(f"HTTP {values.get('ha_http')} on :8123")
+    ha_http = values.get("ha_http")
+    if ha_http != "200":
+        if ha_http == "403" and values.get("ha_http_lan") == "200":
+            problems.append(
+                "HTTP 403 on localhost while the LAN address answers 200: "
+                "127.0.0.1 is banned (ip_bans.yaml, usually after a start with "
+                "the 2024 clock); local scripts fail until HA restarts"
+            )
+        else:
+            problems.append(f"HTTP {ha_http} on :8123")
+    clock_year = _int_or_none(values.get("clock_year"))
+    if clock_year is not None and clock_year < 2026:
+        problems.append(
+            f"board clock is wrong (year {clock_year}): NTP has not corrected it yet"
+        )
+    started_year = _int_or_none(values.get("ha_started_year"))
+    if started_year is not None and started_year < 2026:
+        problems.append(
+            f"home-assistant started under a {started_year} clock: cloud "
+            "integrations may sit in setup_error and recorder rows carry old "
+            "stamps until HA restarts"
+        )
     fs_state = values.get("fs_state", "")
     if "with errors" in fs_state:
         problems.append(
@@ -385,6 +472,11 @@ def board_health() -> dict[str, Any]:
     backup_age = _int_or_none(values.get("backup_age_h"))
     if backup_age is None:
         problems.append("no HA backup archive found on NAS")
+    elif backup_age < 0:
+        problems.append(
+            f"newest HA backup is {-backup_age} h in the future: the board clock "
+            "is behind the NAS"
+        )
     elif backup_age > 48:
         problems.append(f"newest HA backup is {backup_age} h old")
     backup_size = _int_or_none(values.get("backup_size_mb"))
@@ -401,6 +493,43 @@ def board_health() -> dict[str, Any]:
         problems.append("Deye logger 192.168.50.179 does not answer: outage automations are blind")
     if values.get("well_pump_ping") != "ok":
         problems.append(f"well pump plug {WELL_PUMP_IP} does not answer")
+    inverter_unavailable = _int_or_none(values.get("inverter_unavailable"))
+    if (
+        inverter_unavailable is not None
+        and inverter_unavailable >= INVERTER_UNAVAILABLE_LIMIT
+    ):
+        suffix = (
+            " although the logger answers ping"
+            if values.get("inverter_ping") == "ok"
+            else ""
+        )
+        problems.append(
+            f"{inverter_unavailable} inverter entities are unavailable{suffix}: "
+            "HA has no inverter data, battery and load thresholds are blind"
+        )
+    entries_broken = values.get("entries_setup_error")
+    if entries_broken:
+        problems.append(f"config entries failed to set up: {entries_broken}")
+    if values.get("entries_error"):
+        problems.append(f"could not read config entries: {values['entries_error']}")
+    entities_total = _int_or_none(values.get("entities_total"))
+    entities_unavailable = _int_or_none(values.get("entities_unavailable"))
+    if (
+        entities_total
+        and entities_unavailable is not None
+        and entities_unavailable * 4 > entities_total
+    ):
+        problems.append(
+            f"{entities_unavailable} of {entities_total} entities are unavailable or unknown"
+        )
+    if values.get("photo_mount") not in (None, "active"):
+        problems.append("photo NAS mount is not active: the TV slideshow has no photos")
+    video_mount = values.get("video_mount")
+    if video_mount not in (None, "active"):
+        problems.append(
+            f"mnt-homemate_media-video.mount is {video_mount}: the video move of "
+            "03.09.2026 is not applied (finish-video-move.sh) or the NAS share is down"
+        )
     orphaned = _int_or_none(values.get("automations_orphaned"))
     if orphaned:
         problems.append(f"{orphaned} automation/script registry entries are orphaned (unavailable)")
@@ -436,11 +565,7 @@ printf 'controller_errors_10m='; sudo journalctl -u home-assistant --since '-10 
 printf 'pump_errors_10m='; sudo journalctl -u home-assistant --since '-10 min' --no-pager 2>/dev/null | grep -iE '192\\.168\\.50\\.91|mini_switch_k601' | grep -ciE 'failed|not connected|unavailable|does not match' || true
 """.strip()
     result = _ssh(command, timeout=120)
-    values: dict[str, str] = {}
-    for line in result["stdout"].splitlines():
-        if "=" in line:
-            key, value = line.split("=", 1)
-            values[key.strip()] = value.strip()
+    values = _parse_key_values(result["stdout"])
 
     neighbor = values.get("controller_neighbor", "").casefold()
     controller_mac_ok = (
@@ -472,7 +597,7 @@ printf 'pump_errors_10m='; sudo journalctl -u home-assistant --since '-10 min' -
             "controller": "HA active/HTTP 200, expected IP/MAC reachable, hass TCP/6668 established, no matching errors for 10 minutes",
             "full_irrigation": "controller ready plus pump relay reachable with hass TCP/6668 established and no matching errors for 10 minutes",
             "physical_proof": "A controlled valve command must still report the selected LocalTuya switch on within 8 seconds; this read-only check never moves hardware",
-            "pump_without_valve": "Never an emergency: garden hydrants let the pump feed a hose with every valve closed, and manual start has no conditions at all. Only the three-hour maximum runtime limits it",
+            "pump_without_valve": "Never an emergency: garden hydrants let the pump feed a hose with every valve closed, and manual start has no conditions at all. There is no runtime limit either: max_runtime_hours is deliberately 0 (the '3h' in the automation id is historical)",
         },
         "transport": result,
     }
@@ -494,11 +619,7 @@ if sudo ss -Hntp 2>/dev/null | grep -F '{WELL_PUMP_IP}:{LOCALTUYA_PORT}' | grep 
 printf 'well_pump_errors_10m='; sudo journalctl -u home-assistant --since '-10 min' --no-pager 2>/dev/null | grep -iE '{WELL_PUMP_DEVICE_ID}|192\.168\.50\.26|t34_smart_plug' | grep -ciE 'failed|not connected|unavailable|does not match|exception' || true
 """.strip()
     result = _ssh(command, timeout=120)
-    values: dict[str, str] = {}
-    for line in result["stdout"].splitlines():
-        if "=" in line:
-            key, value = line.split("=", 1)
-            values[key.strip()] = value.strip()
+    values = _parse_key_values(result["stdout"])
 
     neighbor = values.get("well_pump_neighbor", "").casefold()
     mac_ok = (
@@ -574,9 +695,8 @@ def energy_flow_health() -> dict[str, Any]:
         "sensor.inverter_pv_power",
     )
     remote_script = f"""
-import json
+{_REMOTE_HTTP_GET}
 import os
-import urllib.request
 
 ids = {entity_ids!r}
 token_path = {HA_TOKEN_FILE!r}
@@ -584,12 +704,7 @@ if not os.path.isfile(token_path):
     print(json.dumps({{'_error': 'token_missing', 'token_file': token_path}}))
     raise SystemExit(0)
 token = open(token_path, encoding='utf-8').read().strip()
-request = urllib.request.Request(
-    'http://localhost:8123/api/states',
-    headers={{'Authorization': 'Bearer ' + token}},
-)
-with urllib.request.urlopen(request, timeout=10) as response:
-    states = {{item['entity_id']: item for item in json.load(response)}}
+states = {{item['entity_id']: item for item in ha_get('/api/states', token)}}
 result = {{}}
 for entity_id in ids:
     item = states.get(entity_id)
@@ -820,13 +935,13 @@ def entity_states(pattern: str, limit: int = 200) -> dict[str, Any]:
     re.compile(pattern)  # validate locally before sending
     limit = max(1, min(int(limit), 500))
     remote_script = f"""
-import json, os, re, urllib.request
+{_REMOTE_HTTP_GET}
+import os, re
 token_path = {HA_TOKEN_FILE!r}
 if not os.path.isfile(token_path):
     print(json.dumps({{'_error': 'token_missing'}})); raise SystemExit(0)
 token = open(token_path, encoding='utf-8').read().strip()
-req = urllib.request.Request('http://localhost:8123/api/states', headers={{'Authorization': 'Bearer ' + token}})
-states = json.load(urllib.request.urlopen(req, timeout=15))
+states = ha_get('/api/states', token)
 rx = re.compile({pattern!r}, re.I)
 out = []
 for s in sorted(states, key=lambda s: s['entity_id']):

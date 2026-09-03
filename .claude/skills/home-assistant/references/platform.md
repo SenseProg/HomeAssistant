@@ -132,6 +132,18 @@ the `127.0.0.1` entry from `ip_bans.yaml` before the next restart
 (`finish-video-move.sh` does it). Symptom to recognise: `403: Forbidden` on
 every localhost API call while the browser works.
 
+What a 2024 start does to integrations (seen 2026-09-03 13:59): every cloud
+integration that talks TLS fails at setup because certificates look "not yet
+valid" - both Tuya entries and Yasno ended in `setup_error`, which Home
+Assistant does not retry, so 192 entities stayed unavailable for the whole
+session even after NTP fixed the clock. Only a restart of HA recovers them;
+`cli.py health` now reports `ha_started_year`, `entries_setup_error` and the
+banned-localhost case explicitly. Two caveats of the drop-in itself: systemd
+substitutes `$i` in `ExecStartPre=` before the shell sees it (a shell variable
+must be written `$$i`), and the line runs as `forlinx` without a `+` prefix,
+so the `systemctl restart systemd-timesyncd` inside it never runs - the wait
+loop works, `timesync-retry.timer` does the actual restart.
+
 ## Backup meaning and location
 
 In this project, **backup** means a copy stored outside the MB35x8 board on the
@@ -159,9 +171,9 @@ validation. Never retain rollback copies in `/userdata`.
 
 Current state since 2026-08-06: QNAP exports
 `/HomeAssistant/MB35x8/backups` over NFS only to `192.168.50.141`. The board
-mounts it directly at `/userdata/hass/config/backups` with
-`userdata-hass-config-backups.mount`; `homemate-ha-backups-mount.timer` retries
-the mount every five minutes. The underlying local directory is root-owned and
+mounts it directly at `/userdata/hass/config-standalone/backups` with
+`userdata-hass-config\x2dstandalone-backups.mount` (started by
+`nas-mounts.service`; `nas-mounts.timer` retries every minute). The underlying local directory is root-owned and
 mode `0555`, so HA fails closed instead of writing backup archives to eMMC when
 NAS is unavailable. In the HA UI, `This system` therefore means this NAS mount,
 not board storage.
@@ -173,18 +185,33 @@ stayed at 54% used and HA held no photo-album files open. Never move the photo
 mount back under the configuration tree as a real mount: Core backups archive
 the whole config tree and would recursively include the NAS photo library.
 
-## Enabled supporting services
+## Enabled supporting services (verified on the board 2026-09-03)
 
-- `homemate-nas-sync.timer`: hourly incremental journal export to NAS. It does
-  not create, stage, or upload Home Assistant backup archives from the board.
-- `userdata-hass-config-backups.mount` plus
-  `homemate-ha-backups-mount.timer`: direct NAS-only HA backup destination.
-- `house-analyst.timer`: scheduled local analysis.
+- `nas-mounts.service` + `nas-mounts.timer` (every minute): starts the NFS
+  mounts by path and retries them; this is the only mount retry there is.
+- `userdata-hass-config\x2dstandalone-backups.mount`: direct NAS-only HA
+  backup destination (the name carries systemd escaping; the repo stores it as
+  `new-board/systemd/userdata-hass-config-standalone-backups.mount`).
+- `timesync-retry.service` + `.timer` (90 s after boot, then every 10 min):
+  nudges timesyncd until the clock is right. `home-assistant.service.d/
+  wait-for-clock.conf` makes HA wait up to 5 min for a sane year.
+- `cloudflared-ha.service`: the public tunnel. `cloudflared-quick.service` is
+  disabled and kept only as a fallback.
+- `tv-photo-cache.service` + `.timer` (04:20 daily): album index for the TV
+  slideshow.
 - `zram-swap.service`: compressed swap.
 - `wyoming-vosk.service`: local speech-to-text when enabled/configured.
 - `mnt-homemate_media-foto.mount`: read-only photo library outside the backup
-  tree. The video NFS unit remains disabled until the QNAP video share is
-  explicitly exported read/write to the board.
+  tree. `mnt-homemate_media-video.mount` (camera clips, same idea) exists in
+  the repo since 03.09 and is installed by `finish-video-move.sh`; until the
+  owner runs it, the clips are still mounted under the config tree.
+
+Not on the board, although older documents and `system_context.py` used to
+list them as live: `homemate-nas-sync.timer` (journal export to NAS never ran
+from a timer; only `scripts/homemate-nas-sync.sh` exists),
+`homemate-ha-backups-mount.timer` (replaced by `nas-mounts.timer`) and
+`house-analyst.service/.timer` (units in the repo, never installed; the
+decision "deploy or delete" is still open). Do not describe them as running.
 
 ## Architecture limits
 
