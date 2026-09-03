@@ -23,16 +23,24 @@
 
 - The root filesystem contains the venv and Node/Claude tooling.
 - `/userdata` contains HA config and recorder data.
-- **`/userdata` is ext4 without a journal** (`tune2fs -l /dev/mmcblk0p8` lists
-  no `has_journal`), mounted `errors=continue`, `pass 0` in fstab. The board is
-  not on protected power and goes down with every outage, so each power cut
-  leaves the superblock "not clean with errors": fixed by fsck on 2026-08-22,
-  broken again on 2026-08-30, nine errors by 2026-09-02, with `ls` returning
-  "Structure needs cleaning" on two files. `cli.py health` reports
-  `fs_state`/`fs_error_count`/`fs_journal`. Repair is
-  `bash /home/forlinx/fsck-userdata.sh` (stops HA for minutes; irrigation must
-  be idle); the durable fix is protected power plus `tune2fs -O has_journal`
-  on the unmounted partition, which the script can do in the same stop.
+- **`/userdata` is ext4 with a journal since 2026-09-03 09:06.** Until then it
+  had no `has_journal`, was mounted `errors=continue` with `pass 0`, and the
+  board — which is not on protected power and goes down with every outage —
+  collected superblock errors after each cut: fixed by fsck on 2026-08-22,
+  broken again on 2026-08-30, 17 errors by the morning of 2026-09-03, `ls`
+  returning "Structure needs cleaning". `fsck-userdata.sh` v2 (in
+  `board-config/scripts/`, deployed to `/home/forlinx/`) now does the whole
+  thing in one stop of ~100 s: e2fsck, `tune2fs -O has_journal -e remount-ro
+  -c 20`, fstab `defaults,errors=remount-ro,nofail,x-systemd.device-timeout=30
+  0 2`, remount, restart. What that buys on the next power cut: the journal
+  replays on mount instead of leaving holes; `pass 2` lets systemd-fsck fix
+  small things in preen mode before mounting; if it cannot, `nofail` still
+  boots the board (SSH works) while HA stays down because of
+  `Requires=userdata.mount` — then run the script by hand; and if an error
+  appears while running, the partition goes read-only instead of corrupting
+  further, which HA reports as write failures and `health` as
+  `fs_state`. `cli.py health` reports `fs_state` / `fs_error_count` /
+  `fs_journal`; `fs_journal=0` is a problem again.
 - Active swap is `/dev/zram0`, 1 GiB compressed RAM swap. The old 4 GiB eMMC
   swapfile was removed.
 - Use `du -x` on `/userdata`. The photo library is mounted outside the HA

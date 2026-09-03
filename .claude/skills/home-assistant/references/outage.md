@@ -105,9 +105,11 @@ The MB35x8 is not on protected power: with the grid it goes down too. On
 next boot starts at 15:05 — three and a half hours without a controller, without
 watchdogs, without pushes. Consequences the automations cannot cover:
 
-- `/userdata` is ext4 **without a journal**; every hard power-off adds
-  superblock errors (see `platform.md`). The `userdata_fs_broken` automation
-  pushes daily at 09:30 until someone runs `fsck-userdata.sh`.
+- `/userdata` had no ext4 journal until 2026-09-03, so every hard power-off
+  added superblock errors; it now has a journal, `errors=remount-ro`, `nofail`
+  and boot-time fsck (see `platform.md`). The `userdata_fs_broken` automation
+  still pushes daily at 09:30 if errors appear again — then run
+  `fsck-userdata.sh`, which also re-checks the journal settings.
 - After the board comes back: `irrigation_fail_safe_on_ha_start` switches the
   irrigation off, LocalTuya devices stay `unavailable` for ~3 minutes,
   Irrigation Unlimited logs "Switch does not match current state", and Wi-Fi
@@ -116,10 +118,10 @@ watchdogs, without pushes. Consequences the automations cannot cover:
 - The RTC battery is dead: the clock is wrong until NTP catches up, and `last`
   shows boots in 1970.
 
-Durable fixes, in order: protected power or a small UPS for the board;
-`tune2fs -O has_journal` on the unmounted `/userdata`; a "board rebooted" push
-with the start time and what fail-safe switched off; DHCP reservations for every
-Tuya plug so that a reconnect keeps its address.
+Durable fixes, in order: protected power or a small UPS for the board (still
+open); the ext4 journal (done 2026-09-03); a "board rebooted" push with the
+start time and what fail-safe switched off; DHCP reservations for every Tuya
+plug so that a reconnect keeps its address.
 
 ## Do not
 

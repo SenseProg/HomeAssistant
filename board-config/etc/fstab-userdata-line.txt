@@ -1,1 +1,1 @@
-/dev/mmcblk0p8     	/userdata               	ext4            defaults                0       0
+/dev/mmcblk0p8	/userdata	ext4	defaults,errors=remount-ro,nofail,x-systemd.device-timeout=30	0	2
