@@ -5039,8 +5039,6 @@ views:
         {% set inv = is_state('binary_sensor.invertor_zviazok', 'on') %}
         {% set off = is_state('binary_sensor.svitlo_vidsutnie', 'on') %}
         {% set soc = states('sensor.inverter_battery') %}
-        {% set load = states('sensor.spozhyvannia_zaraz_kvt') %}
-        {% set avt = states('sensor.avtonomiia_batarei') %}
         {% set since = states.binary_sensor.svitlo_vidsutnie.last_changed if states.binary_sensor.svitlo_vidsutnie else none %}
         {% set src = states('sensor.merezha_dzherelo') %}
         {% set inv_since = (states.sensor.inverter_battery.last_changed | as_local).strftime('%d.%m %H:%M') if states.sensor.inverter_battery else '—' %}
@@ -5050,10 +5048,10 @@ views:
         Лічильник вводу відповідає, але напруги на фазах немає. Батарея і автономія невідомі: логер Deye мовчить з {{ inv_since }}.
         {% elif not inv %}## ⚠️ Інвертор і лічильник не відповідають — стан мережі невідомий
         Логер Deye мовчить з {{ inv_since }}, лічильник вводу теж поза зв'язком. Поки так, сповіщення про світло, пороги батареї і автовимикання **не працюють**: «світло є» нижче означає лише «даних немає». Найчастіше допомагає перезапуск інвертора.
-        {% elif off %}## 🔴 Світла немає з {{ (since | as_local).strftime('%H:%M') if since else '—' }} · батарея {{ soc }} % · вистачить ≈ {{ avt }} год
-        Споживання {{ load }} кВт. Автономія рахується до критичного порогу {{ states('input_number.batareia_porih_krytychno') }} % при поточному навантаженні: вимкнете зайве — час зросте.
-        {% else %}## 🟢 Мережа є · батарея {{ soc }} % · при відключенні вистачить ≈ {{ avt }} год
-        Споживання {{ load }} кВт. Оцінка — при такому самому навантаженні і до критичного порогу {{ states('input_number.batareia_porih_krytychno') }} %; ємність з налаштувань інвертора: {{ state_attr('sensor.avtonomiia_batarei', 'iemnist_kvtg') }} кВт·год.
+        {% elif off %}## 🔴 Світла немає з {{ (since | as_local).strftime('%H:%M') if since else '—' }} · батарея {{ soc }} %
+        Скільки вистачить і яке навантаження несе інвертор — у плитках нижче, вони оновлюються з кожним опитуванням Deye. Автономія рахується до критичного порогу {{ states('input_number.batareia_porih_krytychno') }} % при поточному навантаженні: вимкнете зайве — час зросте.
+        {% else %}## 🟢 Мережа є · батарея {{ soc }} %
+        Скільки вистачить при відключенні і яке навантаження несе інвертор — у плитках нижче. Оцінка — при такому самому навантаженні і до критичного порогу {{ states('input_number.batareia_porih_krytychno') }} %; ємність з налаштувань інвертора: {{ state_attr('sensor.avtonomiia_batarei', 'iemnist_kvtg') }} кВт·год.
         {% endif %}
     - type: gauge
       entity: sensor.inverter_battery
@@ -5073,7 +5071,7 @@ views:
     # і те, що живиться повз Deye і при відключенні згасне одразу.
     - type: gauge
       entity: sensor.zagalne_navantazhennia
-      name: Споживання дому зараз
+      name: Весь дім зараз · за лічильником вводу
       unit: кВт
       min: 0
       max: 15
@@ -5086,14 +5084,14 @@ views:
         columns: 8
     - type: tile
       entity: sensor.avtonomiia_batarei
-      name: Автономія
+      name: Автономія при цьому навантаженні
       icon: mdi:battery-clock
       grid_options:
         columns: 8
         rows: 1
     - type: tile
       entity: sensor.spozhyvannia_zaraz_kvt
-      name: Споживання від інвертора
+      name: Навантаження на інвертор · нестиме батарея
       icon: mdi:flash
       grid_options:
         columns: 8
