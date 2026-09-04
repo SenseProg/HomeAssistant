@@ -157,6 +157,21 @@ before a power cut would. Each unclean restart therefore leaves the absolute
 integrator a few hundredths of a kWh below the sum of its own history, and the
 "розрахунковий показник" drifts a little below the cards' sums.)
 
+**Coefficient changes rescale the estimated water sensor.**
+`sensor.sverdlovina_voda_m3` is `(E + offset) × k`; when a new mechanical
+reading changes `k`, the sensor jumps at once (04.09.2026: 0.802 → 1.073 gave
++1.9 m³ inside one hour). The calibration automation therefore calls
+`shell_command.sverdlovina_perekalibruvaty_statystyku` →
+`scripts/water_lts_import.py recalibrate`: re-import the hourly history with
+the current `k` and align the live 5-minute sum to the last imported hour.
+`recorder/import_statistics` only queues the write - the script polls until
+the rows land before aligning. `k` is fitted over the whole window since the
+baseline (22.08 21:36), so the estimate equals the meter at every reading and
+drifts only between readings. A rising `k` over time is a warning, not
+progress: the T34 plug at `.26` drops offline under load (32 h/week on
+04.09), the integrator does not see pump runs then, and the fit compensates
+by inflating `k`.
+
 **Since 2026-09-03 the daily and monthly numbers come from long-term
 statistics**, not raw history. The recorder kept 7 days (`purge_keep_days`, 21 since 2026-09-03),
 so the daily card's "за 30 днів" used to mean "за 7" and the Overview's "цього

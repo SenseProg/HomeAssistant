@@ -13,6 +13,14 @@ LTS інтегратора (погодинні суми кВт·год) живе
 
     water_lts_import.py import [--days 40] [--coef 0.802] [--dry-run]
     water_lts_import.py adjust            # після першої живої години сенсора
+    water_lts_import.py recalibrate [--days 40]   # після зміни коефіцієнта
+
+recalibrate (04.09.2026): коефіцієнт міняється після кожного показника
+механічного лічильника, а сенсор води - це (E + offset) × k, тож у ту мить він
+стрибає (04.09: 5,650 → 7,559 м³, +1,9 м³ «спожито» за одну годину). Команда
+переписує погодинну історію новим k (той самий import) і вирівнює живу
+5-хвилинну суму з останньою імпортованою годиною, щоб стрибок не потрапив у
+добові й місячні графіки. Викликається автоматизацією калібрування.
 
 Ключ: energy_offset_kwh з calibration журналу показників (вода від контрольної
 точки = (E + offset) × коефіцієнт, як у самому сенсорі).
@@ -94,12 +102,13 @@ async def cmd_import(days: int, coef: float | None, dry: bool) -> None:
         print(f"rows: {len(stats)}, offset={offset}, coef={k}, first={stats[0]['start'][:16]} last={stats[-1]['start'][:16]} last_sum={stats[-1]['sum']}")
         if dry:
             print(json.dumps(stats[-3:], ensure_ascii=False))
-            return
+            return None
         await ws.call(type="recorder/import_statistics",
                       metadata={"has_mean": False, "has_sum": True, "name": None, "source": "recorder",
                                 "statistic_id": DST, "unit_of_measurement": "m³"},
                       stats=stats)
         print("imported", len(stats), "hourly rows into", DST)
+        return stats[-1]
 
 
 async def cmd_adjust() -> None:
@@ -133,6 +142,47 @@ async def cmd_adjust() -> None:
         print(f"no gap: imported {last_imported}, first live {first_live['sum']}")
 
 
+async def cmd_recalibrate(days: int) -> None:
+    """Переписати історію поточним k і вирівняти живу суму (див. docstring)."""
+    last_row = await cmd_import(days, None, False)
+    async with WS() as ws:
+        now = dt.datetime.now(dt.timezone.utc)
+        # import_statistics лише ставить задачу в чергу recorder - рядки лягають
+        # у базу за кілька секунд; читати їх одразу означає побачити старі суми.
+        hourly = []
+        for _ in range(30):
+            hourly = (await ws.call(type="recorder/statistics_during_period", start_time=(now - dt.timedelta(days=3)).isoformat(),
+                                    statistic_ids=[DST], period="hour", types=["state", "sum"])).get(DST, [])
+            got = [r for r in hourly if r.get("sum") is not None]
+            if last_row and got and abs(got[-1]["sum"] - last_row["sum"]) < 0.002:
+                break
+            await asyncio.sleep(2)
+        else:
+            raise SystemExit("import did not land in the recorder within 60 s - not aligning")
+        short = (await ws.call(type="recorder/statistics_during_period", start_time=(now - dt.timedelta(hours=3)).isoformat(),
+                               statistic_ids=[DST], period="5minute", types=["sum"])).get(DST, [])
+        imported = [r for r in hourly if r.get("sum") is not None and r.get("state") is not None]
+        live = [r for r in short if r.get("sum") is not None]
+        if not imported or not live:
+            raise SystemExit(f"nothing to align: hourly={len(imported)} short-term={len(live)}")
+        last = imported[-1]
+        # Реальна вода після кінця останньої повної години - різниця між живим
+        # станом сенсора зараз і станом на кінець тієї години (обидва з поточним k).
+        state_now = float(rest_state(DST)["state"])
+        target = last["sum"] + (state_now - last["state"])
+        cur = live[-1]
+        delta = round(target - cur["sum"], 3)
+        when = dt.datetime.fromtimestamp(cur["start"] / 1000, dt.timezone.utc).isoformat()
+        print(f"align: imported last hour sum={last['sum']:.3f} state={last['state']:.3f}, live now={state_now:.3f}, "
+              f"short-term sum={cur['sum']:.3f} at {when[:16]} -> adjust {delta:+.3f}")
+        if abs(delta) < 0.005:
+            print("no adjustment needed")
+            return
+        await ws.call(type="recorder/adjust_sum_statistics", statistic_id=DST, start_time=when,
+                      adjustment=delta, adjustment_unit_of_measurement="m³")
+        print("adjusted")
+
+
 def main() -> int:
     for s in (sys.stdout, sys.stderr):
         try:
@@ -143,9 +193,12 @@ def main() -> int:
     sub = p.add_subparsers(dest="cmd", required=True)
     a = sub.add_parser("import"); a.add_argument("--days", type=int, default=40); a.add_argument("--coef", type=float); a.add_argument("--dry-run", action="store_true")
     sub.add_parser("adjust")
+    r = sub.add_parser("recalibrate"); r.add_argument("--days", type=int, default=40)
     args = p.parse_args()
     if args.cmd == "import":
         asyncio.run(cmd_import(args.days, args.coef, args.dry_run))
+    elif args.cmd == "recalibrate":
+        asyncio.run(cmd_recalibrate(args.days))
     else:
         asyncio.run(cmd_adjust())
     return 0

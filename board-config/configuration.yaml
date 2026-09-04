@@ -2156,6 +2156,11 @@ shell_command:
   # потім ріже її shlex, тому ім'я автора з лапкою чи нотатка з крапкою з комою
   # ламали б виклик. Base64 складається тільки з [A-Za-z0-9+/=] і доїжджає цілим.
   water_reading_apply: "/userdata/hass/venv/bin/python /userdata/hass/config/scripts/water_readings.py apply --payload {{ payload }}"
+  # 04.09.2026: після зміни коефіцієнта сенсор води (E + offset) × k стрибає
+  # (0,802 → 1,073 дало +1,9 м³ за одну годину). Переписати погодинну історію
+  # новим k і вирівняти живу суму - інакше стрибок стає «спожитою» водою на
+  # добових і місячних графіках. Викликає автоматизація калібрування.
+  sverdlovina_perekalibruvaty_statystyku: "/userdata/hass/venv/bin/python /userdata/hass/config/scripts/water_lts_import.py recalibrate --days 40"
 
 # --- Сторож насоса свердловини (2026-08-22) ---
 # У поливу є повний набір захисту - максимальна тривалість, закриття клапанів,

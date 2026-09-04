@@ -1359,6 +1359,12 @@
         entity_id: input_number.sverdlovina_koefitsiient_vodi
       data:
         value: '{{ candidate | round(3) }}'
+    # Сенсор води перерахувався новим k і стрибнув - переписати статистику
+    # тим самим k (див. коментар до shell_command). Пауза - щоб template-сенсор
+    # і recorder встигли побачити новий коефіцієнт.
+    - delay: '00:00:20'
+    - action: shell_command.sverdlovina_perekalibruvaty_statystyku
+      continue_on_error: true
     else:
     - action: persistent_notification.create
       data:
