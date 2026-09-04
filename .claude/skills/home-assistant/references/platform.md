@@ -138,11 +138,12 @@ valid" - both Tuya entries and Yasno ended in `setup_error`, which Home
 Assistant does not retry, so 192 entities stayed unavailable for the whole
 session even after NTP fixed the clock. Only a restart of HA recovers them;
 `cli.py health` now reports `ha_started_year`, `entries_setup_error` and the
-banned-localhost case explicitly. Two caveats of the drop-in itself: systemd
-substitutes `$i` in `ExecStartPre=` before the shell sees it (a shell variable
-must be written `$$i`), and the line runs as `forlinx` without a `+` prefix,
-so the `systemctl restart systemd-timesyncd` inside it never runs - the wait
-loop works, `timesync-retry.timer` does the actual restart.
+banned-localhost case explicitly. The drop-in's wait loop was verified with a
+real unit file on 04.09 (`$i` inside the quoted `sh -c` string is not
+substituted by systemd; the `$$i` claim from the 03.09 review was wrong). What
+was real: the line ran as `forlinx`, so the `systemctl restart
+systemd-timesyncd` inside never worked - fixed with the `+` prefix on 04.09;
+`timesync-retry.timer` remains the primary clock fix.
 
 ## Backup meaning and location
 

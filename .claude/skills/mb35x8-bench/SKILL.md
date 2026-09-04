@@ -37,9 +37,10 @@ to it fails with `Cannot assign requested address`.
    NTP keeps living with that start (TLS "not yet valid", `setup_error` in
    cloud integrations, localhost banned by HA) until it is restarted.
    `journalctl --list-boots` shows a wrong boot start time after the jump; do
-   not trust it. In systemd units, `$VAR` in `ExecStart*=` is substituted by
-   systemd before the shell runs (write `$$VAR`), and `ExecStartPre=` runs as
-   the unit's `User=` unless the executable is prefixed with `+`.
+   not trust it. In systemd units only a whole-word `$VAR` argument or `${VAR}`
+   is substituted; `$i` inside a quoted `sh -c` string is left alone (verified
+   2026-09-04), `%` needs `%%`. `ExecStartPre=` runs as the unit's `User=`
+   unless the executable is prefixed with `+`.
 
 Recorder unclean-shutdown messages are consequences of abrupt board loss, not
 proof that SQLite caused it.

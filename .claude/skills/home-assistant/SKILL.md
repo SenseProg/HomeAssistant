@@ -244,11 +244,13 @@ Three traps confirmed by the revision of 2026-09-03:
   (`sed -i 's/\r$//'`) or fix it at the root with `board-config/** text eol=lf`
   and `mcp-server/** text eol=lf` in `.gitattributes` plus
   `git add --renormalize .`.
-- **systemd `$`.** systemd substitutes `$VAR` in `ExecStart*=` lines before
-  the shell sees them, quotes or not; write `$$i` for a shell variable, and
-  prefix the executable with `+` when the command needs root under
-  `User=forlinx`. `wait-for-clock.conf` carries both mistakes: the wait loop
-  works, the `systemctl restart systemd-timesyncd` inside it never runs.
+- **systemd `$` and `+`.** Verified with a real unit file on 2026-09-04: a
+  `$i` embedded inside the quoted `sh -c '...'` string is NOT touched by
+  systemd (it prints i=1, i=2); only a whole-word `$VAR` argument or `${VAR}`
+  is substituted, and `%` must be written `%%`. The earlier claim that `$$i`
+  is required was wrong - do not "fix" it. What is real: `ExecStartPre=` runs
+  as the unit's `User=forlinx`, so prefix the executable with `+` when the
+  command needs root (`wait-for-clock.conf` has it since 04.09).
 - **`www/` is public.** Home Assistant serves `www/` as `/local/` without
   authentication and the Cloudflare tunnel forwards it to the internet
   (checked from outside on 2026-09-03: camera frames in `www/motion/`,
